@@ -1,18 +1,14 @@
 """Tests for SYNTRA core module."""
 
-import asyncio
 import pytest
+
 from syntra.core import (
     AutonomyMode,
     Event,
     EventBus,
     EventType,
-    Settings,
     TelemetryCollector,
-    TokenUsage,
-    get_event_bus,
     get_settings,
-    get_telemetry,
     reset_settings,
 )
 

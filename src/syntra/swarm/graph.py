@@ -1,9 +1,9 @@
 """Deterministic State Graph execution engine for multi-agent workflows."""
 
-import asyncio
 import logging
 from collections.abc import Callable, Coroutine
 from typing import Any
+
 from syntra.core.events import Event, EventType, get_event_bus
 from syntra.core.exceptions import SwarmOrchestrationError
 from syntra.swarm.state import SwarmState

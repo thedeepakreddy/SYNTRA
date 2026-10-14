@@ -1,7 +1,7 @@
 """Isolated workspace management with strict path traversal defenses."""
 
-import os
 from pathlib import Path
+
 from syntra.core.events import Event, EventType, get_event_bus
 from syntra.core.exceptions import SandboxSecurityViolationError
 
@@ -89,6 +89,7 @@ class WorkspaceManager:
             path.unlink()
         elif path.is_dir():
             import shutil
+
             shutil.rmtree(path)
 
         await get_event_bus().publish(
@@ -126,6 +127,7 @@ class WorkspaceManager:
 
     def get_tree(self, max_depth: int = 4) -> dict:
         """Generate structured directory tree representation."""
+
         def _build_tree(current: Path, depth: int) -> dict:
             if depth > max_depth:
                 return {"...": "max depth reached"}
@@ -162,11 +164,13 @@ class WorkspaceManager:
                 with open(p, "r", encoding="utf-8", errors="ignore") as f:
                     for idx, line in enumerate(f, start=1):
                         if query in line:
-                            results.append({
-                                "file": str(p.relative_to(self.root_path)),
-                                "line_number": idx,
-                                "line_content": line.strip(),
-                            })
+                            results.append(
+                                {
+                                    "file": str(p.relative_to(self.root_path)),
+                                    "line_number": idx,
+                                    "line_content": line.strip(),
+                                }
+                            )
             except Exception:
                 continue
 

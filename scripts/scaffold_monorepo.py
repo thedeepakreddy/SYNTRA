@@ -19,11 +19,31 @@ PACKAGES = [
 ]
 
 APPS = [
-    ("api", "SYNTRA REST & WebSocket API control plane application.", "from syntra.api.app import app\n\nif __name__ == '__main__':\n    import uvicorn\n    uvicorn.run(app, host='0.0.0.0', port=8000)\n"),
-    ("orchestrator", "LangGraph mission coordination daemon.", "def main():\n    print('SYNTRA Orchestrator Daemon initialized.')\n\nif __name__ == '__main__':\n    main()\n"),
-    ("scheduler", "Deterministic DAG task scheduler and lease manager daemon.", "def main():\n    print('SYNTRA Task Scheduler Daemon initialized.')\n\nif __name__ == '__main__':\n    main()\n"),
-    ("worker_controller", "Sandbox runner and worker supervision daemon.", "def main():\n    print('SYNTRA Worker Controller Daemon initialized.')\n\nif __name__ == '__main__':\n    main()\n"),
-    ("mcp_server", "SYNTRA Model Context Protocol (MCP) server daemon.", "def main():\n    print('SYNTRA MCP Server Daemon initialized.')\n\nif __name__ == '__main__':\n    main()\n"),
+    (
+        "api",
+        "SYNTRA REST & WebSocket API control plane application.",
+        "from syntra.api.app import app\n\nif __name__ == '__main__':\n    import uvicorn\n    uvicorn.run(app, host='0.0.0.0', port=8000)\n",
+    ),
+    (
+        "orchestrator",
+        "LangGraph mission coordination daemon.",
+        "def main():\n    print('SYNTRA Orchestrator Daemon initialized.')\n\nif __name__ == '__main__':\n    main()\n",
+    ),
+    (
+        "scheduler",
+        "Deterministic DAG task scheduler and lease manager daemon.",
+        "def main():\n    print('SYNTRA Task Scheduler Daemon initialized.')\n\nif __name__ == '__main__':\n    main()\n",
+    ),
+    (
+        "worker_controller",
+        "Sandbox runner and worker supervision daemon.",
+        "def main():\n    print('SYNTRA Worker Controller Daemon initialized.')\n\nif __name__ == '__main__':\n    main()\n",
+    ),
+    (
+        "mcp_server",
+        "SYNTRA Model Context Protocol (MCP) server daemon.",
+        "def main():\n    print('SYNTRA MCP Server Daemon initialized.')\n\nif __name__ == '__main__':\n    main()\n",
+    ),
 ]
 
 

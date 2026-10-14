@@ -3,8 +3,10 @@
 import json
 from collections.abc import Callable
 from typing import Any, TypeVar
+
 from pydantic import BaseModel
-from syntra.core.telemetry import TokenUsage, get_telemetry
+
+from syntra.core.telemetry import get_telemetry
 from syntra.llm.client import BaseLLMClient
 from syntra.llm.models import (
     LLMMessage,
@@ -43,14 +45,16 @@ class MockLLMClient(BaseLLMClient):
         agent_id: str = "agent",
         agent_role: str = "assistant",
     ) -> LLMResponse:
-        self.call_history.append({
-            "messages": messages,
-            "model": model,
-            "tools": tools,
-            "session_id": session_id,
-            "agent_id": agent_id,
-            "agent_role": agent_role,
-        })
+        self.call_history.append(
+            {
+                "messages": messages,
+                "model": model,
+                "tools": tools,
+                "session_id": session_id,
+                "agent_id": agent_id,
+                "agent_role": agent_role,
+            }
+        )
 
         if self._custom_handler:
             resp = self._custom_handler(messages, tools)
@@ -108,14 +112,16 @@ class MockLLMClient(BaseLLMClient):
         agent_id: str = "agent",
         agent_role: str = "assistant",
     ) -> tuple[T, LLMResponse]:
-        self.call_history.append({
-            "messages": messages,
-            "response_model": response_model.__name__,
-            "model": model,
-            "session_id": session_id,
-            "agent_id": agent_id,
-            "agent_role": agent_role,
-        })
+        self.call_history.append(
+            {
+                "messages": messages,
+                "response_model": response_model.__name__,
+                "model": model,
+                "session_id": session_id,
+                "agent_id": agent_id,
+                "agent_role": agent_role,
+            }
+        )
 
         if self._responses_queue:
             item = self._responses_queue.pop(0)
@@ -123,10 +129,10 @@ class MockLLMClient(BaseLLMClient):
                 parsed = item
                 json_str = item.model_dump_json()
             elif isinstance(item, dict):
-                parsed = response_model.model_validate(item)
+                parsed = response_model.model_validate(item)  # type: ignore[assignment]
                 json_str = json.dumps(item)
             elif isinstance(item, str):
-                parsed = response_model.model_validate_json(item)
+                parsed = response_model.model_validate_json(item)  # type: ignore[assignment]
                 json_str = item
             else:
                 raise ValueError(f"Cannot parse queued item to {response_model}")
@@ -136,9 +142,7 @@ class MockLLMClient(BaseLLMClient):
                 parsed = response_model()  # type: ignore
                 json_str = parsed.model_dump_json()
             except Exception:
-                raise ValueError(
-                    f"MockLLMClient has no queued response for structured type {response_model.__name__}"
-                )
+                raise ValueError(f"MockLLMClient has no queued response for structured type {response_model.__name__}")
 
         metric = get_telemetry().record_call(
             session_id=session_id,

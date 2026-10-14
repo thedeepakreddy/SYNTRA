@@ -1,24 +1,31 @@
+name: syntra
+
+networks:
+  syntra_net:
+    driver: bridge
+
 services:
   backend:
     build:
       context: .
       dockerfile: Dockerfile
-    image: syntra-backend:latest
+    image: syntra-backend:0.1.0
     container_name: syntra-backend
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
+      - SYNTRA_ENVIRONMENT=${SYNTRA_ENVIRONMENT:-development}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - SYNTRA_DEFAULT_MODEL=${SYNTRA_DEFAULT_MODEL:-gemini-2.5-flash}
       - SYNTRA_REASONING_MODEL=${SYNTRA_REASONING_MODEL:-gemini-2.5-pro}
       - SYNTRA_FAST_MODEL=${SYNTRA_FAST_MODEL:-gemini-2.0-flash-lite}
       - SYNTRA_AUTONOMY_MODE=${SYNTRA_AUTONOMY_MODE:-semi_autonomous}
-      - SYNTRA_DATABASE_URL=postgresql+asyncpg://syntra:syntra_secret@postgres:5432/syntra_db
+      - SYNTRA_DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-syntra}:${POSTGRES_PASSWORD:-syntra_secret}@postgres:5432/${POSTGRES_DB:-syntra_db}
       - SYNTRA_REDIS_URL=redis://redis:6379/0
       - SYNTRA_S3_ENDPOINT=minio:9000
-      - SYNTRA_S3_ACCESS_KEY=syntra_minio
-      - SYNTRA_S3_SECRET_KEY=syntra_minio_secret
+      - SYNTRA_S3_ACCESS_KEY=${MINIO_ROOT_USER:-syntra_minio}
+      - SYNTRA_S3_SECRET_KEY=${MINIO_ROOT_PASSWORD:-syntra_minio_secret}
       - SYNTRA_S3_BUCKET=syntra-artifacts
       - SYNTRA_S3_SECURE=false
       - SYNTRA_HOST=0.0.0.0
@@ -32,33 +39,45 @@ services:
         condition: service_healthy
     volumes:
       - syntra_data:/app/.syntra
+    networks:
+      - syntra_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16.4-alpine
     container_name: syntra-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: syntra
-      POSTGRES_PASSWORD: syntra_secret
-      POSTGRES_DB: syntra_db
+      POSTGRES_USER: ${POSTGRES_USER:-syntra}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-syntra_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-syntra_db}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - syntra_net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U syntra -d syntra_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-syntra} -d ${POSTGRES_DB:-syntra_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
 
   redis:
-    image: redis:7-alpine
+    image: redis:7.4.1-alpine
     container_name: syntra-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
+    networks:
+      - syntra_net
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -71,15 +90,17 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: syntra_minio
-      MINIO_ROOT_PASSWORD: syntra_minio_secret
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-syntra_minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-syntra_minio_secret}
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     volumes:
       - minio_data:/data
+    networks:
+      - syntra_net
     healthcheck:
-      test: ["CMD-SHELL", "mc ready local || curl -s -f http://localhost:9000/minio/health/live || exit 1"]
+      test: ["CMD-SHELL", "curl -s -f http://127.0.0.1:9000/minio/health/live || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 5

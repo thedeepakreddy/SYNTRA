@@ -1,6 +1,7 @@
 """Typer CLI entry point for SYNTRA."""
 
 import typer
+
 from syntra.cli.commands import (
     list_checkpoints_command,
     list_sessions_command,

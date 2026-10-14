@@ -25,8 +25,8 @@ PY_VERSION=$("${PYTHON_BIN}" -c 'import sys; print(f"{sys.version_info.major}.{s
 PY_MAJOR=$("${PYTHON_BIN}" -c 'import sys; print(sys.version_info.major)')
 PY_MINOR=$("${PYTHON_BIN}" -c 'import sys; print(sys.version_info.minor)')
 
-if [ "${PY_MAJOR}" -lt 3 ] || { [ "${PY_MAJOR}" -eq 3 ] && [ "${PY_MINOR}" -lt 11 ]; }; then
-    echo "❌ Error: SYNTRA requires Python 3.11+. Detected: Python ${PY_VERSION}" >&2
+if [ "${PY_MAJOR}" -lt 3 ] || { [ "${PY_MAJOR}" -eq 3 ] && [ "${PY_MINOR}" -lt 12 ]; }; then
+    echo "❌ Error: SYNTRA requires Python 3.12+. Detected: Python ${PY_VERSION}" >&2
     exit 1
 fi
 echo "✅ Python ${PY_VERSION} detected."
@@ -49,7 +49,7 @@ fi
 
 # 4. Install locked dependencies
 echo "📥 Installing pinned dependencies from uv.lock..."
-uv pip install -e ".[dev]"
+uv sync --locked --extra dev --extra test --extra integrations
 
 # 5. Create runtime state directories
 echo "📁 Initializing local .syntra storage directories..."

@@ -1,6 +1,7 @@
 """Diff generation, unified patch application, and text replacement engine."""
 
 import difflib
+
 from syntra.core.exceptions import SandboxError
 
 

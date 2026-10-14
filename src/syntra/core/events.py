@@ -8,6 +8,7 @@ from collections.abc import Callable, Coroutine
 from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
+
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)

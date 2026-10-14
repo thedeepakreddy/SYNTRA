@@ -4,6 +4,7 @@ import inspect
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass
 from typing import Any, get_type_hints
+
 from syntra.core.exceptions import AgentError
 from syntra.llm.models import ToolDefinition
 from syntra.sandbox.patcher import FilePatcher
@@ -93,6 +94,7 @@ class ToolRegistry:
         requires_approval: bool = False,
     ) -> Callable:
         """Decorator to register an async tool function."""
+
         def decorator(func: Callable[..., Coroutine[Any, Any, Any]]) -> Callable:
             tool = Tool(
                 name=name,

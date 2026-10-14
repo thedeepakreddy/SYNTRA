@@ -3,6 +3,7 @@
 import asyncio
 import logging
 from typing import Any
+
 from syntra.checkpoints.models import (
     Checkpoint,
     CheckpointActionType,

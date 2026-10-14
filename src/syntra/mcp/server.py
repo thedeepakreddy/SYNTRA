@@ -5,9 +5,8 @@ import json
 import logging
 import sys
 from typing import Any
-from syntra.agents.tools import ToolRegistry, create_standard_workspace_tools
-from syntra.sandbox.runner import SandboxRunner
-from syntra.sandbox.workspace import WorkspaceManager
+
+from syntra.agents.tools import ToolRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -87,9 +86,7 @@ class MCPServer:
                     "jsonrpc": "2.0",
                     "id": req_id,
                     "result": {
-                        "content": [
-                            {"type": "text", "text": output_str}
-                        ],
+                        "content": [{"type": "text", "text": output_str}],
                         "isError": False,
                     },
                 }
@@ -98,9 +95,7 @@ class MCPServer:
                     "jsonrpc": "2.0",
                     "id": req_id,
                     "result": {
-                        "content": [
-                            {"type": "text", "text": f"Tool execution failed: {exc}"}
-                        ],
+                        "content": [{"type": "text", "text": f"Tool execution failed: {exc}"}],
                         "isError": True,
                     },
                 }

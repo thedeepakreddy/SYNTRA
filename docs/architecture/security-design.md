@@ -65,7 +65,7 @@ class CapabilityGrant(BaseModel):
     grant_id: UUID
     org_id: UUID
     agent_role: AgentRole
-    tool_name_pattern: str   # e.g. "syntra.workspace_*" or "syntra.read_file"
+    tool_name_pattern: str  # e.g. "syntra.workspace_*" or "syntra.read_file"
     is_allowed: bool
     requires_approval: bool
     path_scope_pattern: str | None = None

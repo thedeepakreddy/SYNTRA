@@ -1,6 +1,7 @@
 """Tests for SYNTRA Typer CLI."""
 
 from typer.testing import CliRunner
+
 from syntra.cli.main import app
 
 runner = CliRunner()

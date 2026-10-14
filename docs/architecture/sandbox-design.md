@@ -39,6 +39,7 @@ from pathlib import Path
 from pydantic import BaseModel
 from typing import Mapping
 
+
 class ExecutionResult(BaseModel):
     exit_code: int
     stdout: str
@@ -46,6 +47,7 @@ class ExecutionResult(BaseModel):
     duration_ms: int
     timed_out: bool
     output_truncated: bool
+
 
 class SandboxInstance(ABC):
     sandbox_id: UUID
@@ -80,6 +82,7 @@ class SandboxInstance(ABC):
     async def cleanup(self) -> None:
         """Tear down worktree and delete temporary files."""
         pass
+
 
 class SandboxProvider(ABC):
     @abstractmethod

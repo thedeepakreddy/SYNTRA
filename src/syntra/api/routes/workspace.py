@@ -1,6 +1,7 @@
 """Workspace inspection endpoints."""
 
 from fastapi import APIRouter, HTTPException, Query
+
 from syntra.api.routes.sessions import get_active_swarm
 from syntra.api.schemas import WorkspaceFileResponse
 

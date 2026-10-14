@@ -49,6 +49,7 @@ from syntra.agents.tools import Tool, ToolRegistry
 
 custom_registry = ToolRegistry()
 
+
 @custom_registry.register(
     name="query_knowledge_base",
     description="Query enterprise semantic vector database",

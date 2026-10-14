@@ -1,15 +1,9 @@
 """Comprehensive end-to-end evaluation tests for SYNTRA."""
 
 import pytest
-from syntra.checkpoints import (
-    CheckpointActionType,
-    CheckpointEngine,
-    CheckpointStatus,
-    RiskLevel,
-)
+
 from syntra.core.config import AutonomyMode
 from syntra.llm import MockLLMClient
-from syntra.sandbox import SandboxRunner, WorkspaceManager
 from syntra.swarm import SwarmEngine
 
 
@@ -33,39 +27,43 @@ async def test_self_healing_review_and_fix_loop(tmp_path):
     # 2. Planner
     mock_llm.queue_response("Task 1: Implement fibonacci function. Task 2: Add tests.")
     # 3. Coder Iteration 0 (Buggy implementation: n <= 0 returns 0, but n=1 returns 0 instead of 1)
-    mock_llm.queue_response({
-        "text": "Writing buggy fibonacci to math_svc.py",
-        "tool_calls": [
-            {
-                "id": "c-buggy",
-                "name": "write_file",
-                "arguments": {
-                    "relative_path": "math_svc.py",
-                    "content": "def fib(n):\n    if n <= 1:\n        return 0\n    return fib(n-1) + fib(n-2)\n",
-                },
-            }
-        ],
-    })
+    mock_llm.queue_response(
+        {
+            "text": "Writing buggy fibonacci to math_svc.py",
+            "tool_calls": [
+                {
+                    "id": "c-buggy",
+                    "name": "write_file",
+                    "arguments": {
+                        "relative_path": "math_svc.py",
+                        "content": "def fib(n):\n    if n <= 1:\n        return 0\n    return fib(n-1) + fib(n-2)\n",
+                    },
+                }
+            ],
+        }
+    )
     mock_llm.queue_response("Implemented initial math_svc.py")
     # 4. Tester Iteration 0
     mock_llm.queue_response("Running tests: FAILED fib(1) expected 1 got 0.")
     # 5. Reviewer Iteration 0 (REJECTS with feedback)
     mock_llm.queue_response("Code Review: REJECTED. fib(1) must return 1, not 0. Fix the base condition.")
     # 6. Coder Iteration 1 (Fixes the bug)
-    mock_llm.queue_response({
-        "text": "Fixing fibonacci base condition in math_svc.py",
-        "tool_calls": [
-            {
-                "id": "c-fix",
-                "name": "replace_content",
-                "arguments": {
-                    "relative_path": "math_svc.py",
-                    "target": "    if n <= 1:\n        return 0",
-                    "replacement": "    if n <= 0:\n        return 0\n    if n == 1:\n        return 1",
-                },
-            }
-        ],
-    })
+    mock_llm.queue_response(
+        {
+            "text": "Fixing fibonacci base condition in math_svc.py",
+            "tool_calls": [
+                {
+                    "id": "c-fix",
+                    "name": "replace_content",
+                    "arguments": {
+                        "relative_path": "math_svc.py",
+                        "target": "    if n <= 1:\n        return 0",
+                        "replacement": "    if n <= 0:\n        return 0\n    if n == 1:\n        return 1",
+                    },
+                }
+            ],
+        }
+    )
     mock_llm.queue_response("Fixed fibonacci base condition in math_svc.py.")
     # 7. Tester Iteration 1
     mock_llm.queue_response("Running tests: PASSED 5 tests, 0 failed. All green.")

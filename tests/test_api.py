@@ -2,6 +2,7 @@
 
 import httpx
 import pytest
+
 from syntra.api.app import app
 from syntra.checkpoints.engine import get_checkpoint_engine
 from syntra.checkpoints.models import CheckpointActionType

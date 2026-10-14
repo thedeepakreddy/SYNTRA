@@ -1,6 +1,7 @@
 """Tests for SYNTRA sandbox module."""
 
 import pytest
+
 from syntra.core.exceptions import SandboxError, SandboxSecurityViolationError
 from syntra.sandbox import (
     CommandSafetyValidator,

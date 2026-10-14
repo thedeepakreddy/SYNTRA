@@ -1,12 +1,30 @@
 """FastAPI application factory and middleware configuration."""
 
+import uuid
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+
 from syntra.api.routes import checkpoints, events, health, sessions, workspace
 from syntra.core.config import get_settings
-from syntra.core.logging import setup_logging
+from syntra.core.logging import correlation_id_ctx, setup_logging
 from syntra.storage.database import get_db_manager
+
+
+class CorrelationIdMiddleware(BaseHTTPMiddleware):
+    """Middleware that injects and propagates X-Correlation-ID headers across requests."""
+
+    async def dispatch(self, request: Request, call_next):
+        corr_id = request.headers.get("X-Correlation-ID") or str(uuid.uuid4())
+        token = correlation_id_ctx.set(corr_id)
+        try:
+            response: Response = await call_next(request)
+            response.headers["X-Correlation-ID"] = corr_id
+            return response
+        finally:
+            correlation_id_ctx.reset(token)
 
 
 @asynccontextmanager
@@ -35,10 +53,12 @@ def create_app() -> FastAPI:
         version="0.1.0",
         docs_url="/docs",
         redoc_url="/redoc",
+        debug=settings.debug,
         lifespan=lifespan,
     )
 
-    # CORS configuration
+    # Middleware registration
+    app.add_middleware(CorrelationIdMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],

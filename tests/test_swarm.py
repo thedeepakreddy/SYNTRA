@@ -1,6 +1,7 @@
 """Tests for Swarm orchestration and StateGraph engine."""
 
 import pytest
+
 from syntra.llm import MockLLMClient
 from syntra.swarm import StateGraph, SwarmEngine, SwarmState
 
@@ -51,19 +52,21 @@ async def test_swarm_engine_end_to_end_flow(tmp_path):
     # 2. Planner
     mock_llm.queue_response("Task 1: Create auth module. Task 2: Write tests.")
     # 3. Coder (tool call: write_file auth.py)
-    mock_llm.queue_response({
-        "text": "Writing auth.py file",
-        "tool_calls": [
-            {
-                "id": "c-auth",
-                "name": "write_file",
-                "arguments": {
-                    "relative_path": "auth.py",
-                    "content": "def authenticate(user, password):\n    return True\n",
-                },
-            }
-        ],
-    })
+    mock_llm.queue_response(
+        {
+            "text": "Writing auth.py file",
+            "tool_calls": [
+                {
+                    "id": "c-auth",
+                    "name": "write_file",
+                    "arguments": {
+                        "relative_path": "auth.py",
+                        "content": "def authenticate(user, password):\n    return True\n",
+                    },
+                }
+            ],
+        }
+    )
     mock_llm.queue_response("Finished implementing auth.py")
     # 4. Tester
     mock_llm.queue_response("Ran tests: 2 passed, 0 failed. All tests green.")
@@ -73,6 +76,7 @@ async def test_swarm_engine_end_to_end_flow(tmp_path):
     mock_llm.queue_response("Security scan complete. No critical vulnerabilities found.")
 
     from syntra.core.config import AutonomyMode
+
     engine = SwarmEngine(
         workspace_dir=tmp_path,
         llm_client=mock_llm,

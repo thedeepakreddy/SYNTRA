@@ -1,0 +1,31 @@
+tools:
+  syntra.workspace_search:
+    description: "Search text patterns in workspace files using ripgrep semantics."
+    mutation: false
+    requires_approval: false
+    timeout_seconds: 15
+  syntra.read_file:
+    description: "Read complete or sliced content from a specified workspace file."
+    mutation: false
+    requires_approval: false
+    timeout_seconds: 10
+  syntra.write_file:
+    description: "Create or replace file content inside the isolated worker sandbox."
+    mutation: true
+    requires_approval: false
+    timeout_seconds: 15
+  syntra.list_directory:
+    description: "List directory structure and file names within the workspace."
+    mutation: false
+    requires_approval: false
+    timeout_seconds: 10
+  syntra.run_command:
+    description: "Execute a shell command inside the isolated worker sandbox."
+    mutation: true
+    requires_approval: false
+    timeout_seconds: 120
+  syntra.submit_patch:
+    description: "Submit unified diff patch deliverable for independent verification."
+    mutation: true
+    requires_approval: false
+    timeout_seconds: 30

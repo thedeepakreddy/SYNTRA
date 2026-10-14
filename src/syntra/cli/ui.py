@@ -4,6 +4,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.syntax import Syntax
 from rich.table import Table
+
 from syntra.checkpoints.models import Checkpoint
 from syntra.storage.models import SessionModel
 

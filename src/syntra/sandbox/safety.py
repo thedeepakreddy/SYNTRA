@@ -1,22 +1,23 @@
 """Command safety analysis, blacklisting, and sanitization for sandbox execution."""
 
 import re
+
 from syntra.core.exceptions import SandboxSecurityViolationError
 
 # Dangerous commands and command fragments that could compromise host system
 DANGEROUS_PATTERNS = [
-    r"\brm\s+-[a-zA-Z]*[rfRF]+[a-zA-Z]*\s+/(?:\s|$|[a-zA-Z0-9_\-\.\*]+)", # rm -rf / or /etc etc
-    r"\bmkfs\b",                                 # format disk
-    r"\bfdisk\b",                                # partition disk
-    r"\bdd\s+if=",                               # direct disk overwrite
-    r":\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:",# fork bomb
-    r"\bshutdown\b",                             # system shutdown
-    r"\breboot\b",                               # system reboot
-    r"\bhalt\b",                                 # system halt
-    r"\binit\s+0\b",                             # system halt
-    r">\s*/dev/sd[a-z]",                         # raw device write
-    r">\s*/dev/nvme",                            # raw device write
-    r"\bchmod\s+-[R\s]*777\s+/(?:\s|$|[a-zA-Z0-9_\-\.\*]+)", # permission compromise
+    r"\brm\s+-[a-zA-Z]*[rfRF]+[a-zA-Z]*\s+/(?:\s|$|[a-zA-Z0-9_\-\.\*]+)",  # rm -rf / or /etc etc
+    r"\bmkfs\b",  # format disk
+    r"\bfdisk\b",  # partition disk
+    r"\bdd\s+if=",  # direct disk overwrite
+    r":\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:",  # fork bomb
+    r"\bshutdown\b",  # system shutdown
+    r"\breboot\b",  # system reboot
+    r"\bhalt\b",  # system halt
+    r"\binit\s+0\b",  # system halt
+    r">\s*/dev/sd[a-z]",  # raw device write
+    r">\s*/dev/nvme",  # raw device write
+    r"\bchmod\s+-[R\s]*777\s+/(?:\s|$|[a-zA-Z0-9_\-\.\*]+)",  # permission compromise
 ]
 
 # Sensitive environment variables to redact from sandbox process environment
@@ -52,6 +53,7 @@ class CommandSafetyValidator:
     def sanitize_env(cls, env: dict[str, str] | None = None) -> dict[str, str]:
         """Produce sanitized environment dictionary free of sensitive tokens."""
         import os
+
         base_env = dict(env or os.environ)
         sanitized = {}
         for k, v in base_env.items():

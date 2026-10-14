@@ -178,6 +178,7 @@ class AgentRole(str, Enum):
     CODE_REVIEWER = "code_reviewer"
     DEBUGGING_SPECIALIST = "debugging_specialist"
 
+
 class AgentInvocationRequest(BaseModel):
     invocation_id: UUID = Field(default_factory=uuid4)
     mission_id: UUID
@@ -189,6 +190,7 @@ class AgentInvocationRequest(BaseModel):
     budget_reservation_tokens: int = Field(default=32768)
     sandbox_id: UUID | None = None
     timeout_seconds: int = Field(default=300)
+
 
 class AgentInvocationResult(BaseModel):
     invocation_id: UUID

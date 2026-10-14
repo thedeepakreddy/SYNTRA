@@ -1,6 +1,7 @@
 """Pre-configured multi-agent software engineering workflows."""
 
 import logging
+
 from syntra.agents.roles import (
     ArchitectAgent,
     CoderAgent,
@@ -74,7 +75,7 @@ def create_feature_workflow(
         # Parse basic tasks
         state.tasks = [
             SwarmTask(
-                id=f"task-1",
+                id="task-1",
                 title="Implement Core Architecture",
                 description=res.output[:300],
                 assigned_role="coder",
@@ -86,7 +87,7 @@ def create_feature_workflow(
         state.update_stage("coding", "coder")
         feedback_context = ""
         if state.review_comments:
-            feedback_context = f"\nPrevious review feedback to address:\n" + "\n".join(state.review_comments)
+            feedback_context = "\nPrevious review feedback to address:\n" + "\n".join(state.review_comments)
 
         prompt = (
             f"Implement the solution for objective:\n{state.objective}\n"
@@ -106,7 +107,10 @@ def create_feature_workflow(
             f"Ensure edge cases and core requirements for '{state.objective}' are verified."
         )
         res = await tester.run_task(prompt)
-        state.test_results = {"summary": res.output, "passed": "error" not in res.output.lower() and "failed" not in res.output.lower()}
+        state.test_results = {
+            "summary": res.output,
+            "passed": "error" not in res.output.lower() and "failed" not in res.output.lower(),
+        }
         return state
 
     async def reviewer_node(state: SwarmState) -> SwarmState:
@@ -127,8 +131,8 @@ def create_feature_workflow(
     async def security_node(state: SwarmState) -> SwarmState:
         state.update_stage("security_scan", "security")
         prompt = (
-            f"Perform a security audit on the workspace.\n"
-            f"Check for secret leaks, unsafe commands, or improper validations."
+            "Perform a security audit on the workspace.\n"
+            "Check for secret leaks, unsafe commands, or improper validations."
         )
         res = await security.run_task(prompt)
         state.security_passed = "vulnerability found" not in res.output.lower()

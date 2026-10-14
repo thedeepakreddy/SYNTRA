@@ -4,6 +4,7 @@ import logging
 import uuid
 from pathlib import Path
 from typing import Any
+
 from syntra.agents.roles import (
     ArchitectAgent,
     CoderAgent,
@@ -15,7 +16,7 @@ from syntra.agents.roles import (
 )
 from syntra.agents.tools import create_standard_workspace_tools
 from syntra.checkpoints.engine import CheckpointEngine, get_checkpoint_engine
-from syntra.core.config import AutonomyMode, get_settings
+from syntra.core.config import get_settings
 from syntra.core.events import Event, EventType, get_event_bus
 from syntra.llm.client import BaseLLMClient, GeminiClient
 from syntra.sandbox.runner import SandboxRunner
@@ -95,7 +96,11 @@ class SwarmEngine:
 
         try:
             final_state = await workflow.execute(state)
-            ev_type = EventType.SESSION_COMPLETED if final_state.is_completed and not final_state.error else EventType.SESSION_FAILED
+            ev_type = (
+                EventType.SESSION_COMPLETED
+                if final_state.is_completed and not final_state.error
+                else EventType.SESSION_FAILED
+            )
             await get_event_bus().publish(
                 Event(
                     type=ev_type,

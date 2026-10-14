@@ -1,8 +1,9 @@
 """Hybrid autonomy policy evaluation and risk assessment."""
 
 import re
-from syntra.core.config import AutonomyMode
+
 from syntra.checkpoints.models import CheckpointActionType, RiskLevel
+from syntra.core.config import AutonomyMode
 
 # Commands that are always high risk even in semi-autonomous mode
 HIGH_RISK_COMMAND_PATTERNS = [

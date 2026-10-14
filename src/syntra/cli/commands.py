@@ -2,9 +2,11 @@
 
 import asyncio
 from pathlib import Path
+
 import typer
 import uvicorn
 from rich.panel import Panel
+
 from syntra.checkpoints.engine import get_checkpoint_engine
 from syntra.cli.ui import (
     console,
@@ -22,13 +24,20 @@ from syntra.swarm.engine import SwarmEngine
 
 def run_command(
     objective: str = typer.Argument(..., help="Software engineering task or feature objective"),
-    workspace: str | None = typer.Option(None, "--workspace", "-w", help="Target workspace path (defaults to sandboxed temp)"),
-    mode: str = typer.Option("semi_autonomous", "--mode", "-m", help="Autonomy mode: autonomous, semi_autonomous, supervised, strict_approval"),
+    workspace: str | None = typer.Option(
+        None, "--workspace", "-w", help="Target workspace path (defaults to sandboxed temp)"
+    ),
+    mode: str = typer.Option(
+        "semi_autonomous",
+        "--mode",
+        "-m",
+        help="Autonomy mode: autonomous, semi_autonomous, supervised, strict_approval",
+    ),
     iterations: int = typer.Option(3, "--iterations", "-i", help="Maximum review/test self-healing cycles"),
 ) -> None:
     """Run an autonomous multi-agent engineering workflow."""
     render_banner()
-    console.print(f"[bold green]Starting Swarm Execution...[/bold green]")
+    console.print("[bold green]Starting Swarm Execution...[/bold green]")
     console.print(f"[bold]Objective:[/bold] {objective}")
     console.print(f"[bold]Autonomy Mode:[/bold] {mode}")
 
@@ -42,14 +51,16 @@ def run_command(
         elif event.type == EventType.AGENT_TOOL_CALL_STARTED:
             console.print(f"  [yellow]⚡ Calling Tool:[/yellow] {event.data.get('tool')} {event.data.get('arguments')}")
         elif event.type == EventType.CHECKPOINT_REQUESTED:
-            console.print(Panel(
-                f"[bold red]CHECKPOINT REQUIRED[/bold red]\n"
-                f"Action: {event.data.get('action_type')}\n"
-                f"Risk: {event.data.get('risk_level')}\n"
-                f"Description: {event.data.get('description')}\n"
-                f"Use `syntra checkpoint resolve {event.data.get('checkpoint_id')} --decision approve`",
-                border_style="red",
-            ))
+            console.print(
+                Panel(
+                    f"[bold red]CHECKPOINT REQUIRED[/bold red]\n"
+                    f"Action: {event.data.get('action_type')}\n"
+                    f"Risk: {event.data.get('risk_level')}\n"
+                    f"Description: {event.data.get('description')}\n"
+                    f"Use `syntra checkpoint resolve {event.data.get('checkpoint_id')} --decision approve`",
+                    border_style="red",
+                )
+            )
 
     get_event_bus().subscribe(log_event)
 
@@ -64,17 +75,21 @@ def run_command(
     state = asyncio.run(_run())
 
     if state.is_completed and not state.error:
-        console.print(Panel(
-            f"[bold green]✓ Swarm Workflow Successfully Completed![/bold green]\n"
-            f"Review Status: {'Approved' if state.review_approved else 'Max iterations reached'}\n"
-            f"Security Status: {'Passed' if state.security_passed else 'Warnings recorded'}",
-            border_style="green",
-        ))
+        console.print(
+            Panel(
+                f"[bold green]✓ Swarm Workflow Successfully Completed![/bold green]\n"
+                f"Review Status: {'Approved' if state.review_approved else 'Max iterations reached'}\n"
+                f"Security Status: {'Passed' if state.security_passed else 'Warnings recorded'}",
+                border_style="green",
+            )
+        )
     else:
-        console.print(Panel(
-            f"[bold red]✗ Swarm Execution Terminated with Error[/bold red]\n{state.error}",
-            border_style="red",
-        ))
+        console.print(
+            Panel(
+                f"[bold red]✗ Swarm Execution Terminated with Error[/bold red]\n{state.error}",
+                border_style="red",
+            )
+        )
 
 
 def serve_command(
@@ -90,6 +105,7 @@ def serve_command(
 
 def list_sessions_command(limit: int = typer.Option(20, "--limit", "-l")) -> None:
     """List historical engineering sessions."""
+
     async def _fetch():
         db = get_db_manager()
         async with db.session() as s:
@@ -119,7 +135,9 @@ def resolve_checkpoint_command(
         return await engine.resolve(checkpoint_id=checkpoint_id, decision=decision, feedback=feedback or None)
 
     resolved = asyncio.run(_resolve())
-    console.print(f"[bold green]Checkpoint {resolved.checkpoint_id[:8]} resolved as {resolved.status.value.upper()}[/bold green]")
+    console.print(
+        f"[bold green]Checkpoint {resolved.checkpoint_id[:8]} resolved as {resolved.status.value.upper()}[/bold green]"
+    )
 
 
 def status_command() -> None:
@@ -158,4 +176,3 @@ def mcp_serve_command(
 
     server = MCPServer(tools=tools)
     asyncio.run(server.run_stdio())
-

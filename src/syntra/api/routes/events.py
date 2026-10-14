@@ -1,9 +1,10 @@
 """Event logging and real-time WebSocket streaming endpoints."""
 
-import asyncio
 import json
 import logging
+
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
 from syntra.core.events import get_event_bus
 
 logger = logging.getLogger(__name__)

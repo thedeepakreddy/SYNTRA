@@ -1,14 +1,15 @@
 """Google GenAI SDK client integration and LLM client interface."""
 
 import abc
-import json
 import logging
 import time
 from typing import Any, TypeVar
+
 from pydantic import BaseModel
+
 from syntra.core.config import get_settings
 from syntra.core.exceptions import LLMError, LLMQuotaExceededError
-from syntra.core.telemetry import TokenUsage, get_telemetry
+from syntra.core.telemetry import get_telemetry
 from syntra.llm.models import (
     LLMMessage,
     LLMResponse,
@@ -63,6 +64,7 @@ class GeminiClient(BaseLLMClient):
         if self.api_key and not self.api_key.startswith("your_"):
             try:
                 from google import genai
+
                 self._client = genai.Client(api_key=self.api_key)
             except Exception as exc:
                 logger.warning("Failed to initialize Google GenAI SDK client: %s", exc)
@@ -77,6 +79,7 @@ class GeminiClient(BaseLLMClient):
                     "or pass a valid key to GeminiClient."
                 )
             from google import genai
+
             self._client = genai.Client(api_key=key)
         return self._client
 
@@ -125,7 +128,7 @@ class GeminiClient(BaseLLMClient):
             decl = types.FunctionDeclaration(
                 name=tool.name,
                 description=tool.description,
-                parameters=tool.parameters,
+                parameters=tool.parameters,  # type: ignore[arg-type]
             )
             function_declarations.append(decl)
 
@@ -152,6 +155,7 @@ class GeminiClient(BaseLLMClient):
         contents = self._convert_messages(messages)
 
         from google.genai import types
+
         config = types.GenerateContentConfig(
             temperature=temp,
             max_output_tokens=max_output_tokens,
@@ -178,6 +182,7 @@ class GeminiClient(BaseLLMClient):
                 if is_quota and attempt < retries:
                     logger.warning("Quota hit, backing off %0.1fs (attempt %d/%d)", backoff, attempt + 1, retries)
                     import asyncio
+
                     await asyncio.sleep(backoff)
                     backoff *= 2.0
                     continue
@@ -203,7 +208,7 @@ class GeminiClient(BaseLLMClient):
                         args = dict(fc.args) if hasattr(fc, "args") and fc.args else {}
                         tool_calls.append(
                             ToolCall(
-                                id=getattr(fc, "id", "") or f"call_{int(time.time()*1000)}",
+                                id=getattr(fc, "id", "") or f"call_{int(time.time() * 1000)}",
                                 name=fc.name,
                                 arguments=args,
                             )
@@ -253,6 +258,7 @@ class GeminiClient(BaseLLMClient):
         contents = self._convert_messages(messages)
 
         from google.genai import types
+
         config = types.GenerateContentConfig(
             temperature=temperature if temperature is not None else 0.1,
             response_mime_type="application/json",

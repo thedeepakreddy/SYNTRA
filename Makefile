@@ -1,4 +1,23 @@
-.PHONY: bootstrap doctor smoke-test install test test-cov run serve status compose-up compose-down docker-up docker-down clean
+# ==============================================================================
+# SYNTRA Project Automation Makefile
+# Synchronized Intelligence for Autonomous Engineering
+# ==============================================================================
+
+.PHONY: help bootstrap doctor up down test test-cov lint typecheck smoke-test clean run serve status
+
+help:
+	@echo "SYNTRA Automation Commands:"
+	@echo "  make bootstrap   - Idempotently bootstrap local Python workspace and dependencies"
+	@echo "  make doctor      - Run comprehensive system diagnostics and prerequisite checks"
+	@echo "  make up          - Start containerized services (PostgreSQL, Redis, MinIO) via Compose"
+	@echo "  make down        - Stop containerized infrastructure services"
+	@echo "  make test        - Run fast unit and contract test suites"
+	@echo "  make test-cov    - Run test suite with line-level coverage reporting"
+	@echo "  make lint        - Run ruff code formatter and linter checks"
+	@echo "  make typecheck   - Run mypy strict static type analysis"
+	@echo "  make smoke-test  - Run end-to-end smoke test sanity suite"
+	@echo "  make serve       - Run FastAPI control plane server in development mode"
+	@echo "  make clean       - Remove test caches, temporary files, and sandbox runtimes"
 
 bootstrap:
 	bash scripts/bootstrap.sh
@@ -6,17 +25,29 @@ bootstrap:
 doctor:
 	bash scripts/doctor.sh
 
-smoke-test:
-	bash scripts/smoke-test.sh
+up:
+	docker compose up -d
 
-install:
-	uv pip install -e ".[dev]"
+down:
+	docker compose down
 
 test:
+	uv run pytest tests/unit tests/contract tests/test_phase1_initialization.py
+
+test-all:
 	uv run pytest
 
 test-cov:
 	uv run pytest --cov=syntra --cov-report=term-missing
+
+lint:
+	uv run ruff check .
+
+typecheck:
+	uv run mypy src/syntra
+
+smoke-test:
+	bash scripts/smoke-test.sh
 
 run:
 	uv run syntra run "$(TASK)"
@@ -26,16 +57,6 @@ serve:
 
 status:
 	uv run syntra status
-
-compose-up:
-	docker compose up -d
-
-compose-down:
-	docker compose down
-
-docker-up: compose-up
-
-docker-down: compose-down
 
 clean:
 	rm -rf .pytest_cache .coverage htmlcov .syntra/sandboxes/* *.sqlite3

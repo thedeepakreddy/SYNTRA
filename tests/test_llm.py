@@ -2,16 +2,14 @@
 
 import pytest
 from pydantic import BaseModel
+
 from syntra.core.exceptions import LLMError
 from syntra.llm import (
     GeminiClient,
     LLMMessage,
-    LLMResponse,
     MessageRole,
     MockLLMClient,
     ModelRouter,
-    ToolCall,
-    ToolDefinition,
     get_role_prompt,
 )
 
@@ -53,12 +51,12 @@ async def test_mock_llm_client_simple_response():
 @pytest.mark.asyncio
 async def test_mock_llm_client_tool_call():
     client = MockLLMClient()
-    client.queue_response({
-        "text": "I will inspect the workspace files.",
-        "tool_calls": [
-            {"id": "c1", "name": "list_files", "arguments": {"path": "."}}
-        ]
-    })
+    client.queue_response(
+        {
+            "text": "I will inspect the workspace files.",
+            "tool_calls": [{"id": "c1", "name": "list_files", "arguments": {"path": "."}}],
+        }
+    )
 
     messages = [LLMMessage(role=MessageRole.USER, content="List the project files")]
     resp = await client.generate(messages, agent_role="coder")

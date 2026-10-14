@@ -1,0 +1,38 @@
+skills_registry:
+  directory: "skills"
+  autoload: false
+  validate_on_startup: true
+
+skills:
+  - id: "requirements-analysis"
+    enabled: true
+  - id: "system-architecture"
+    enabled: true
+  - id: "task-decomposition"
+    enabled: true
+  - id: "backend-api-development"
+    enabled: true
+  - id: "frontend-development"
+    enabled: true
+  - id: "database-engineering"
+    enabled: true
+  - id: "test-driven-development"
+    enabled: true
+  - id: "debugging-and-root-cause-analysis"
+    enabled: true
+  - id: "code-review"
+    enabled: true
+  - id: "security-review"
+    enabled: true
+  - id: "git-workflow"
+    enabled: true
+  - id: "devops-and-ci"
+    enabled: true
+  - id: "api-contract-testing"
+    enabled: true
+  - id: "dependency-management"
+    enabled: true
+  - id: "integration-testing"
+    enabled: true
+  - id: "documentation-generation"
+    enabled: true

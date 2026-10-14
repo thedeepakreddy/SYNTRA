@@ -41,10 +41,10 @@ if command -v python3 >/dev/null 2>&1; then
     PY_VER=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")')
     PY_MAJOR=$(python3 -c 'import sys; print(sys.version_info.major)')
     PY_MINOR=$(python3 -c 'import sys; print(sys.version_info.minor)')
-    if [ "${PY_MAJOR}" -ge 3 ] && [ "${PY_MINOR}" -ge 11 ]; then
+    if [ "${PY_MAJOR}" -ge 3 ] && [ "${PY_MINOR}" -ge 12 ]; then
         check_pass "Python runtime: ${PY_VER}"
     else
-        check_fail "Python runtime: ${PY_VER} (requires 3.11+)"
+        check_fail "Python runtime: ${PY_VER} (requires 3.12+)"
     fi
 else
     check_fail "Python 3 is not installed or not in PATH"
@@ -70,7 +70,7 @@ if command -v docker >/dev/null 2>&1; then
     if docker info >/dev/null 2>&1; then
         check_pass "Docker daemon is running"
     else
-        check_warn "Docker daemon is not running (needed for compose services)"
+        check_warn "Docker daemon is not running (needed for containerized services)"
     fi
 else
     check_warn "Docker CLI is not installed (needed for full containerized stack)"
@@ -94,7 +94,7 @@ fi
 
 echo ""
 echo "3. SYNTRA Python Package & Dependencies:"
-if uv run python -c "import syntra; import fastapi; import sqlalchemy; import redis; import minio; import yaml" >/dev/null 2>&1; then
+if uv run python -c "import syntra; import fastapi; import sqlalchemy; import redis; import minio; import yaml; import alembic; import structlog; import ruff; import mypy" >/dev/null 2>&1; then
     check_pass "Core dependencies import cleanly"
 else
     check_fail "Failed to import core dependencies in virtual environment"

@@ -1,6 +1,7 @@
 """Scaffolding utility for SYNTRA skills system."""
 
 import os
+
 import yaml
 
 SKILLS_DEFINITIONS = [
@@ -22,7 +23,7 @@ Transform raw user requests into an unambiguous, structured Product Requirements
 2. **Ambiguity Resolution**: Identify implicit assumptions, unstated edge cases, and missing inputs.
 3. **Acceptance Criteria**: Formulate verifiable criteria in Given-When-Then format.
 4. **Non-Functional Bounds**: Establish latency, security, concurrency, and persistence limits.
-"""
+""",
     },
     {
         "dir": "system-architecture",
@@ -41,7 +42,7 @@ Produce rigorous architecture decision records (ADRs) and component diagrams.
 1. **Boundary Definition**: Enforce strict separation between Domain, Contracts, and Infrastructure.
 2. **Data Flow Modeling**: Define state transitions, transactional boundaries, and outbox patterns.
 3. **Decision Records**: Formulate context, decision, consequences, and alternatives considered.
-"""
+""",
     },
     {
         "dir": "task-decomposition",
@@ -60,7 +61,7 @@ Decompose system specifications into parallelizable, dependency-ordered engineer
 1. **Atomicity**: Ensure each task delivers a distinct, independently testable change.
 2. **DAG Validation**: Enforce cycle-free topological order.
 3. **Role Assignment**: Assign specialized agent personas based on task domain.
-"""
+""",
     },
     {
         "dir": "backend-api-development",
@@ -79,7 +80,7 @@ Develop production-grade FastAPI endpoints with Pydantic v2 schemas and pure dom
 1. **Schema First**: Define input and output Pydantic v2 models.
 2. **Domain Encapsulation**: Keep business rules inside domain entities or services.
 3. **Error Boundaries**: Handle known exceptions gracefully with RFC 7807 problem details.
-"""
+""",
     },
     {
         "dir": "frontend-development",
@@ -98,7 +99,7 @@ Develop client components and state flows inside the target repository. Note: SY
 1. **Target Repository Focus**: Execute changes strictly inside the designated workspace.
 2. **Type Safety**: Use TypeScript/modern JavaScript with strict checks.
 3. **Accessibility**: Implement accessible components with automated UI testing.
-"""
+""",
     },
     {
         "dir": "database-engineering",
@@ -117,7 +118,7 @@ Architect reliable relational models with SQLAlchemy 2.x and manage zero-downtim
 1. **Relational Constraints**: Use explicit foreign keys, check constraints, and unique indexes.
 2. **Concurrency**: Implement optimistic locking and transactional outbox.
 3. **Reversible Migrations**: Provide deterministic upgrade() and downgrade() scripts.
-"""
+""",
     },
     {
         "dir": "test-driven-development",
@@ -136,7 +137,7 @@ Write failing tests before code, implement minimal passing logic, and refactor u
 1. **Test First**: Formulate edge cases, boundary conditions, and invalid inputs before code.
 2. **Isolation**: Use mock doubles strictly for external network dependencies.
 3. **Coverage & Assertions**: Verify code paths with high precision assertions.
-"""
+""",
     },
     {
         "dir": "debugging-and-root-cause-analysis",
@@ -155,7 +156,7 @@ Systematically isolate the root cause of test failures or runtime crashes withou
 1. **Trace Analysis**: Inspect stderr, stdout, and stack traces.
 2. **Minimal Reproducer**: Write an automated test reproducing the exact failure.
 3. **Targeted Remediation**: Apply the minimal surgical patch to fix the defect.
-"""
+""",
     },
     {
         "dir": "code-review",
@@ -174,7 +175,7 @@ Provide rigorous peer review on proposed patches before merge approval.
 1. **Verification Check**: Ensure tests pass and cover modified code.
 2. **Design Conformance**: Verify changes respect module boundaries and coding standards.
 3. **Structured Verdict**: Issue APPROVED or REJECTED with specific, actionable critique.
-"""
+""",
     },
     {
         "dir": "security-review",
@@ -193,7 +194,7 @@ Perform static and dynamic security assessments of code changes and dependency u
 1. **Threat Vectors**: Inspect for SQL injection, command execution, path traversal, and SSRF.
 2. **Secret Detection**: Verify no hardcoded credentials, API keys, or tokens exist in diffs.
 3. **Authorization**: Confirm tenant isolation and role permissions are strictly enforced.
-"""
+""",
     },
     {
         "dir": "git-workflow",
@@ -212,7 +213,7 @@ Manage version control operations cleanly inside isolated worker sandboxes.
 1. **Worktree Isolation**: Create separate worktrees per task to eliminate race conditions.
 2. **Patch Extraction**: Generate clean unified diffs for verification.
 3. **Commit Quality**: Enforce Conventional Commits (feat, fix, chore).
-"""
+""",
     },
     {
         "dir": "devops-and-ci",
@@ -231,7 +232,7 @@ Create reproducible deployment artifacts, container definitions, and CI automati
 1. **Multi-Stage Builds**: Keep container images minimal, non-root, and secure.
 2. **Health Probes**: Implement liveness and readiness probes for all services.
 3. **Fast Pipelines**: Optimize CI caches for dependencies and test suites.
-"""
+""",
     },
     {
         "dir": "api-contract-testing",
@@ -250,7 +251,7 @@ Guarantee that API implementations adhere strictly to their published contracts 
 1. **Schema Comparison**: Validate runtime JSON responses against Pydantic/OpenAPI specs.
 2. **Status Codes**: Confirm error scenarios return appropriate HTTP status codes.
 3. **Idempotency**: Test that repeated requests behave according to HTTP semantics.
-"""
+""",
     },
     {
         "dir": "dependency-management",
@@ -269,7 +270,7 @@ Manage Python and platform dependencies deterministically using uv and pinned lo
 1. **Minimal Additions**: Only add dependencies with proven architectural necessity.
 2. **Deterministic Locking**: Maintain synchronized uv.lock with SHA-256 hashes.
 3. **Vulnerability Audits**: Scan for CVEs and unmaintained libraries.
-"""
+""",
     },
     {
         "dir": "integration-testing",
@@ -288,7 +289,7 @@ Test end-to-end flows involving real databases, Redis queues, and local MinIO st
 1. **Real Infrastructure**: Test against running Compose services where appropriate.
 2. **State Cleanup**: Ensure tests clean up databases or run inside isolated transactions.
 3. **Asynchronous Verification**: Test async message delivery and event stream ordering.
-"""
+""",
     },
     {
         "dir": "documentation-generation",
@@ -307,8 +308,8 @@ Maintain comprehensive, accurate, and up-to-date documentation across all phases
 1. **Clarity & Structure**: Use concise GitHub-flavored markdown with diagrams.
 2. **Accuracy**: Reflect actual implementation details, verified by automated tests.
 3. **Traceability**: Link requirements, architecture decisions, and code files directly.
-"""
-    }
+""",
+    },
 ]
 
 

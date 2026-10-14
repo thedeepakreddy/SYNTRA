@@ -1,7 +1,9 @@
 """Tests for SYNTRA hybrid autonomy checkpoints."""
 
 import asyncio
+
 import pytest
+
 from syntra.checkpoints import (
     CheckpointActionType,
     CheckpointEngine,
@@ -18,22 +20,31 @@ def test_checkpoint_policy_risk_evaluation():
     assert CheckpointPolicy.evaluate_risk(CheckpointActionType.GIT_PUSH) == RiskLevel.CRITICAL
 
     # High-risk command
-    assert CheckpointPolicy.evaluate_risk(
-        CheckpointActionType.COMMAND_EXECUTION,
-        command="git reset --hard HEAD~1",
-    ) == RiskLevel.HIGH
+    assert (
+        CheckpointPolicy.evaluate_risk(
+            CheckpointActionType.COMMAND_EXECUTION,
+            command="git reset --hard HEAD~1",
+        )
+        == RiskLevel.HIGH
+    )
 
     # Safe command
-    assert CheckpointPolicy.evaluate_risk(
-        CheckpointActionType.COMMAND_EXECUTION,
-        command="pytest tests/",
-    ) == RiskLevel.MEDIUM
+    assert (
+        CheckpointPolicy.evaluate_risk(
+            CheckpointActionType.COMMAND_EXECUTION,
+            command="pytest tests/",
+        )
+        == RiskLevel.MEDIUM
+    )
 
     # Config file edit
-    assert CheckpointPolicy.evaluate_risk(
-        CheckpointActionType.FILE_WRITE,
-        path="src/config.py",
-    ) == RiskLevel.HIGH
+    assert (
+        CheckpointPolicy.evaluate_risk(
+            CheckpointActionType.FILE_WRITE,
+            path="src/config.py",
+        )
+        == RiskLevel.HIGH
+    )
 
 
 def test_checkpoint_policy_mode_gating():

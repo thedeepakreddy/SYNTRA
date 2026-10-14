@@ -4,11 +4,12 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from typing import Any
+
 from syntra.agents.context import AgentContext
 from syntra.agents.tools import ToolRegistry
 from syntra.core.config import get_settings
 from syntra.core.events import Event, EventType, get_event_bus
-from syntra.core.exceptions import AgentError, AgentMaxStepsExceededError
+from syntra.core.exceptions import AgentMaxStepsExceededError
 from syntra.llm.client import BaseLLMClient
 from syntra.llm.models import LLMMessage, MessageRole, ToolCall
 from syntra.llm.prompts import get_role_prompt

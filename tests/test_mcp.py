@@ -1,6 +1,7 @@
 """Tests for SYNTRA Model Context Protocol (MCP) server."""
 
 import pytest
+
 from syntra.agents.tools import create_standard_workspace_tools
 from syntra.mcp.server import MCPServer
 from syntra.sandbox.runner import SandboxRunner

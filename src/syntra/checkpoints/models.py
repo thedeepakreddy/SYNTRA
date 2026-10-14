@@ -4,11 +4,13 @@ import uuid
 from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
+
 from pydantic import BaseModel, Field
 
 
 class RiskLevel(str, Enum):
     """Risk severity associated with a proposed agent action."""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -17,6 +19,7 @@ class RiskLevel(str, Enum):
 
 class CheckpointStatus(str, Enum):
     """Lifecycle status of a checkpoint."""
+
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
@@ -26,6 +29,7 @@ class CheckpointStatus(str, Enum):
 
 class CheckpointActionType(str, Enum):
     """Types of actions that may trigger a checkpoint."""
+
     FILE_WRITE = "file_write"
     FILE_PATCH = "file_patch"
     COMMAND_EXECUTION = "command_execution"

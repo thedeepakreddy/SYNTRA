@@ -1,0 +1,12 @@
+mcp:
+  protocol_version: "2024-11-05"
+  server_name: "syntra"
+  server_version: "0.1.0"
+  stdio_timeout_seconds: 30
+  sse_timeout_seconds: 60
+
+servers:
+  syntra:
+    enabled: true
+    transport: "stdio"
+    description: "Internal platform tools for workspace inspection, reading, editing, and test execution."

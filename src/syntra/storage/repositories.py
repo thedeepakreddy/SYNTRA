@@ -2,12 +2,13 @@
 
 import json
 from datetime import UTC, datetime
+
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from syntra.checkpoints.models import Checkpoint, CheckpointActionType, CheckpointStatus, RiskLevel
-from syntra.core.events import Event, EventType
+
+from syntra.checkpoints.models import Checkpoint
+from syntra.core.events import Event
 from syntra.storage.models import (
-    ArtifactModel,
     CheckpointModel,
     EventModel,
     SessionModel,

@@ -1,16 +1,16 @@
 """Swarm shared blackboard state and execution status."""
 
-from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
-from pydantic import BaseModel, Field
 
+from pydantic import BaseModel, Field
 
 from syntra.core.config import AutonomyMode
 
 
 class SwarmTask(BaseModel):
     """An individual engineering task within the swarm plan."""
+
     id: str
     title: str
     description: str

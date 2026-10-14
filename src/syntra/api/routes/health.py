@@ -1,10 +1,12 @@
 """Healthcheck, readiness probes, and telemetry endpoints."""
 
 import asyncio
-from datetime import datetime, timezone
 import time
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Response, status
 from sqlalchemy import text
+
 from syntra.api.schemas import ComponentHealth, SystemHealthResponse, SystemReadinessResponse
 from syntra.core.config import get_settings
 from syntra.core.telemetry import get_telemetry
@@ -13,6 +15,7 @@ from syntra.storage.database import get_db_manager
 router = APIRouter(tags=["health"])
 
 
+@router.get("/v1/health", response_model=SystemHealthResponse)
 @router.get("/health", response_model=SystemHealthResponse)
 @router.get("/api/health", response_model=SystemHealthResponse)
 async def health_check() -> SystemHealthResponse:
@@ -29,6 +32,7 @@ async def health_check() -> SystemHealthResponse:
     )
 
 
+@router.get("/v1/ready", response_model=SystemReadinessResponse)
 @router.get("/health/ready", response_model=SystemReadinessResponse)
 @router.get("/api/health/ready", response_model=SystemReadinessResponse)
 async def readiness_check(response: Response) -> SystemReadinessResponse:
@@ -41,7 +45,7 @@ async def readiness_check(response: Response) -> SystemReadinessResponse:
     db_start = time.perf_counter()
     try:
         db_mgr = get_db_manager()
-        async with db_mgr.get_session() as session:
+        async with db_mgr.session() as session:
             await session.execute(text("SELECT 1"))
         db_latency = (time.perf_counter() - db_start) * 1000
         components["database"] = ComponentHealth(
@@ -60,6 +64,7 @@ async def readiness_check(response: Response) -> SystemReadinessResponse:
     redis_start = time.perf_counter()
     try:
         import redis.asyncio as aioredis
+
         client = aioredis.from_url(
             settings.redis_url,
             socket_connect_timeout=1.5,
@@ -82,8 +87,9 @@ async def readiness_check(response: Response) -> SystemReadinessResponse:
     # 3. MinIO / S3 Object Storage Connectivity Probe
     minio_start = time.perf_counter()
     try:
-        from minio import Minio
         import urllib3
+        from minio import Minio
+
         endpoint = settings.s3_endpoint
         if "://" in endpoint:
             endpoint = endpoint.split("://")[1]
@@ -92,7 +98,7 @@ async def readiness_check(response: Response) -> SystemReadinessResponse:
             timeout=urllib3.Timeout(connect=0.5, read=0.5),
             retries=False,
         )
-        client = Minio(
+        minio_client = Minio(
             endpoint=endpoint,
             access_key=settings.s3_access_key,
             secret_key=settings.s3_secret_key,
@@ -101,7 +107,7 @@ async def readiness_check(response: Response) -> SystemReadinessResponse:
         )
         loop = asyncio.get_running_loop()
         await asyncio.wait_for(
-            loop.run_in_executor(None, client.list_buckets),
+            loop.run_in_executor(None, minio_client.list_buckets),
             timeout=1.0,
         )
         minio_latency = (time.perf_counter() - minio_start) * 1000

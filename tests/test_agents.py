@@ -1,15 +1,14 @@
 """Tests for SYNTRA agent framework."""
 
 import pytest
+
 from syntra.agents import (
     AgentContext,
     AgentMemory,
-    BaseAgent,
     CoderAgent,
-    ToolRegistry,
     create_standard_workspace_tools,
 )
-from syntra.llm import LLMMessage, MessageRole, MockLLMClient
+from syntra.llm import MockLLMClient
 from syntra.sandbox import SandboxRunner, WorkspaceManager
 
 
@@ -68,19 +67,21 @@ async def test_agent_react_loop_with_tools(tmp_path):
 
     llm = MockLLMClient()
     # Step 1: LLM decides to call tool 'write_file'
-    llm.queue_response({
-        "text": "I will create index.py",
-        "tool_calls": [
-            {
-                "id": "call-1",
-                "name": "write_file",
-                "arguments": {
-                    "relative_path": "index.py",
-                    "content": "print('SYNTRA is active')\n",
-                },
-            }
-        ],
-    })
+    llm.queue_response(
+        {
+            "text": "I will create index.py",
+            "tool_calls": [
+                {
+                    "id": "call-1",
+                    "name": "write_file",
+                    "arguments": {
+                        "relative_path": "index.py",
+                        "content": "print('SYNTRA is active')\n",
+                    },
+                }
+            ],
+        }
+    )
     # Step 2: LLM finishes task
     llm.queue_response("I have successfully created index.py.")
 

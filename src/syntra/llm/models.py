@@ -2,12 +2,15 @@
 
 from enum import Enum
 from typing import Any
+
 from pydantic import BaseModel, Field
+
 from syntra.core.telemetry import TokenUsage
 
 
 class MessageRole(str, Enum):
     """Message roles for conversational context."""
+
     SYSTEM = "system"
     USER = "user"
     ASSISTANT = "assistant"
@@ -16,6 +19,7 @@ class MessageRole(str, Enum):
 
 class ModelTier(str, Enum):
     """Model selection tiers."""
+
     FAST = "gemini-2.0-flash-lite"
     BALANCED = "gemini-2.5-flash"
     REASONING = "gemini-2.5-pro"
@@ -23,6 +27,7 @@ class ModelTier(str, Enum):
 
 class ToolCall(BaseModel):
     """Represents a function/tool invocation request from the model."""
+
     id: str = Field(default="")
     name: str
     arguments: dict[str, Any] = Field(default_factory=dict)
@@ -30,6 +35,7 @@ class ToolCall(BaseModel):
 
 class ToolResult(BaseModel):
     """Represents the output from executing a tool."""
+
     call_id: str
     name: str
     output: Any
@@ -38,6 +44,7 @@ class ToolResult(BaseModel):
 
 class LLMMessage(BaseModel):
     """Single message in the LLM conversation history."""
+
     role: MessageRole
     content: str = ""
     tool_calls: list[ToolCall] = Field(default_factory=list)
@@ -47,6 +54,7 @@ class LLMMessage(BaseModel):
 
 class LLMResponse(BaseModel):
     """Unified response from LLM generation."""
+
     text: str = ""
     tool_calls: list[ToolCall] = Field(default_factory=list)
     usage: TokenUsage = Field(default_factory=TokenUsage)
@@ -57,6 +65,7 @@ class LLMResponse(BaseModel):
 
 class ToolDefinition(BaseModel):
     """Specification of a tool exposed to the LLM."""
+
     name: str
     description: str
     parameters: dict[str, Any]  # JSON Schema dict

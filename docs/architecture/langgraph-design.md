@@ -131,6 +131,7 @@ SYNTRA leverages LangGraph's native `interrupt()` primitive combined with the Po
 ```python
 from langgraph.types import interrupt
 
+
 def plan_approval_node(state: MissionState) -> dict:
     """Pause execution graph and await human decision."""
     # 1. Authoritative record created in PostgreSQL
@@ -141,11 +142,13 @@ def plan_approval_node(state: MissionState) -> dict:
     )
 
     # 2. Yield control via LangGraph interrupt
-    decision = interrupt({
-        "approval_id": str(approval_record.id),
-        "prompt": "Please review the proposed task DAG.",
-        "plan_digest": state["plan_digest"],
-    })
+    decision = interrupt(
+        {
+            "approval_id": str(approval_record.id),
+            "prompt": "Please review the proposed task DAG.",
+            "plan_digest": state["plan_digest"],
+        }
+    )
 
     # 3. Resume with decision payload
     if decision["action"] == "APPROVE":

@@ -2,13 +2,14 @@
 
 import asyncio
 import uuid
+
 from fastapi import APIRouter, HTTPException, Query
+
 from syntra.api.schemas import (
     CreateSessionRequest,
     RunTaskRequest,
     SessionResponse,
 )
-from syntra.core.config import get_settings
 from syntra.storage.database import get_db_manager
 from syntra.storage.repositories import SessionRepository
 from syntra.swarm.engine import SwarmEngine

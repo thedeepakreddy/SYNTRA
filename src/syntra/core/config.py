@@ -2,15 +2,18 @@
 
 from enum import Enum
 from pathlib import Path
-from pydantic import Field
+from typing import Literal, Self
+
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class AutonomyMode(str, Enum):
     """Autonomy modes supported by SYNTRA."""
-    AUTONOMOUS = "autonomous"            # Auto-executes everything; pauses only on unrecoverable error
+
+    AUTONOMOUS = "autonomous"  # Auto-executes everything; pauses only on unrecoverable error
     SEMI_AUTONOMOUS = "semi_autonomous"  # Auto-executes read/test; requires approval for file writes/shell execution
-    SUPERVISED = "supervised"            # Pauses at each major agent lifecycle gate
+    SUPERVISED = "supervised"  # Pauses at each major agent lifecycle gate
     STRICT_APPROVAL = "strict_approval"  # Explicit human approval for every mutation/tool call
 
 
@@ -23,6 +26,10 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    # Runtime Environment
+    environment: Literal["development", "test", "production"] = "development"
+    dev_auth_enabled: bool = True
 
     # Gemini LLM Settings
     gemini_api_key: str | None = Field(default=None, alias="GEMINI_API_KEY")
@@ -63,6 +70,18 @@ class Settings(BaseSettings):
     port: int = 8000
     log_level: str = "INFO"
     debug: bool = False
+
+    @model_validator(mode="after")
+    def validate_production_guards(self) -> Self:
+        """Enforce production security invariants."""
+        if self.environment == "production":
+            if self.dev_auth_enabled:
+                raise ValueError(
+                    "Development authentication (dev_auth_enabled=True) cannot be enabled in production environment."
+                )
+            if "sqlite" in self.database_url:
+                raise ValueError("SQLite database is not permitted in production environment.")
+        return self
 
     def is_api_key_configured(self) -> bool:
         """Check if Gemini API key is configured."""

@@ -1,9 +1,11 @@
 """Comprehensive verification tests for Phase 1: Project Initialization."""
 
 from pathlib import Path
+
 import httpx
 import pytest
 import yaml
+
 from syntra.api.app import app
 from syntra.core.config import get_settings
 

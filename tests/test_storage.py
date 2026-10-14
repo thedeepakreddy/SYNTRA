@@ -1,6 +1,7 @@
 """Tests for SYNTRA storage and persistence repositories."""
 
 import pytest
+
 from syntra.checkpoints.models import Checkpoint, CheckpointActionType, RiskLevel
 from syntra.core.events import Event, EventType
 from syntra.storage import (

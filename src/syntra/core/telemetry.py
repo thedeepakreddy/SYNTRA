@@ -123,9 +123,7 @@ class TelemetryCollector:
             total_cost = sum(m.usage.estimated_cost_usd for m in self._metrics)
             total_calls = len(self._metrics)
             successful_calls = sum(1 for m in self._metrics if m.success)
-            avg_latency = (
-                sum(m.latency_seconds for m in self._metrics) / total_calls if total_calls > 0 else 0.0
-            )
+            avg_latency = sum(m.latency_seconds for m in self._metrics) / total_calls if total_calls > 0 else 0.0
 
             return {
                 "total_invocations": total_calls,
