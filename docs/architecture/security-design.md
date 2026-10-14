@@ -1,67 +1,99 @@
-# SYNTRA Security Architecture & Threat Defense
+# SYNTRA Security Architecture & Hybrid Autonomy Governance
 
-## 1. Security Philosophy: Zero-Trust AI Execution
-In SYNTRA, LLMs are considered untrusted probabilistic reasoning components. Under no circumstance does an LLM output directly alter authoritative database records or host filesystem state without validation, authorization, and audit recording.
+**SYNTRA: Synchronized Intelligence for Autonomous Engineering**  
+*Security Model: Zero-Trust AI Execution with Cryptographic Human Checkpoints*
 
 ---
 
-## 2. Threat Vector Defense Matrix
+## 1. Hybrid Autonomy Model & Exact Approval Boundaries
 
-```mermaid
-flowchart TD
-    subgraph Threats["Identified Threat Vectors"]
-        T1["Prompt Injection & Jailbreaks"]
-        T2["Host Credential Leakage"]
-        T3["Sandbox Escape & Path Traversal"]
-        T4["Cross-Tenant Data Tampering"]
-        T5["Approval Replay & Tampering"]
-        T6["Runaway Loops & Resource Exhaustion"]
-    end
+SYNTRA implements a **hybrid autonomy model**. Autonomous AI operations are strictly partitioned into **Autonomous Safe Zones** and **Human-Gated High-Risk Actions**:
 
-    subgraph Defenses["Architectural Countermeasures"]
-        D1["Pydantic Strict Schemas & Context Boundary Fences"]
-        D2["Environment Scrubbing & Sensitive Token Redaction"]
-        D3["Git Worktree Isolation & canonical Path.resolve() Check"]
-        D4["Row-Level Organization ID Scoping on All Queries"]
-        D5["Cryptographic Action Digests (SHA-256) & Expiration"]
-        D6["Hard Timeout Killers, Memory Caps & Budget Ledgers"]
-    end
-
-    T1 --> D1
-    T2 --> D2
-    T3 --> D3
-    T4 --> D4
-    T5 --> D5
-    T6 --> D6
+```
++─────────────────────────────────────────────────────────────+
+|               AUTONOMOUS SAFE ZONE (No Human Wait)          |
++─────────────────────────────────────────────────────────────+
+|  ✓ Reading repository files inside active workspace         |
+|  ✓ Formulating architecture proposals & draft task DAGs     |
+|  ✓ Modifying source code inside disposable sandbox worktrees|
+|  ✓ Executing test suites (pytest, jest) in worker sandboxes |
+|  ✓ Collecting unified diff patches & coverage reports       |
+|  ✓ Executing automated security scans & static linting      |
++─────────────────────────────────────────────────────────────+
+                              │
+                    Crosses Boundary?
+                              ▼
++─────────────────────────────────────────────────────────────+
+|            MANDATORY HUMAN APPROVAL GATES (Strict)          |
++─────────────────────────────────────────────────────────────+
+|  1. Initial Mission Execution Scope                         |
+|  2. Material Plan Changes (DAG structural revisions)       |
+|  3. External Repository Writes (git push to remote)         |
+|  4. Pull Request Creation on GitHub / GitLab                |
+|  5. Protected Branch Merges                                 |
+|  6. Production Deployments & Infrastructure Modifications   |
+|  7. Budget Increases (tokens / cost overrides)              |
+|  8. Security Policy Changes (altering capability grants)    |
++─────────────────────────────────────────────────────────────+
 ```
 
 ---
 
-## 3. Defense Mechanisms in Detail
+## 2. Cryptographic Approval Digests & Anti-Tampering
 
-### 3.1 Untrusted Model Output & Prompt Injection
-- **Structural Fencing**: System instructions and user context are segmented using distinct delimiters.
-- **Contract Enforcement**: Model completions must validate against strongly-typed Pydantic schemas. Unparseable responses are rejected and trigger bounded corrective retries.
-- **Tool Grant Verification**: The agent cannot execute tools not explicitly granted in its execution capability token.
+Every checkpoint approval is cryptographically bound to prevent payload substitution, replay attacks, or post-approval tampering:
 
-### 3.2 Host Credential Isolation
-- Coding agents operate inside isolated worktrees.
-- Host credentials (`AWS_SECRET_ACCESS_KEY`, `GEMINI_API_KEY`, SSH keys, etc.) are stripped from the environment before launching subprocesses.
-- No production database credentials or cloud deployment keys are ever exposed to the sandbox worker.
+$$\text{ActionDigest} = \text{HMAC-SHA256}_{K_{\text{secret}}}(\text{mission\_id} \parallel \text{action\_type} \parallel \text{proposed\_payload} \parallel \text{plan\_version} \parallel \text{expires\_at})$$
 
-### 3.3 Sandbox Isolation & Path Traversal Guards
-- Every file access is resolved to canonical form via `Path.resolve()`.
-- The target path must verify `path.relative_to(sandbox_root)`. Any escape attempts (`../../../etc/passwd`) raise `SandboxSecurityViolationError` immediately.
-- Execution runs under a non-root user (UID 1000) with no access to the host Docker daemon or socket.
+### Invariant:
+When an approval decision (`APPROVE`) is submitted:
+1. The `ApprovalService` recomputes the expected SHA-256 digest over the current database payload.
+2. If the digests do not match identically, the request is rejected with `DigestMismatchError`.
+3. An approval token is strictly single-use and expires after a configured TTL (default 24 hours).
 
-### 3.4 Cryptographically Bound Human Approvals
-- Checkpoint approvals are bound to a cryptographic SHA-256 digest of the proposed payload:
-  $$\text{ActionDigest} = \text{SHA256}(\text{mission\_id} \,\|\, \text{action\_type} \,\|\, \text{proposed\_payload} \,\|\, \text{plan\_version})$$
-- Approvals include mandatory expiration timestamps.
-- Once approved, the record is marked `RESOLVED` and cannot be replayed or reused for any subsequent action.
+---
 
-### 3.5 Resource Limits & Loop Breakers
-- Step limit: Agents are capped at a maximum number of ReAct steps (default 30).
-- Subprocess timeout: Commands automatically terminate after `sandbox_timeout_seconds` (default 120s).
-- Buffer truncation: Subprocess stdout/stderr captures truncate at 1MB to prevent out-of-memory crashes.
-- Budget ledger: Invocations halt immediately once the approved token or USD budget is exhausted.
+## 3. Capability Policy Engine & Grant Specification
+
+Capability grants are modeled in the database as fine-grained, scoped authorization tokens:
+- **Tenant Scope**: Bound to `org_id`.
+- **Role Scope**: Restricts tool usage by agent persona (e.g. `product_manager` cannot invoke `syntra.write_file`).
+- **Resource Constraints**: Path prefixes restricted to the assigned sandbox directory; shell commands filtered through an allowlist/denylist of binaries.
+
+```python
+class CapabilityGrant(BaseModel):
+    grant_id: UUID
+    org_id: UUID
+    agent_role: AgentRole
+    tool_name_pattern: str   # e.g. "syntra.workspace_*" or "syntra.read_file"
+    is_allowed: bool
+    requires_approval: bool
+    path_scope_pattern: str | None = None
+```
+
+---
+
+## 4. Secret Boundaries & Credential Scrubbing
+
+1. **Zero Secret Leakage to Agents**:
+   - Host credentials (`GEMINI_API_KEY`, database passwords, cloud tokens) are stripped from the worker subprocess environment.
+   - Workers execute under a sanitized environment containing only required runtime paths (`PATH`, `LANG`, `VIRTUAL_ENV`).
+2. **Automated Output Redaction**:
+   - Every stdout, stderr, and unified diff output generated by sandboxes is scanned by an automated regex and Shannon entropy scrubber.
+   - Any pattern matching API keys, JWT tokens, private keys, or passwords is replaced with `[REDACTED_SECRET]`.
+
+---
+
+## 5. Sandbox Process Isolation & Defense-in-Depth
+
+- **Filesystem Isolation**: Ephemeral Git worktree mounted at a unique UUID directory inside `.syntra/sandboxes/`.
+- **Path Traversal Barrier**: Canonical path resolution enforces that all read and write operations remain strictly within `sandbox_root`:
+  ```python
+  resolved_path = (sandbox_root / target_path).resolve()
+  if not resolved_path.is_relative_to(sandbox_root):
+      raise SandboxSecurityViolationError("Path traversal prohibited.")
+  ```
+- **Execution Limits**:
+  - Wall-clock timeout: Hard kill (`SIGKILL`) after 120 seconds.
+  - Output limit: stdout and stderr capped at 1MB to prevent memory exhaustion.
+  - Non-root execution: Subprocesses run under non-root UID 1000.
