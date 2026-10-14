@@ -1,0 +1,10 @@
+name: frontend-development
+version: 1.0.0
+description: Develops web and client applications inside target repositories.
+category: implementation
+compatible_roles:
+- frontend_engineer
+required_tools:
+- syntra.read_file
+- syntra.write_file
+- syntra.run_command

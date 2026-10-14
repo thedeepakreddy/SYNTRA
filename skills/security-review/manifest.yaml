@@ -1,0 +1,10 @@
+name: security-review
+version: 1.0.0
+description: Audits code changes for injection flaws, secret leakage, authorization
+  bypasses, and CVEs.
+category: security
+compatible_roles:
+- security_reviewer
+required_tools:
+- syntra.read_file
+- syntra.workspace_search

@@ -1,0 +1,12 @@
+name: test-driven-development
+version: 1.0.0
+description: Executes Red-Green-Refactor cycles with pytest, fixtures, and contract
+  assertions.
+category: quality
+compatible_roles:
+- qa_engineer
+- backend_engineer
+required_tools:
+- syntra.read_file
+- syntra.write_file
+- syntra.run_command

@@ -48,6 +48,16 @@ class Settings(BaseSettings):
     # Storage & Persistence
     database_url: str = "sqlite+aiosqlite:///./syntra.db"
 
+    # Queue & Streaming (Redis Streams)
+    redis_url: str = "redis://localhost:6379/0"
+
+    # Artifact Storage (MinIO / S3)
+    s3_endpoint: str = "localhost:9000"
+    s3_access_key: str = "syntra_minio"
+    s3_secret_key: str = "syntra_minio_secret"
+    s3_bucket: str = "syntra-artifacts"
+    s3_secure: bool = False
+
     # API Server
     host: str = "0.0.0.0"
     port: int = 8000

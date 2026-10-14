@@ -1,0 +1,11 @@
+name: database-engineering
+version: 1.0.0
+description: Designs relational schemas, indexes, and Alembic migrations for PostgreSQL.
+category: database
+compatible_roles:
+- backend_engineer
+- architect
+required_tools:
+- syntra.read_file
+- syntra.write_file
+- syntra.run_command

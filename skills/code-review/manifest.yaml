@@ -1,0 +1,10 @@
+name: code-review
+version: 1.0.0
+description: Evaluates code diffs for correctness, architectural compliance, readability,
+  and security.
+category: review
+compatible_roles:
+- code_reviewer
+required_tools:
+- syntra.read_file
+- syntra.workspace_search

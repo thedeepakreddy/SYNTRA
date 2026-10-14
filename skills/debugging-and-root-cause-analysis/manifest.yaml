@@ -1,0 +1,11 @@
+name: debugging-and-root-cause-analysis
+version: 1.0.0
+description: Isolates defects, inspects execution traces, and crafts minimal regression-proof
+  fixes.
+category: debugging
+compatible_roles:
+- debugging_specialist
+required_tools:
+- syntra.read_file
+- syntra.write_file
+- syntra.run_command

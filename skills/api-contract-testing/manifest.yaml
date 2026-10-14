@@ -1,0 +1,10 @@
+name: api-contract-testing
+version: 1.0.0
+description: Validates REST and RPC interfaces against published OpenAPI schemas and
+  proto contracts.
+category: testing
+compatible_roles:
+- qa_engineer
+required_tools:
+- syntra.read_file
+- syntra.run_command

@@ -1,0 +1,10 @@
+name: system-architecture
+version: 1.0.0
+description: Designs modular, maintainable, and scalable component architectures with
+  formal boundaries.
+category: architecture
+compatible_roles:
+- architect
+required_tools:
+- syntra.workspace_search
+- syntra.read_file

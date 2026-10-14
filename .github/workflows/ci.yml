@@ -1,0 +1,37 @@
+name: SYNTRA CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test & Diagnostics
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Bootstrap Environment
+        run: bash scripts/bootstrap.sh
+
+      - name: System Doctor Diagnostics
+        run: bash scripts/doctor.sh
+
+      - name: Run Test Suite with Coverage
+        run: uv run pytest --cov=syntra --cov-report=xml
+
+      - name: Execute Smoke Test
+        run: bash scripts/smoke-test.sh

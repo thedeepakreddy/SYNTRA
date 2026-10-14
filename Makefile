@@ -1,8 +1,16 @@
-.PHONY: install test test-cov lint run serve status docker-up docker-down clean
+.PHONY: bootstrap doctor smoke-test install test test-cov run serve status compose-up compose-down docker-up docker-down clean
+
+bootstrap:
+	bash scripts/bootstrap.sh
+
+doctor:
+	bash scripts/doctor.sh
+
+smoke-test:
+	bash scripts/smoke-test.sh
 
 install:
-	uv venv .venv --python 3.12
-	uv pip install --python .venv -e ".[dev]"
+	uv pip install -e ".[dev]"
 
 test:
 	uv run pytest
@@ -19,11 +27,16 @@ serve:
 status:
 	uv run syntra status
 
-docker-up:
-	docker compose up -d --build
+compose-up:
+	docker compose up -d
 
-docker-down:
+compose-down:
 	docker compose down
 
+docker-up: compose-up
+
+docker-down: compose-down
+
 clean:
-	rm -rf .pytest_cache .coverage htmlcov .syntra .devswarm *.sqlite3 syntra.db devswarm.db
+	rm -rf .pytest_cache .coverage htmlcov .syntra/sandboxes/* *.sqlite3
+	find . -type d -name "__pycache__" -exec rm -rf {} +

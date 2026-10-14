@@ -1,0 +1,10 @@
+name: git-workflow
+version: 1.0.0
+description: Manages isolated Git worktrees, atomic commits, branch lifecycles, and
+  unified patches.
+category: platform
+compatible_roles:
+- devops_engineer
+- engineering_manager
+required_tools:
+- syntra.run_command

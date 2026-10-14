@@ -67,3 +67,18 @@ class SystemHealthResponse(BaseModel):
     gemini_configured: bool
     autonomy_mode: str
     telemetry: dict[str, Any]
+
+
+class ComponentHealth(BaseModel):
+    """Health status of an individual infrastructure component."""
+    status: str
+    latency_ms: float | None = None
+    details: str | None = None
+
+
+class SystemReadinessResponse(BaseModel):
+    """Comprehensive readiness probe for all backend subsystems."""
+    status: str
+    version: str = "0.1.0"
+    timestamp: str
+    components: dict[str, ComponentHealth]

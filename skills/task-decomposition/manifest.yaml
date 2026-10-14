@@ -1,0 +1,10 @@
+name: task-decomposition
+version: 1.0.0
+description: Breaks high-level architectures into a cycle-free directed acyclic graph
+  (DAG) of actionable tasks.
+category: planning
+compatible_roles:
+- engineering_manager
+- architect
+required_tools:
+- syntra.workspace_search

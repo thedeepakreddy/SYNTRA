@@ -80,6 +80,8 @@ class DatabaseManager:
                 await sess.rollback()
                 raise
 
+    get_session = session
+
     async def close(self) -> None:
         """Dispose database connections."""
         if self._engine:

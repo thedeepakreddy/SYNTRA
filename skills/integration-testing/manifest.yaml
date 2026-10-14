@@ -1,0 +1,10 @@
+name: integration-testing
+version: 1.0.0
+description: Validates cross-component interactions across databases, queues, and
+  external services.
+category: testing
+compatible_roles:
+- qa_engineer
+required_tools:
+- syntra.read_file
+- syntra.run_command

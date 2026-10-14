@@ -1,0 +1,11 @@
+name: documentation-generation
+version: 1.0.0
+description: Produces clear, structured technical documentation, architecture specs,
+  and user guides.
+category: documentation
+compatible_roles:
+- product_manager
+- architect
+required_tools:
+- syntra.read_file
+- syntra.write_file

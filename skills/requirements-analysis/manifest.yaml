@@ -1,0 +1,11 @@
+name: requirements-analysis
+version: 1.0.0
+description: Dissects ambiguous problem statements into structured, verifiable functional
+  and non-functional requirements.
+category: specification
+compatible_roles:
+- product_manager
+- architect
+required_tools:
+- syntra.workspace_search
+- syntra.read_file
