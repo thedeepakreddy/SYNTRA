@@ -1,69 +1,98 @@
-# DevSwarm Master Build Specification & Implementation Roadmap
+# DevSwarm Master Implementation Roadmap (Phases 0–13)
 
-## 1. Project Overview & Guiding Principles
-**DevSwarm** is a production-oriented autonomous multi-agent software engineering platform built on Google Gemini through the supported Google Gen AI SDK (`google-genai`). DevSwarm coordinates specialized AI agents (Architect, Planner, Coder, Reviewer, Tester, Security, Orchestrator) under a hybrid autonomy governance model with strict workspace sandboxing and deterministic execution guarantees.
-
-### Guiding Principles:
-1. **Backend-First Modular Monolith**: Clear domain boundaries, zero premature microservice fragmentation, sub-millisecond in-process eventing.
-2. **Deterministic State Graphs**: Workflows execute as deterministic, cyclic, stateful graphs with rigorous termination bounds and self-healing feedback cycles.
-3. **Hybrid Autonomy**: Multi-tier autonomy levels with risk-evaluated checkpoint gates for human-in-the-loop oversight.
-4. **Isolated Sandbox Execution**: Strict directory boundaries, path traversal guards, command whitelists, and timeout enforcement.
-5. **Standardized Protocols**: Native support for Google Gen AI SDK, OpenAPI 3.1, and Model Context Protocol (MCP).
+This roadmap outlines the complete 14-phase development program for DevSwarm in accordance with the DevSwarm Master Build Specification.
 
 ---
 
-## 2. Phase-by-Phase Roadmap
+## Phase Overview Matrix
 
-### Phase 0: Foundation, Baseline Contracts, Master Tracking & Tooling Setup
-- [x] **0.1 Master Specification & Progress Tracking**: Create `docs/phases/implementation-roadmap.md` and `docs/phases/progress.md`.
-- [x] **0.2 Core Environment Verification**: Verify Python 3.12, `uv` packaging, virtual environment, and dependency lockfile integrity.
-- [x] **0.3 Baseline Domain Contracts**: Verify configuration validation, exception hierarchies, telemetry, and event bus pub-sub.
-- [x] **0.4 MCP Protocol Server Subsystem**: Implement a full Model Context Protocol (MCP) server (`devswarm.mcp`) exposing standard engineering tools via stdio JSON-RPC.
-- [x] **0.5 Verification & Acceptance**: Establish 100% test pass rate across baseline test suites.
+| Phase | Phase Name | Focus Area | Key Deliverables |
+|---|---|---|---|
+| **Phase 0** | **Architecture and Implementation Planning** | Blueprint & Contracts | Architecture docs, schemas, ADRs, Phase 0 report |
+| **Phase 1** | **Project Initialization** | Environment & Infrastructure | Monorepo structure, Compose, Redis, MinIO, Makefile |
+| **Phase 2** | **Database and Domain Foundation** | Core Domain & PostgreSQL | SQLAlchemy models, Alembic migrations, Outbox, Repos |
+| **Phase 3** | **API, Authentication, and Governance** | Control Plane & Approvals | `/v1/` REST API, OIDC/Dev auth, Budgets, Approvals |
+| **Phase 4** | **MCP Infrastructure** | Tool Interoperability | MCP Client Manager, Tool Registry, Stdio/HTTP Server |
+| **Phase 5** | **Skills and Capability Registry** | Reusable Engineering Skills | 16 Skill packages, Manifest validator, Progressive loading |
+| **Phase 6** | **Model Runtime** | LLM Engine & Gemini | Google Gen AI SDK adapter, Router, Token/Cost ledger |
+| **Phase 7** | **LangGraph Workflow Engine** | Orchestration & State Machine | Mission & Task Graphs, PostgreSQL Checkpoints |
+| **Phase 8** | **Task Scheduler & Collaboration** | Dependency DAG & Leases | Deterministic scheduler, Concurrency, Leases, Heartbeats |
+| **Phase 9** | **Sandbox Execution** | Isolated Worker Plane | SandboxProvider, Worktrees, Resource limits, Patches |
+| **Phase 10** | **Autonomous Engineering Organization** | 10 Specialized Agents | PM, Arch, EM, Backend, Frontend, QA, DevOps, Sec, Review |
+| **Phase 11** | **Memory and Self-Correction** | Knowledge & Recovery | Execution/Project/Org Memory, Failure classifier |
+| **Phase 12** | **Verification, Security, Observability**| Quality & Governance | Independent verifier, Protected suites, Tracing |
+| **Phase 13** | **End-to-End Integration & Benchmark** | Full System Proof | Real failing inventory repo fix, Failure injection test |
 
-### Phase 1: LLM Engine & Google Gemini Provider Integration
-- Core integration with official `google-genai` SDK.
-- Structured output validation with Pydantic schemas.
-- Model routing across Gemini tiers (`gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.0-flash-lite`).
-- Resilient retry logic with exponential backoff and rate limit handling.
-- Deterministic `MockLLMClient` for offline test suites.
+---
 
-### Phase 2: Execution Sandbox & Workspace Worker Subsystem
-- Safe filesystem workspace manager with strict path traversal defenses.
-- Subprocess execution runner with timeout and buffer limit guards.
-- Command safety validator and environment variable sanitizer.
-- Unified diff generation and surgical text patcher.
+## Detailed Phase Specifications
 
-### Phase 3: Agent Framework & Specialized Engineering Roles
-- ReAct reasoning loops, context window compaction, and durable memory store.
-- Tool registry with schema generation and MCP interoperability.
-- Specialized roles: Architect, Planner, Senior Coder, Reviewer, Tester, Security, and Orchestrator.
+### Phase 0: Architecture and Implementation Planning
+- **Goal**: Produce a detailed, implementable backend blueprint and contract specifications.
+- **Tasks**: Architecture documents, ERD, LangGraph state machine design, MCP design, Agent design, Security model.
+- **Exit Criteria**: Every subsystem has a documented owner, all contracts defined, no frontend code started.
 
-### Phase 4: Hybrid Autonomy & Checkpoint Governance Engine
-- Multi-tier autonomy modes (`autonomous`, `semi_autonomous`, `supervised`, `strict_approval`).
-- Dynamic risk assessment engine (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`).
-- Checkpoint state machine with async pause-and-resume semantics and feedback channels.
+### Phase 1: Project Initialization
+- **Goal**: Create a reproducible backend development environment.
+- **Tasks**: Monorepo scaffolding, `pyproject.toml`, `uv.lock`, Docker Compose (PostgreSQL, Redis, MinIO), `scripts/bootstrap.sh`, `scripts/doctor.sh`, Makefile targets.
+- **Exit Criteria**: Developer can bootstrap and run health checks from clean clone.
 
-### Phase 5: Swarm Orchestration Engine & Workflow Execution
-- Deterministic StateGraph execution engine with conditional routing.
-- Feature development workflow with self-healing feedback loop (Coder <-> Tester <-> Reviewer).
-- Swarm state / blackboard synchronization.
+### Phase 2: Database and Domain Foundation
+- **Goal**: Implement authoritative application state and transactional outbox.
+- **Tasks**: SQLAlchemy 2.x models, Alembic migrations, domain entities, task DAG validation (reject cycles), tenant isolation.
+- **Exit Criteria**: Core domain operations testable with zero LLM invocations.
 
-### Phase 6: Persistence Layer & Data Storage
-- Async SQLAlchemy 2.0 with PostgreSQL (`asyncpg`) and SQLite (`aiosqlite`) drivers.
-- Relational schema for sessions, executions, checkpoints, events, and artifacts.
-- Repository pattern isolating data persistence operations.
+### Phase 3: API, Authentication, and Governance
+- **Goal**: Create the secure backend control plane.
+- **Tasks**: `/v1/projects`, `/v1/missions`, `/v1/approvals`, OIDC/Dev auth, budget reservations, action digest verification.
+- **Exit Criteria**: Missions and approvals completely manageable via REST API without frontend.
 
-### Phase 7: Production API & Real-time WebSocket Streaming
-- FastAPI REST endpoints for sessions, checkpoints, workspace files, and telemetry.
-- WebSocket `/ws/events` streaming live events to connected clients.
-- OpenAPI specification and health endpoints.
+### Phase 4: MCP Infrastructure
+- **Goal**: Implement secure MCP tool interoperability.
+- **Tasks**: MCP Client Manager, Server Registry, Tool Registry, Capability Policy Gateway, Stdio/HTTP transports.
+- **Exit Criteria**: Authorized test client can discover and call DevSwarm MCP tools.
 
-### Phase 8: Production CLI & Developer Experience
-- Typer CLI with Rich terminal formatting (`devswarm run`, `devswarm serve`, `devswarm status`, `devswarm session`, `devswarm checkpoint`).
-- Interactive checkpoint approvals in terminal.
+### Phase 5: Skills and Capability Registry
+- **Goal**: Create reusable, discoverable engineering skills.
+- **Tasks**: 16 initial skill manifests, on-demand loader, capability validation, evaluation runner.
+- **Exit Criteria**: Tasks dynamically load only required skills via progressive disclosure.
 
-### Phase 9: Production Packaging, Validation & Release Hardening
-- Multi-stage Dockerfile and Docker Compose with PostgreSQL 16.
-- Comprehensive end-to-end evaluation suite.
-- Production deployment guides and operational documentation.
+### Phase 6: Model Runtime
+- **Goal**: Build reliable structured AI execution with Google Gen AI SDK.
+- **Tasks**: Provider adapter, Gemini client, Mock provider, Pydantic structured output validation, cost ledger.
+- **Exit Criteria**: Validated structured outputs obtained from Gemini and deterministic mock.
+
+### Phase 7: LangGraph Workflow Engine
+- **Goal**: Implement durable mission orchestration.
+- **Tasks**: Mission Graph, Task Execution Graph, PostgreSQL checkpointing, human approval pause/resume.
+- **Exit Criteria**: Mission can pause for approval and resume safely without state loss.
+
+### Phase 8: Task Scheduler and Collaboration
+- **Goal**: Coordinate parallel tasks safely.
+- **Tasks**: Deterministic DAG scheduler, critical-path estimation, leases, heartbeats, outbox dispatch.
+- **Exit Criteria**: Multi-task DAG executes under contention with stale worker detection.
+
+### Phase 9: Sandbox Execution
+- **Goal**: Allow agents to execute real engineering work in isolation.
+- **Tasks**: SandboxProvider, Git worktree isolation, non-root execution, timeout enforcement, patch collection.
+- **Exit Criteria**: Worker modifies isolated repository, runs tests, and produces patch without altering host.
+
+### Phase 10: Autonomous Engineering Organization
+- **Goal**: Implement the actual 10-agent team with real handoffs.
+- **Tasks**: Product Manager, Architect, EM, Backend, Frontend, QA, DevOps, Security, Reviewer, Debugger.
+- **Exit Criteria**: Multi-agent pipeline passes work through real handoffs to produce verified code.
+
+### Phase 11: Memory and Self-Correction
+- **Goal**: Make DevSwarm context-aware and recoverable.
+- **Tasks**: Execution, project, and organizational memory; failure classifier; bounded replanning.
+- **Exit Criteria**: Controlled failure triggers automatic corrective action without manual intervention.
+
+### Phase 12: Verification, Security, Observability
+- **Goal**: Establish engineering quality, independent verification, and distributed observability.
+- **Tasks**: Independent verification service, regression test runner, OpenTelemetry, audit logging.
+- **Exit Criteria**: All successful mission deliverables backed by independent verification evidence.
+
+### Phase 13: End-to-End Integration and Benchmark
+- **Goal**: Prove DevSwarm as a complete autonomous software engineering platform.
+- **Tasks**: Real inventory backend bug-fix mission, worker kill failure test, benchmark comparison against baseline.
+- **Exit Criteria**: DevSwarm completes real engineering work, survives worker failure, and produces reproducible evidence.
