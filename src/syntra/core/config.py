@@ -31,6 +31,15 @@ class Settings(BaseSettings):
     environment: Literal["development", "test", "production"] = "development"
     dev_auth_enabled: bool = True
 
+    # Security & Authentication (OIDC / JWT)
+    jwt_secret_key: str | None = None
+    jwt_algorithm: str = "HS256"
+    oidc_issuer: str | None = None
+    oidc_audience: str | None = None
+    oidc_jwks_url: str | None = None
+    approval_secret_key: str = "syntra-default-approval-hmac-secret-change-in-prod"
+    max_request_body_bytes: int = 10 * 1024 * 1024  # 10MB
+
     # Gemini LLM Settings
     gemini_api_key: str | None = Field(default=None, alias="GEMINI_API_KEY")
     default_model: str = "gemini-2.5-flash"

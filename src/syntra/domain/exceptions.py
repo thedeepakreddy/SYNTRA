@@ -71,3 +71,39 @@ class DuplicateIdempotencyKeyError(DomainError):
     """Raised when an idempotency key is reused with a conflicting payload."""
 
     pass
+
+
+class ApprovalError(DomainError):
+    """Base exception for approval governance failures."""
+
+    pass
+
+
+class ApprovalExpiredError(ApprovalError):
+    """Raised when resolving an approval request that has passed its expiration time."""
+
+    pass
+
+
+class ApprovalReplayError(ApprovalError):
+    """Raised when attempting to re-resolve an already finalized approval request."""
+
+    pass
+
+
+class ApprovalTamperedError(ApprovalError):
+    """Raised when an approval request target or mission state has been modified after request creation."""
+
+    pass
+
+
+class DigestMismatchError(ApprovalError):
+    """Raised when the cryptographic HMAC action digest fails validation."""
+
+    pass
+
+
+class UnauthorizedApprovalError(ApprovalError):
+    """Raised when a user lacks required organizational permissions to resolve an approval."""
+
+    pass

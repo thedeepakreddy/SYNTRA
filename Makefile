@@ -36,7 +36,7 @@ migrate:
 	uv run alembic upgrade head
 
 test:
-	uv run pytest tests/unit tests/test_domain_and_persistence.py tests/test_migrations.py tests/test_phase1_initialization.py
+	uv run pytest tests/unit tests/security tests/test_domain_and_persistence.py tests/test_migrations.py tests/test_phase1_initialization.py
 
 test-all:
 	uv run pytest

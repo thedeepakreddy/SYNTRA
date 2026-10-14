@@ -7,7 +7,10 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from syntra.api.errors import register_exception_handlers
+from syntra.api.middleware import RequestSizeLimitMiddleware
 from syntra.api.routes import checkpoints, events, health, sessions, workspace
+from syntra.api.v1.router import v1_router
 from syntra.core.config import get_settings
 from syntra.core.logging import correlation_id_ctx, setup_logging
 from syntra.storage.database import get_db_manager
@@ -57,8 +60,9 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # Middleware registration
+    # Middleware registration (executed in reverse order of addition)
     app.add_middleware(CorrelationIdMiddleware)
+    app.add_middleware(RequestSizeLimitMiddleware, max_bytes=settings.max_request_body_bytes)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -67,12 +71,16 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Include routers
+    # Register RFC 7807 problem details exception handlers
+    register_exception_handlers(app)
+
+    # Include legacy & v1 routers
     app.include_router(health.router)
     app.include_router(sessions.router)
     app.include_router(checkpoints.router)
     app.include_router(workspace.router)
     app.include_router(events.router)
+    app.include_router(v1_router)
 
     return app
 

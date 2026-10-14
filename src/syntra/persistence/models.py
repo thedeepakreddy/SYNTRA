@@ -636,6 +636,9 @@ class HumanApprovalModel(Base):
     __table_args__ = (Index("idx_human_approvals_mission_decision", "mission_id", "decision"),)
 
     id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    org_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
     mission_id: Mapped[UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("missions.id", ondelete="CASCADE"), nullable=False
     )
@@ -643,7 +646,9 @@ class HumanApprovalModel(Base):
         Uuid(as_uuid=True), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True
     )
     action_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    target_resource: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     action_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    mission_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     decision: Mapped[ApprovalDecision] = mapped_column(
         Enum(ApprovalDecision, name="approval_decision", native_enum=True),
         default=ApprovalDecision.PENDING,
@@ -678,8 +683,12 @@ class BudgetModel(Base):
     )
     max_tokens: Mapped[int] = mapped_column(BigInteger, default=1_000_000, nullable=False)
     max_cost_usd: Mapped[Decimal] = mapped_column(Numeric(10, 4), default=Decimal("50.0000"), nullable=False)
+    max_concurrency: Mapped[int] = mapped_column(Integer, default=4, nullable=False)
+    max_task_attempts: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
+    max_mission_duration_seconds: Mapped[int] = mapped_column(Integer, default=3600, nullable=False)
     reserved_tokens: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
     consumed_tokens: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
+    reserved_cost_usd: Mapped[Decimal] = mapped_column(Numeric(10, 4), default=Decimal("0.0000"), nullable=False)
     consumed_cost_usd: Mapped[Decimal] = mapped_column(Numeric(10, 4), default=Decimal("0.0000"), nullable=False)
     version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     created_at: Mapped[datetime] = mapped_column(

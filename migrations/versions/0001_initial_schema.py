@@ -400,11 +400,16 @@ def upgrade() -> None:
         "human_approvals",
         sa.Column("id", sa.Uuid(as_uuid=True), primary_key=True),
         sa.Column(
+            "org_id", sa.Uuid(as_uuid=True), sa.ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+        ),
+        sa.Column(
             "mission_id", sa.Uuid(as_uuid=True), sa.ForeignKey("missions.id", ondelete="CASCADE"), nullable=False
         ),
         sa.Column("task_id", sa.Uuid(as_uuid=True), sa.ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True),
         sa.Column("action_type", sa.String(100), nullable=False),
+        sa.Column("target_resource", sa.String(255), nullable=False, default=""),
         sa.Column("action_digest", sa.String(64), nullable=False),
+        sa.Column("mission_version", sa.Integer(), nullable=False, default=1),
         sa.Column("decision", sa.String(50), nullable=False, default="PENDING"),
         sa.Column("feedback", sa.Text(), nullable=True),
         sa.Column("resolved_by", sa.Uuid(as_uuid=True), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True),
@@ -424,8 +429,12 @@ def upgrade() -> None:
         sa.Column("mission_id", sa.Uuid(as_uuid=True), sa.ForeignKey("missions.id", ondelete="CASCADE"), nullable=True),
         sa.Column("max_tokens", sa.BigInteger(), nullable=False, default=1000000),
         sa.Column("max_cost_usd", sa.Numeric(10, 4), nullable=False, default=50.0000),
+        sa.Column("max_concurrency", sa.Integer(), nullable=False, default=4),
+        sa.Column("max_task_attempts", sa.Integer(), nullable=False, default=3),
+        sa.Column("max_mission_duration_seconds", sa.Integer(), nullable=False, default=3600),
         sa.Column("reserved_tokens", sa.BigInteger(), nullable=False, default=0),
         sa.Column("consumed_tokens", sa.BigInteger(), nullable=False, default=0),
+        sa.Column("reserved_cost_usd", sa.Numeric(10, 4), nullable=False, default=0.0000),
         sa.Column("consumed_cost_usd", sa.Numeric(10, 4), nullable=False, default=0.0000),
         sa.Column("version", sa.Integer(), nullable=False, default=1),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),

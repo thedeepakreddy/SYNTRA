@@ -5,12 +5,14 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from syntra.persistence.repositories import (
+    ApprovalRepository,
     ArtifactRepository,
     BudgetRepository,
     IdempotencyRepository,
     MissionRepository,
     OrganizationRepository,
     OutboxRepository,
+    ProjectRepository,
     TaskRepository,
 )
 
@@ -29,10 +31,12 @@ class SqlAlchemyUnitOfWork:
 
         # Repositories initialized when session is active
         self._organizations: OrganizationRepository | None = None
+        self._projects: ProjectRepository | None = None
         self._missions: MissionRepository | None = None
         self._tasks: TaskRepository | None = None
         self._budgets: BudgetRepository | None = None
         self._artifacts: ArtifactRepository | None = None
+        self._approvals: ApprovalRepository | None = None
         self._outbox: OutboxRepository | None = None
         self._idempotency: IdempotencyRepository | None = None
 
@@ -41,10 +45,12 @@ class SqlAlchemyUnitOfWork:
 
     def _init_repositories(self, session: AsyncSession) -> None:
         self._organizations = OrganizationRepository(session)
+        self._projects = ProjectRepository(session)
         self._missions = MissionRepository(session)
         self._tasks = TaskRepository(session)
         self._budgets = BudgetRepository(session)
         self._artifacts = ArtifactRepository(session)
+        self._approvals = ApprovalRepository(session)
         self._outbox = OutboxRepository(session)
         self._idempotency = IdempotencyRepository(session)
 
@@ -58,6 +64,11 @@ class SqlAlchemyUnitOfWork:
     def organizations(self) -> OrganizationRepository:
         assert self._organizations is not None
         return self._organizations
+
+    @property
+    def projects(self) -> ProjectRepository:
+        assert self._projects is not None
+        return self._projects
 
     @property
     def missions(self) -> MissionRepository:
@@ -78,6 +89,11 @@ class SqlAlchemyUnitOfWork:
     def artifacts(self) -> ArtifactRepository:
         assert self._artifacts is not None
         return self._artifacts
+
+    @property
+    def approvals(self) -> ApprovalRepository:
+        assert self._approvals is not None
+        return self._approvals
 
     @property
     def outbox(self) -> OutboxRepository:
@@ -116,9 +132,11 @@ class SqlAlchemyUnitOfWork:
             await self._session.close()
             self._session = None
             self._organizations = None
+            self._projects = None
             self._missions = None
             self._tasks = None
             self._budgets = None
             self._artifacts = None
+            self._approvals = None
             self._outbox = None
             self._idempotency = None

@@ -33,12 +33,14 @@ from syntra.persistence.models import (
     WorkerLeaseModel,
 )
 from syntra.persistence.repositories import (
+    ApprovalRepository,
     ArtifactRepository,
     BudgetRepository,
     IdempotencyRepository,
     MissionRepository,
     OrganizationRepository,
     OutboxRepository,
+    ProjectRepository,
     TaskRepository,
 )
 from syntra.persistence.unit_of_work import SqlAlchemyUnitOfWork
@@ -77,10 +79,12 @@ __all__ = [
     "MemoryRecordModel",
     # Repositories
     "OrganizationRepository",
+    "ProjectRepository",
     "MissionRepository",
     "TaskRepository",
     "BudgetRepository",
     "ArtifactRepository",
+    "ApprovalRepository",
     "OutboxRepository",
     "IdempotencyRepository",
     # Unit of Work

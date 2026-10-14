@@ -17,6 +17,7 @@ from uuid import UUID, uuid4
 class MembershipRole(str, Enum):
     OWNER = "owner"
     ADMIN = "admin"
+    DEVELOPER = "developer"
     ENGINEER = "engineer"
     VIEWER = "viewer"
 
@@ -107,6 +108,17 @@ class MCPTransportType(str, Enum):
     STDIO = "stdio"
     SSE = "sse"
     HTTP = "http"
+
+
+class ApprovalActionType(str, Enum):
+    INITIAL_PLAN = "INITIAL_PLAN"
+    SCOPE_CHANGE = "SCOPE_CHANGE"
+    EXTERNAL_REPOSITORY_WRITE = "EXTERNAL_REPOSITORY_WRITE"
+    PULL_REQUEST_CREATION = "PULL_REQUEST_CREATION"
+    PROTECTED_BRANCH_MERGE = "PROTECTED_BRANCH_MERGE"
+    DEPLOYMENT = "DEPLOYMENT"
+    BUDGET_INCREASE = "BUDGET_INCREASE"
+    SECURITY_POLICY_CHANGE = "SECURITY_POLICY_CHANGE"
 
 
 class ApprovalDecision(str, Enum):
@@ -324,10 +336,13 @@ class VerificationRun:
 @dataclass
 class Approval:
     id: UUID = field(default_factory=uuid4)
+    org_id: UUID = field(default_factory=uuid4)
     mission_id: UUID = field(default_factory=uuid4)
     task_id: UUID | None = None
     action_type: str = ""
+    target_resource: str = ""
     action_digest: str = ""
+    mission_version: int = 1
     decision: ApprovalDecision = ApprovalDecision.PENDING
     feedback: str | None = None
     resolved_by: UUID | None = None
@@ -343,8 +358,12 @@ class Budget:
     mission_id: UUID | None = None
     max_tokens: int = 1_000_000
     max_cost_usd: Decimal = field(default_factory=lambda: Decimal("50.0000"))
+    max_concurrency: int = 4
+    max_task_attempts: int = 3
+    max_mission_duration_seconds: int = 3600
     reserved_tokens: int = 0
     consumed_tokens: int = 0
+    reserved_cost_usd: Decimal = field(default_factory=lambda: Decimal("0.0000"))
     consumed_cost_usd: Decimal = field(default_factory=lambda: Decimal("0.0000"))
     version: int = 1
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
@@ -485,3 +504,51 @@ class MemoryRecord:
     provenance_task_id: UUID | None = None
     confidence_score: Decimal = field(default_factory=lambda: Decimal("1.00"))
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+# ==============================================================================
+# Canonical Action Digest Functions (Anti-Tampering)
+# ==============================================================================
+def compute_action_digest(
+    secret: str,
+    mission_id: UUID,
+    action_type: str,
+    target_resource: str,
+    mission_version: int,
+    expires_at: datetime,
+) -> str:
+    """Compute HMAC-SHA256 digest over canonical action details."""
+    import hashlib
+    import hmac
+
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=UTC)
+
+    canonical_payload = f"{mission_id}:{action_type}:{target_resource}:{mission_version}:{expires_at.isoformat()}"
+    return hmac.new(secret.encode("utf-8"), canonical_payload.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def verify_action_digest(
+    secret: str,
+    expected_digest: str,
+    mission_id: UUID,
+    action_type: str,
+    target_resource: str,
+    mission_version: int,
+    expires_at: datetime,
+) -> bool:
+    """Verify HMAC-SHA256 digest matching canonical action details."""
+    import hmac
+
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=UTC)
+
+    computed = compute_action_digest(
+        secret=secret,
+        mission_id=mission_id,
+        action_type=action_type,
+        target_resource=target_resource,
+        mission_version=mission_version,
+        expires_at=expires_at,
+    )
+    return hmac.compare_digest(computed, expected_digest)
