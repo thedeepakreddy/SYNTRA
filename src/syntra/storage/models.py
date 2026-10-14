@@ -1,4 +1,8 @@
-"""SQLAlchemy models for persistent storage of sessions, checkpoints, events, and artifacts."""
+"""SQLAlchemy models for persistent storage of sessions, checkpoints, events, and artifacts.
+
+Maintains backward-compatibility for Phase 1 session prototype while authoritative
+domain models reside in syntra.persistence.models (ADR-007).
+"""
 
 from datetime import UTC, datetime
 
@@ -9,7 +13,7 @@ from syntra.storage.database import Base
 
 
 class SessionModel(Base):
-    """Represents a SYNTRA multi-agent engineering session."""
+    """Represents a SYNTRA multi-agent engineering session (prototype)."""
 
     __tablename__ = "sessions"
 
@@ -24,18 +28,20 @@ class SessionModel(Base):
     metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Relationships
-    executions: Mapped[list["AgentExecutionModel"]] = relationship(
+    executions: Mapped[list["LegacyAgentExecutionModel"]] = relationship(
         back_populates="session", cascade="all, delete-orphan"
     )
     checkpoints: Mapped[list["CheckpointModel"]] = relationship(back_populates="session", cascade="all, delete-orphan")
-    events: Mapped[list["EventModel"]] = relationship(back_populates="session", cascade="all, delete-orphan")
-    artifacts: Mapped[list["ArtifactModel"]] = relationship(back_populates="session", cascade="all, delete-orphan")
+    events: Mapped[list["LegacyEventModel"]] = relationship(back_populates="session", cascade="all, delete-orphan")
+    artifacts: Mapped[list["LegacyArtifactModel"]] = relationship(
+        back_populates="session", cascade="all, delete-orphan"
+    )
 
 
-class AgentExecutionModel(Base):
-    """Logs individual agent steps and tasks."""
+class LegacyAgentExecutionModel(Base):
+    """Logs individual agent steps and tasks (legacy prototype)."""
 
-    __tablename__ = "agent_executions"
+    __tablename__ = "legacy_agent_executions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     session_id: Mapped[str] = mapped_column(String(64), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
@@ -51,7 +57,7 @@ class AgentExecutionModel(Base):
 
 
 class CheckpointModel(Base):
-    """Stores human-in-the-loop checkpoint decisions and states."""
+    """Stores human-in-the-loop checkpoint decisions and states (legacy prototype)."""
 
     __tablename__ = "checkpoints"
 
@@ -73,10 +79,10 @@ class CheckpointModel(Base):
     session: Mapped["SessionModel"] = relationship(back_populates="checkpoints")
 
 
-class EventModel(Base):
-    """Audit trail log of all system and agent events."""
+class LegacyEventModel(Base):
+    """Audit trail log of all system and agent events (legacy prototype)."""
 
-    __tablename__ = "events"
+    __tablename__ = "legacy_events"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     event_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
@@ -91,10 +97,10 @@ class EventModel(Base):
     session: Mapped["SessionModel | None"] = relationship(back_populates="events")
 
 
-class ArtifactModel(Base):
-    """Files and deliverables produced by swarms."""
+class LegacyArtifactModel(Base):
+    """Files and deliverables produced by swarms (legacy prototype)."""
 
-    __tablename__ = "artifacts"
+    __tablename__ = "legacy_artifacts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     session_id: Mapped[str] = mapped_column(String(64), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
@@ -103,3 +109,9 @@ class ArtifactModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
 
     session: Mapped["SessionModel"] = relationship(back_populates="artifacts")
+
+
+# Backwards compatibility aliases
+AgentExecutionModel = LegacyAgentExecutionModel
+EventModel = LegacyEventModel
+ArtifactModel = LegacyArtifactModel

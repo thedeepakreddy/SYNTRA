@@ -1,5 +1,7 @@
 """SYNTRA persistence and storage package."""
 
+# Ensure authoritative 30 models are registered on Base.metadata
+import syntra.persistence.models  # noqa: F401
 from syntra.storage.database import (
     Base,
     DatabaseManager,

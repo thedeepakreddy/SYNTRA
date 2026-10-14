@@ -3,7 +3,7 @@
 # Synchronized Intelligence for Autonomous Engineering
 # ==============================================================================
 
-.PHONY: help bootstrap doctor up down test test-cov lint typecheck smoke-test clean run serve status
+.PHONY: help bootstrap doctor up down test test-all test-cov lint typecheck smoke-test clean run serve status migrate
 
 help:
 	@echo "SYNTRA Automation Commands:"
@@ -11,6 +11,7 @@ help:
 	@echo "  make doctor      - Run comprehensive system diagnostics and prerequisite checks"
 	@echo "  make up          - Start containerized services (PostgreSQL, Redis, MinIO) via Compose"
 	@echo "  make down        - Stop containerized infrastructure services"
+	@echo "  make migrate     - Run Alembic database migrations to upgrade schema to head"
 	@echo "  make test        - Run fast unit and contract test suites"
 	@echo "  make test-cov    - Run test suite with line-level coverage reporting"
 	@echo "  make lint        - Run ruff code formatter and linter checks"
@@ -31,8 +32,11 @@ up:
 down:
 	docker compose down
 
+migrate:
+	uv run alembic upgrade head
+
 test:
-	uv run pytest tests/unit tests/contract tests/test_phase1_initialization.py
+	uv run pytest tests/unit tests/test_domain_and_persistence.py tests/test_migrations.py tests/test_phase1_initialization.py
 
 test-all:
 	uv run pytest

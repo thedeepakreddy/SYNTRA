@@ -1,0 +1,487 @@
+"""Pure domain entities, value objects, and enumerations for SYNTRA.
+
+Zero framework or database dependencies.
+"""
+
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from decimal import Decimal
+from enum import Enum
+from typing import Any
+from uuid import UUID, uuid4
+
+
+# ==============================================================================
+# Enumerations
+# ==============================================================================
+class MembershipRole(str, Enum):
+    OWNER = "owner"
+    ADMIN = "admin"
+    ENGINEER = "engineer"
+    VIEWER = "viewer"
+
+
+class MissionState(str, Enum):
+    DRAFT = "DRAFT"
+    PLANNING = "PLANNING"
+    AWAITING_APPROVAL = "AWAITING_APPROVAL"
+    READY = "READY"
+    RUNNING = "RUNNING"
+    PAUSED = "PAUSED"
+    REPLANNING = "REPLANNING"
+    VERIFYING = "VERIFYING"
+    AWAITING_DELIVERY_APPROVAL = "AWAITING_DELIVERY_APPROVAL"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+
+
+class RequirementType(str, Enum):
+    FUNCTIONAL = "functional"
+    NON_FUNCTIONAL = "non_functional"
+    SECURITY = "security"
+    INTERFACE = "interface"
+
+
+class ADRStatus(str, Enum):
+    PROPOSED = "PROPOSED"
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
+    SUPERSEDED = "SUPERSEDED"
+
+
+class TaskPlanStatus(str, Enum):
+    DRAFT = "DRAFT"
+    APPROVED = "APPROVED"
+    ACTIVE = "ACTIVE"
+    SUPERSEDED = "SUPERSEDED"
+
+
+class TaskState(str, Enum):
+    PENDING = "PENDING"
+    READY = "READY"
+    ASSIGNED = "ASSIGNED"
+    IN_PROGRESS = "IN_PROGRESS"
+    BLOCKED = "BLOCKED"
+    REVIEW = "REVIEW"
+    VERIFYING = "VERIFYING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+
+
+class AttemptState(str, Enum):
+    INITIALIZING = "INITIALIZING"
+    RUNNING = "RUNNING"
+    AWAITING_TOOL = "AWAITING_TOOL"
+    EVALUATING = "EVALUATING"
+    SUCCEEDED = "SUCCEEDED"
+    FAILED = "FAILED"
+    TIMED_OUT = "TIMED_OUT"
+
+
+class SandboxStatus(str, Enum):
+    PROVISIONING = "PROVISIONING"
+    ACTIVE = "ACTIVE"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    TERMINATED = "TERMINATED"
+
+
+class ArtifactType(str, Enum):
+    PRD = "PRD"
+    ARCHITECTURE_SPEC = "ARCHITECTURE_SPEC"
+    UNIFIED_DIFF = "UNIFIED_DIFF"
+    TEST_REPORT = "TEST_REPORT"
+    SECURITY_REPORT = "SECURITY_REPORT"
+    LOG_ARCHIVE = "LOG_ARCHIVE"
+
+
+class VerificationVerdict(str, Enum):
+    PASS = "PASS"
+    FAIL = "FAIL"
+    ERROR = "ERROR"
+
+
+class MCPTransportType(str, Enum):
+    STDIO = "stdio"
+    SSE = "sse"
+    HTTP = "http"
+
+
+class ApprovalDecision(str, Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    EXPIRED = "EXPIRED"
+
+
+class OutboxStatus(str, Enum):
+    PENDING = "PENDING"
+    PROCESSED = "PROCESSED"
+    FAILED = "FAILED"
+
+
+class MemoryScope(str, Enum):
+    EXECUTION = "EXECUTION"
+    PROJECT = "PROJECT"
+    ORGANIZATION = "ORGANIZATION"
+
+
+# ==============================================================================
+# Domain Entities
+# ==============================================================================
+@dataclass
+class Organization:
+    id: UUID = field(default_factory=uuid4)
+    name: str = ""
+    slug: str = ""
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class User:
+    id: UUID = field(default_factory=uuid4)
+    email: str = ""
+    full_name: str = ""
+    is_active: bool = True
+    is_service_account: bool = False
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class Membership:
+    id: UUID = field(default_factory=uuid4)
+    org_id: UUID = field(default_factory=uuid4)
+    user_id: UUID = field(default_factory=uuid4)
+    role: MembershipRole = MembershipRole.ENGINEER
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class Project:
+    id: UUID = field(default_factory=uuid4)
+    org_id: UUID = field(default_factory=uuid4)
+    name: str = ""
+    slug: str = ""
+    description: str | None = None
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class Repository:
+    id: UUID = field(default_factory=uuid4)
+    project_id: UUID = field(default_factory=uuid4)
+    name: str = ""
+    clone_url: str = ""
+    default_branch: str = "main"
+    is_private: bool = True
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class Mission:
+    id: UUID = field(default_factory=uuid4)
+    org_id: UUID = field(default_factory=uuid4)
+    project_id: UUID = field(default_factory=uuid4)
+    repository_id: UUID | None = None
+    objective: str = ""
+    state: MissionState = MissionState.DRAFT
+    autonomy_mode: str = "semi_autonomous"
+    active_plan_version: int = 1
+    version: int = 1
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class Requirement:
+    id: UUID = field(default_factory=uuid4)
+    mission_id: UUID = field(default_factory=uuid4)
+    identifier: str = ""
+    type: RequirementType = RequirementType.FUNCTIONAL
+    title: str = ""
+    description: str = ""
+    acceptance_criteria: list[dict[str, Any]] = field(default_factory=list)
+    is_ambiguous: bool = False
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class ArchitectureDecision:
+    id: UUID = field(default_factory=uuid4)
+    mission_id: UUID = field(default_factory=uuid4)
+    adr_number: int = 1
+    title: str = ""
+    status: ADRStatus = ADRStatus.PROPOSED
+    context: str = ""
+    decision: str = ""
+    consequences: str = ""
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class TaskPlan:
+    id: UUID = field(default_factory=uuid4)
+    mission_id: UUID = field(default_factory=uuid4)
+    plan_version: int = 1
+    status: TaskPlanStatus = TaskPlanStatus.DRAFT
+    total_tasks: int = 0
+    estimated_tokens: int = 0
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class Task:
+    id: UUID = field(default_factory=uuid4)
+    task_plan_id: UUID = field(default_factory=uuid4)
+    mission_id: UUID = field(default_factory=uuid4)
+    org_id: UUID = field(default_factory=uuid4)
+    identifier: str = ""
+    title: str = ""
+    description: str = ""
+    assigned_role: str = ""
+    state: TaskState = TaskState.PENDING
+    priority: int = 0
+    max_attempts: int = 3
+    attempt_count: int = 0
+    version: int = 1
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class TaskDependency:
+    id: UUID = field(default_factory=uuid4)
+    task_id: UUID = field(default_factory=uuid4)
+    depends_on_task_id: UUID = field(default_factory=uuid4)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class TaskAttempt:
+    id: UUID = field(default_factory=uuid4)
+    task_id: UUID = field(default_factory=uuid4)
+    attempt_number: int = 1
+    state: AttemptState = AttemptState.INITIALIZING
+    exit_code: int | None = None
+    error_message: str | None = None
+    started_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    completed_at: datetime | None = None
+
+
+@dataclass
+class AgentRun:
+    id: UUID = field(default_factory=uuid4)
+    task_attempt_id: UUID = field(default_factory=uuid4)
+    agent_role: str = ""
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_cost_usd: Decimal = field(default_factory=lambda: Decimal("0.000000"))
+    duration_ms: int = 0
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class Artifact:
+    id: UUID = field(default_factory=uuid4)
+    mission_id: UUID = field(default_factory=uuid4)
+    task_id: UUID | None = None
+    type: ArtifactType = ArtifactType.PRD
+    title: str = ""
+    current_version: int = 1
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class ArtifactVersion:
+    id: UUID = field(default_factory=uuid4)
+    artifact_id: UUID = field(default_factory=uuid4)
+    version: int = 1
+    storage_path: str = ""
+    sha256_checksum: str = ""
+    size_bytes: int = 0
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class VerificationRun:
+    id: UUID = field(default_factory=uuid4)
+    task_id: UUID = field(default_factory=uuid4)
+    artifact_version_id: UUID = field(default_factory=uuid4)
+    verdict: VerificationVerdict = VerificationVerdict.PASS
+    tests_passed: int = 0
+    tests_failed: int = 0
+    coverage_percentage: Decimal | None = None
+    raw_output: str | None = None
+    verified_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class Approval:
+    id: UUID = field(default_factory=uuid4)
+    mission_id: UUID = field(default_factory=uuid4)
+    task_id: UUID | None = None
+    action_type: str = ""
+    action_digest: str = ""
+    decision: ApprovalDecision = ApprovalDecision.PENDING
+    feedback: str | None = None
+    resolved_by: UUID | None = None
+    expires_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    resolved_at: datetime | None = None
+
+
+@dataclass
+class Budget:
+    id: UUID = field(default_factory=uuid4)
+    org_id: UUID = field(default_factory=uuid4)
+    mission_id: UUID | None = None
+    max_tokens: int = 1_000_000
+    max_cost_usd: Decimal = field(default_factory=lambda: Decimal("50.0000"))
+    reserved_tokens: int = 0
+    consumed_tokens: int = 0
+    consumed_cost_usd: Decimal = field(default_factory=lambda: Decimal("0.0000"))
+    version: int = 1
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class UsageRecord:
+    id: UUID = field(default_factory=uuid4)
+    org_id: UUID = field(default_factory=uuid4)
+    mission_id: UUID = field(default_factory=uuid4)
+    task_id: UUID | None = None
+    model_name: str = ""
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    cost_usd: Decimal = field(default_factory=lambda: Decimal("0.000000"))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class Event:
+    id: UUID = field(default_factory=uuid4)
+    org_id: UUID = field(default_factory=uuid4)
+    mission_id: UUID | None = None
+    event_type: str = ""
+    payload: dict[str, Any] = field(default_factory=dict)
+    actor_type: str = "system"
+    actor_id: str = "orchestrator"
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class OutboxEvent:
+    id: UUID = field(default_factory=uuid4)
+    event_type: str = ""
+    payload: dict[str, Any] = field(default_factory=dict)
+    status: OutboxStatus = OutboxStatus.PENDING
+    retry_count: int = 0
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    processed_at: datetime | None = None
+
+
+@dataclass
+class IdempotencyKey:
+    key: str = ""
+    org_id: UUID = field(default_factory=uuid4)
+    response_code: int = 200
+    response_body: dict[str, Any] = field(default_factory=dict)
+    payload_hash: str | None = None
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    expires_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class MCPServer:
+    id: UUID = field(default_factory=uuid4)
+    name: str = ""
+    transport: MCPTransportType = MCPTransportType.STDIO
+    command_or_url: str = ""
+    is_enabled: bool = True
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class MCPToolVersion:
+    id: UUID = field(default_factory=uuid4)
+    mcp_server_id: UUID = field(default_factory=uuid4)
+    tool_name: str = ""
+    version: str = "1.0.0"
+    description: str | None = None
+    input_schema: dict[str, Any] = field(default_factory=dict)
+    is_active: bool = True
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class Skill:
+    id: UUID = field(default_factory=uuid4)
+    name: str = ""
+    description: str = ""
+    category: str = ""
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class SkillVersion:
+    id: UUID = field(default_factory=uuid4)
+    skill_id: UUID = field(default_factory=uuid4)
+    version: str = "1.0.0"
+    manifest_yaml: str = ""
+    instruction_markdown: str = ""
+    compatible_roles: list[str] = field(default_factory=list)
+    required_tools: list[str] = field(default_factory=list)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class CapabilityGrant:
+    id: UUID = field(default_factory=uuid4)
+    org_id: UUID = field(default_factory=uuid4)
+    agent_role: str = ""
+    tool_name_pattern: str = ""
+    is_allowed: bool = True
+    requires_approval: bool = False
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class WorkerJobMetadata:
+    id: UUID = field(default_factory=uuid4)
+    task_attempt_id: UUID = field(default_factory=uuid4)
+    worker_id: str = ""
+    workspace_path: str = ""
+    git_worktree_branch: str = ""
+    status: SandboxStatus = SandboxStatus.PROVISIONING
+    timeout_seconds: int = 120
+    started_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    terminated_at: datetime | None = None
+
+
+@dataclass
+class WorkerLease:
+    task_id: UUID = field(default_factory=uuid4)
+    worker_id: str = ""
+    fencing_token: int = 1
+    lease_expires_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    acquired_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class MemoryRecord:
+    id: UUID = field(default_factory=uuid4)
+    org_id: UUID = field(default_factory=uuid4)
+    project_id: UUID | None = None
+    scope: MemoryScope = MemoryScope.ORGANIZATION
+    category: str = ""
+    lesson_key: str = ""
+    content: str = ""
+    provenance_task_id: UUID | None = None
+    confidence_score: Decimal = field(default_factory=lambda: Decimal("1.00"))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))

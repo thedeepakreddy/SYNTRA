@@ -6,7 +6,7 @@
 |---|---|---|---|---|
 | **Phase 0** | **System Architecture & Technical Planning** | **VERIFIED_COMPLETE** | 42/42 | All 12 architecture docs, 6 ADRs, contracts index, roadmap, and phase-00.md delivered. |
 | **Phase 1** | **Project Initialization** | **VERIFIED_COMPLETE** | 52/52 (3 skipped) | Monorepo layout, Compose (Postgres/Redis/MinIO), config guards, doctor/smoke-test, health/readiness endpoints, and unit test suites complete. |
-| **Phase 2** | Database and Domain Foundation | NOT_STARTED | - | Prerequisite: Phase 1. |
+| **Phase 2** | **Database and Domain Foundation** | **VERIFIED_COMPLETE** | 63/63 (3 skipped) | 30 SQLAlchemy models, pure domain entities, Alembic migrations, Unit of Work, state machines, DAG validation, and transactional outbox. |
 | **Phase 3** | API, Authentication, and Governance | NOT_STARTED | - | Prerequisite: Phase 2. |
 | **Phase 4** | MCP Infrastructure | NOT_STARTED | - | Prerequisite: Phase 3. |
 | **Phase 5** | Skills and Capability Registry | NOT_STARTED | - | Prerequisite: Phase 4. |
@@ -45,12 +45,14 @@
 - [x] ADR-004 (MCP Tool Protocol Standard): [`docs/decisions/ADR-004-mcp.md`](file:///Users/thedeepakreddy/SYNTRA/docs/decisions/ADR-004-mcp.md)
 - [x] ADR-005 (Sandbox & Worktree Isolation): [`docs/decisions/ADR-005-sandbox.md`](file:///Users/thedeepakreddy/SYNTRA/docs/decisions/ADR-005-sandbox.md)
 - [x] ADR-006 (Hybrid Autonomy & Approvals): [`docs/decisions/ADR-006-hybrid-autonomy.md`](file:///Users/thedeepakreddy/SYNTRA/docs/decisions/ADR-006-hybrid-autonomy.md)
+- [x] ADR-007 (Domain Aggregates & Schema Evolution): [`docs/decisions/ADR-007-domain-persistence-evolution.md`](file:///Users/thedeepakreddy/SYNTRA/docs/decisions/ADR-007-domain-persistence-evolution.md)
 
 ### Master Roadmaps & Verification
 - [x] 14-Phase Master Roadmap: [`docs/phases/roadmap.md`](file:///Users/thedeepakreddy/SYNTRA/docs/phases/roadmap.md)
 - [x] Phase 0 Verification Report: [`docs/phases/phase-00.md`](file:///Users/thedeepakreddy/SYNTRA/docs/phases/phase-00.md)
 - [x] Phase 1 Verification Report: [`docs/phases/phase-01.md`](file:///Users/thedeepakreddy/SYNTRA/docs/phases/phase-01.md)
-- [x] Test Suite Status: **52 passed, 3 skipped in 1.04s (100% pass rate among unit suites)**
-- [x] Linter & Typecheck Status: **`ruff` 100% clean, `mypy` 0 errors across 58 source files**
+- [x] Phase 2 Verification Report: [`docs/phases/phase-02.md`](file:///Users/thedeepakreddy/SYNTRA/docs/phases/phase-02.md)
+- [x] Test Suite Status: **63 passed, 3 skipped in 1.93s (100% pass rate among runnable suites)**
+- [x] Linter & Typecheck Status: **`ruff` 100% clean, `mypy` 0 errors across 67 source files**
 - [x] **Zero graphical frontend created.**
 
