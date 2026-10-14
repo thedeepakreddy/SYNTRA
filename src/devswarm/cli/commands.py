@@ -140,3 +140,22 @@ def status_command() -> None:
         f"[bold]Estimated Cost (USD):[/bold] ${summary['total_estimated_cost_usd']:.6f}"
     )
     console.print(Panel(status_info, title="System Diagnostics & Telemetry", border_style="cyan"))
+
+
+def mcp_serve_command(
+    workspace: str | None = typer.Option(None, "--workspace", "-w", help="Workspace path to expose to MCP clients"),
+) -> None:
+    """Launch Model Context Protocol (MCP) server over standard I/O (stdio)."""
+    from devswarm.agents.tools import create_standard_workspace_tools
+    from devswarm.mcp.server import MCPServer
+    from devswarm.sandbox.runner import SandboxRunner
+    from devswarm.sandbox.workspace import WorkspaceManager
+
+    ws_path = Path(workspace) if workspace else Path.cwd()
+    ws = WorkspaceManager(root_dir=ws_path)
+    runner = SandboxRunner(cwd=ws_path)
+    tools = create_standard_workspace_tools(ws, runner)
+
+    server = MCPServer(tools=tools)
+    asyncio.run(server.run_stdio())
+

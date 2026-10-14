@@ -4,6 +4,7 @@ import typer
 from devswarm.cli.commands import (
     list_checkpoints_command,
     list_sessions_command,
+    mcp_serve_command,
     resolve_checkpoint_command,
     run_command,
     serve_command,
@@ -30,6 +31,10 @@ checkpoint_app = typer.Typer(name="checkpoint", help="Manage hybrid autonomy che
 checkpoint_app.command("list", help="List pending checkpoints")(list_checkpoints_command)
 checkpoint_app.command("resolve", help="Approve, reject, or modify a checkpoint")(resolve_checkpoint_command)
 app.add_typer(checkpoint_app, name="checkpoint")
+
+mcp_app = typer.Typer(name="mcp", help="Model Context Protocol (MCP) server commands")
+mcp_app.command("serve", help="Start MCP server over stdio for IDE / agent integration")(mcp_serve_command)
+app.add_typer(mcp_app, name="mcp")
 
 
 if __name__ == "__main__":
