@@ -3,14 +3,14 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "devswarm"
+name = "syntra"
 version = "0.1.0"
-description = "Production-oriented Autonomous Multi-Agent Software Engineering Platform"
+description = "SYNTRA: Synchronized Intelligence for Autonomous Engineering"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 authors = [
-    { name = "DevSwarm Engineering Team", email = "dev@devswarm.syntra" },
+    { name = "SYNTRA Core Team", email = "dev@syntra.ai" },
 ]
 keywords = ["multi-agent", "gemini", "autonomous-coding", "software-engineering", "hybrid-autonomy"]
 dependencies = [
@@ -40,7 +40,8 @@ dev = [
 ]
 
 [project.scripts]
-devswarm = "devswarm.cli.main:app"
+syntra = "syntra.cli.main:app"
+devswarm = "syntra.cli.main:app"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -49,4 +50,4 @@ python_files = ["test_*.py"]
 python_functions = ["test_*"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/devswarm"]
+packages = ["src/syntra"]

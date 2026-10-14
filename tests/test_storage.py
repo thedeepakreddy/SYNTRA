@@ -1,9 +1,9 @@
-"""Tests for DevSwarm storage and persistence repositories."""
+"""Tests for SYNTRA storage and persistence repositories."""
 
 import pytest
-from devswarm.checkpoints.models import Checkpoint, CheckpointActionType, RiskLevel
-from devswarm.core.events import Event, EventType
-from devswarm.storage import (
+from syntra.checkpoints.models import Checkpoint, CheckpointActionType, RiskLevel
+from syntra.core.events import Event, EventType
+from syntra.storage import (
     CheckpointRepository,
     DatabaseManager,
     EventRepository,

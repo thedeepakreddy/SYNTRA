@@ -1,9 +1,9 @@
-# DevSwarm System Architecture Overview
+# SYNTRA System Architecture Overview
 
 ## 1. Executive Summary
-**DevSwarm** is an enterprise-grade, autonomous multi-agent software engineering platform. It ingests high-level, human-formulated software engineering objectives and orchestrates specialized AI agents to autonomously analyze requirements, produce technical designs, compute dependency-aware execution graphs, write code, run isolated tests, perform independent reviews, and deliver verified project artifacts.
+**SYNTRA** is an enterprise-grade, autonomous multi-agent software engineering platform. It ingests high-level, human-formulated software engineering objectives and orchestrates specialized AI agents to autonomously analyze requirements, produce technical designs, compute dependency-aware execution graphs, write code, run isolated tests, perform independent reviews, and deliver verified project artifacts.
 
-DevSwarm enforces a **backend-first, modular monolith architecture** paired with **isolated execution workers**, a **deterministic LangGraph state machine**, a **first-class Model Context Protocol (MCP) gateway**, a **versioned Skills system**, and a **hybrid autonomy governance model**.
+SYNTRA enforces a **backend-first, modular monolith architecture** paired with **isolated execution workers**, a **deterministic LangGraph state machine**, a **first-class Model Context Protocol (MCP) gateway**, a **versioned Skills system**, and a **hybrid autonomy governance model**.
 
 ---
 
@@ -96,7 +96,7 @@ flowchart TB
   - Strict separation between reasoning, tool requests, tool executions, and state transitions.
 
 ### Layer 4: MCP and Tool Control
-- **Tech Stack**: Official MCP Python SDK, DevSwarm Custom MCP Server.
+- **Tech Stack**: Official MCP Python SDK, SYNTRA Custom MCP Server.
 - **Responsibilities**:
   - Manages stdio and streamable HTTP connections to approved MCP servers.
   - Enforces server-side capability policies; an agent or LLM can never authorize its own tool access.

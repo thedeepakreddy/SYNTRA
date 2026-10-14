@@ -1,7 +1,7 @@
-# DevSwarm API Architecture Specification
+# SYNTRA API Architecture Specification
 
 ## 1. Overview
-The DevSwarm Control Plane exposes a versioned, secure REST API under `/v1/...` and real-time streaming over WebSockets and Server-Sent Events (SSE). The system is designed to be 100% operable headlessly via API and CLI without requiring any graphical frontend.
+The SYNTRA Control Plane exposes a versioned, secure REST API under `/v1/...` and real-time streaming over WebSockets and Server-Sent Events (SSE). The system is designed to be 100% operable headlessly via API and CLI without requiring any graphical frontend.
 
 ---
 

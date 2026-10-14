@@ -1,4 +1,5 @@
-# Multi-stage Dockerfile for DevSwarm Platform
+# Multi-stage Dockerfile for SYNTRA Platform
+# SYNTRA: Synchronized Intelligence for Autonomous Engineering
 # Base image with Python 3.12 and uv
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
 
@@ -30,25 +31,25 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN groupadd -g 1000 devswarm && \
-    useradd -u 1000 -g devswarm -s /bin/bash -m devswarm
+RUN groupadd -g 1000 syntra && \
+    useradd -u 1000 -g syntra -s /bin/bash -m syntra
 
 # Copy virtualenv and application from builder
-COPY --from=builder --chown=devswarm:devswarm /app/.venv /app/.venv
-COPY --from=builder --chown=devswarm:devswarm /app/src /app/src
-COPY --from=builder --chown=devswarm:devswarm /app/pyproject.toml /app/pyproject.toml
-COPY --from=builder --chown=devswarm:devswarm /app/README.md /app/README.md
+COPY --from=builder --chown=syntra:syntra /app/.venv /app/.venv
+COPY --from=builder --chown=syntra:syntra /app/src /app/src
+COPY --from=builder --chown=syntra:syntra /app/pyproject.toml /app/pyproject.toml
+COPY --from=builder --chown=syntra:syntra /app/README.md /app/README.md
 
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
-ENV DEVSWARM_HOST=0.0.0.0
-ENV DEVSWARM_PORT=8000
+ENV SYNTRA_HOST=0.0.0.0
+ENV SYNTRA_PORT=8000
 
 # Directory for sandboxes and databases
-RUN mkdir -p /app/.devswarm/sandboxes && chown -R devswarm:devswarm /app/.devswarm
+RUN mkdir -p /app/.syntra/sandboxes && chown -R syntra:syntra /app/.syntra
 
-USER devswarm
+USER syntra
 
 EXPOSE 8000
 
@@ -57,4 +58,4 @@ HEALTHCHECK --interval=15s --timeout=5s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/api/health || exit 1
 
 # Default command starts the API and WebSocket server
-CMD ["uvicorn", "devswarm.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "syntra.api.app:app", "--host", "0.0.0.0", "--port", "8000"]

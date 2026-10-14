@@ -1,7 +1,7 @@
-# DevSwarm Security Architecture & Threat Defense
+# SYNTRA Security Architecture & Threat Defense
 
 ## 1. Security Philosophy: Zero-Trust AI Execution
-In DevSwarm, LLMs are considered untrusted probabilistic reasoning components. Under no circumstance does an LLM output directly alter authoritative database records or host filesystem state without validation, authorization, and audit recording.
+In SYNTRA, LLMs are considered untrusted probabilistic reasoning components. Under no circumstance does an LLM output directly alter authoritative database records or host filesystem state without validation, authorization, and audit recording.
 
 ---
 

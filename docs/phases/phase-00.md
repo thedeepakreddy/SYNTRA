@@ -1,7 +1,7 @@
 # Phase 0: Architecture and Implementation Planning
 
 ## 1. Goal
-Produce a detailed, implementable, and production-ready backend architectural blueprint for DevSwarm across all 14 phases, formalizing system boundaries, database schemas, state machines, agent contracts, tool protocols, and security models.
+Produce a detailed, implementable, and production-ready backend architectural blueprint for SYNTRA across all 14 phases, formalizing system boundaries, database schemas, state machines, agent contracts, tool protocols, and security models.
 
 ---
 

@@ -1,16 +1,16 @@
-"""Tests for DevSwarm hybrid autonomy checkpoints."""
+"""Tests for SYNTRA hybrid autonomy checkpoints."""
 
 import asyncio
 import pytest
-from devswarm.checkpoints import (
+from syntra.checkpoints import (
     CheckpointActionType,
     CheckpointEngine,
     CheckpointPolicy,
     CheckpointStatus,
     RiskLevel,
 )
-from devswarm.core.config import AutonomyMode
-from devswarm.core.exceptions import CheckpointError
+from syntra.core.config import AutonomyMode
+from syntra.core.exceptions import CheckpointError
 
 
 def test_checkpoint_policy_risk_evaluation():

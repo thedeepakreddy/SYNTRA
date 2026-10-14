@@ -1,6 +1,6 @@
-# DevSwarm REST & WebSocket API Reference
+# SYNTRA REST & WebSocket API Reference
 
-The DevSwarm backend exposes a production FastAPI server on port 8000. Interactive Swagger documentation is accessible at `http://localhost:8000/docs` and Redoc at `http://localhost:8000/redoc`.
+The SYNTRA backend exposes a production FastAPI server on port 8000. Interactive Swagger documentation is accessible at `http://localhost:8000/docs` and Redoc at `http://localhost:8000/redoc`.
 
 ---
 

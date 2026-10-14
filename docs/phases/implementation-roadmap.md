@@ -1,6 +1,6 @@
-# DevSwarm Master Implementation Roadmap (Phases 0–13)
+# SYNTRA Master Implementation Roadmap (Phases 0–13)
 
-This roadmap outlines the complete 14-phase development program for DevSwarm in accordance with the DevSwarm Master Build Specification.
+This roadmap outlines the complete 14-phase development program for SYNTRA in accordance with the SYNTRA Master Build Specification.
 
 ---
 
@@ -50,7 +50,7 @@ This roadmap outlines the complete 14-phase development program for DevSwarm in 
 ### Phase 4: MCP Infrastructure
 - **Goal**: Implement secure MCP tool interoperability.
 - **Tasks**: MCP Client Manager, Server Registry, Tool Registry, Capability Policy Gateway, Stdio/HTTP transports.
-- **Exit Criteria**: Authorized test client can discover and call DevSwarm MCP tools.
+- **Exit Criteria**: Authorized test client can discover and call SYNTRA MCP tools.
 
 ### Phase 5: Skills and Capability Registry
 - **Goal**: Create reusable, discoverable engineering skills.
@@ -83,7 +83,7 @@ This roadmap outlines the complete 14-phase development program for DevSwarm in 
 - **Exit Criteria**: Multi-agent pipeline passes work through real handoffs to produce verified code.
 
 ### Phase 11: Memory and Self-Correction
-- **Goal**: Make DevSwarm context-aware and recoverable.
+- **Goal**: Make SYNTRA context-aware and recoverable.
 - **Tasks**: Execution, project, and organizational memory; failure classifier; bounded replanning.
 - **Exit Criteria**: Controlled failure triggers automatic corrective action without manual intervention.
 
@@ -93,6 +93,6 @@ This roadmap outlines the complete 14-phase development program for DevSwarm in 
 - **Exit Criteria**: All successful mission deliverables backed by independent verification evidence.
 
 ### Phase 13: End-to-End Integration and Benchmark
-- **Goal**: Prove DevSwarm as a complete autonomous software engineering platform.
+- **Goal**: Prove SYNTRA as a complete autonomous software engineering platform.
 - **Tasks**: Real inventory backend bug-fix mission, worker kill failure test, benchmark comparison against baseline.
-- **Exit Criteria**: DevSwarm completes real engineering work, survives worker failure, and produces reproducible evidence.
+- **Exit Criteria**: SYNTRA completes real engineering work, survives worker failure, and produces reproducible evidence.

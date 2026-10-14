@@ -1,7 +1,7 @@
-"""Tests for DevSwarm agent framework."""
+"""Tests for SYNTRA agent framework."""
 
 import pytest
-from devswarm.agents import (
+from syntra.agents import (
     AgentContext,
     AgentMemory,
     BaseAgent,
@@ -9,8 +9,8 @@ from devswarm.agents import (
     ToolRegistry,
     create_standard_workspace_tools,
 )
-from devswarm.llm import LLMMessage, MessageRole, MockLLMClient
-from devswarm.sandbox import SandboxRunner, WorkspaceManager
+from syntra.llm import LLMMessage, MessageRole, MockLLMClient
+from syntra.sandbox import SandboxRunner, WorkspaceManager
 
 
 def test_agent_memory():
@@ -76,7 +76,7 @@ async def test_agent_react_loop_with_tools(tmp_path):
                 "name": "write_file",
                 "arguments": {
                     "relative_path": "index.py",
-                    "content": "print('DevSwarm is active')\n",
+                    "content": "print('SYNTRA is active')\n",
                 },
             }
         ],
@@ -90,6 +90,6 @@ async def test_agent_react_loop_with_tools(tmp_path):
     assert result.success
     assert "successfully created" in result.output
     assert ws.file_exists("index.py")
-    assert "DevSwarm is active" in ws.read_file("index.py")
+    assert "SYNTRA is active" in ws.read_file("index.py")
     assert result.steps_taken == 2
     assert result.tool_calls_count == 1

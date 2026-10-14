@@ -1,8 +1,8 @@
-"""Tests for DevSwarm sandbox module."""
+"""Tests for SYNTRA sandbox module."""
 
 import pytest
-from devswarm.core.exceptions import SandboxError, SandboxSecurityViolationError
-from devswarm.sandbox import (
+from syntra.core.exceptions import SandboxError, SandboxSecurityViolationError
+from syntra.sandbox import (
     CommandSafetyValidator,
     FilePatcher,
     SandboxRunner,
@@ -94,9 +94,9 @@ async def test_sandbox_runner_execution(tmp_path):
     runner = SandboxRunner(cwd=tmp_path)
 
     # Safe execution
-    result = await runner.run("echo 'DevSwarm Sandbox Test'")
+    result = await runner.run("echo 'SYNTRA Sandbox Test'")
     assert result.is_success
-    assert "DevSwarm Sandbox Test" in result.stdout
+    assert "SYNTRA Sandbox Test" in result.stdout
 
     # Dangerous command rejection
     with pytest.raises(SandboxSecurityViolationError):

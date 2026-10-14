@@ -1,8 +1,8 @@
-"""Tests for DevSwarm core module."""
+"""Tests for SYNTRA core module."""
 
 import asyncio
 import pytest
-from devswarm.core import (
+from syntra.core import (
     AutonomyMode,
     Event,
     EventBus,

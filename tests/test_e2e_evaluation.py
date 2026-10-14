@@ -1,16 +1,16 @@
-"""Comprehensive end-to-end evaluation tests for DevSwarm."""
+"""Comprehensive end-to-end evaluation tests for SYNTRA."""
 
 import pytest
-from devswarm.checkpoints import (
+from syntra.checkpoints import (
     CheckpointActionType,
     CheckpointEngine,
     CheckpointStatus,
     RiskLevel,
 )
-from devswarm.core.config import AutonomyMode
-from devswarm.llm import MockLLMClient
-from devswarm.sandbox import SandboxRunner, WorkspaceManager
-from devswarm.swarm import SwarmEngine
+from syntra.core.config import AutonomyMode
+from syntra.llm import MockLLMClient
+from syntra.sandbox import SandboxRunner, WorkspaceManager
+from syntra.swarm import SwarmEngine
 
 
 @pytest.mark.asyncio

@@ -1,7 +1,7 @@
-# DevSwarm PostgreSQL Database Design
+# SYNTRA PostgreSQL Database Design
 
 ## 1. Overview & Principles
-DevSwarm uses PostgreSQL as its authoritative state store. All schema definitions are managed through SQLAlchemy 2.x and versioned via Alembic migrations.
+SYNTRA uses PostgreSQL as its authoritative state store. All schema definitions are managed through SQLAlchemy 2.x and versioned via Alembic migrations.
 
 ### Core Database Rules:
 1. **UUID Primary Keys**: Every table uses UUIDv4 (`UUID(as_uuid=True)`) primary keys to prevent enumeration attacks and support distributed generation.

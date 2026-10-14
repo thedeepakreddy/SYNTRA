@@ -1,16 +1,16 @@
 # Model Context Protocol (MCP) Integration Guide
 
-DevSwarm incorporates native support for Anthropic / Linux Foundation **Model Context Protocol (MCP)** standards. DevSwarm can act both as an **MCP Tool Host** (consuming external MCP tools) and an **MCP Tool Provider** (exposing its engineering tools to external IDEs or agents).
+SYNTRA incorporates native support for Anthropic / Linux Foundation **Model Context Protocol (MCP)** standards. SYNTRA can act both as an **MCP Tool Host** (consuming external MCP tools) and an **MCP Tool Provider** (exposing its engineering tools to external IDEs or agents).
 
 ---
 
-## 1. Exporting DevSwarm Tools as MCP Schemas
+## 1. Exporting SYNTRA Tools as MCP Schemas
 
 Every tool registered in `ToolRegistry` implements `.to_mcp_tool_schema()`, producing a compliant Model Context Protocol tool schema:
 
 ```python
-from devswarm.agents.tools import create_standard_workspace_tools
-from devswarm.sandbox import WorkspaceManager, SandboxRunner
+from syntra.agents.tools import create_standard_workspace_tools
+from syntra.sandbox import WorkspaceManager, SandboxRunner
 
 workspace = WorkspaceManager("/path/to/project")
 runner = SandboxRunner("/path/to/project")
@@ -41,11 +41,11 @@ for tool_schema in mcp_schemas:
 
 ---
 
-## 2. Registering External MCP Tools into DevSwarm
+## 2. Registering External MCP Tools into SYNTRA
 Agents can be equipped with custom tools or bridge connections to remote MCP servers:
 
 ```python
-from devswarm.agents.tools import Tool, ToolRegistry
+from syntra.agents.tools import Tool, ToolRegistry
 
 custom_registry = ToolRegistry()
 

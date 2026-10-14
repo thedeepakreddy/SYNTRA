@@ -1,13 +1,16 @@
-# DevSwarm
+# SYNTRA
 
-**Production-Oriented Autonomous Multi-Agent Software Engineering Platform**
+**Synchronized Intelligence for Autonomous Engineering**
 
-DevSwarm coordinates teams of specialized AI agents powered by Google Gemini (`google-genai` SDK) to autonomously architect, plan, write, review, test, and release production-quality code under a robust **hybrid autonomy** model.
+> *One Vision. Multiple AI Agents. Autonomous Engineering.*
 
-## Features
-- **Multi-Agent Collaboration**: Specialized roles (Architect, Tech Lead, Senior Coder, Code Reviewer, QA/Tester, Security Auditor).
-- **Primary LLM Provider**: Google Gemini via modern `google-genai` SDK.
-- **Hybrid Autonomy**: Multi-tier autonomy levels with human checkpoint gates (Approve, Reject, Modify, Replay).
-- **Isolated Execution Workers**: Safe process sandboxing with path traversal defenses, resource limits, and execution timeouts.
-- **Event-Driven Architecture**: High-throughput async event bus for real-time observability and WebSocket streaming.
-- **Production API & CLI**: FastAPI REST & WebSocket server and rich terminal CLI.
+SYNTRA coordinates teams of specialized AI agents powered by Google Gemini (`google-genai` SDK) to autonomously architect, plan, write, review, test, and release production-quality code under a robust **hybrid autonomy** model with isolated execution sandboxes.
+
+## Core Features
+- **Synchronized Multi-Agent Collaboration**: Specialized roles (Product Manager, Software Architect, Engineering Manager, Backend Engineer, Frontend Engineer, QA Engineer, DevOps Engineer, Security Reviewer, Code Reviewer, Debugging Specialist).
+- **Primary Model Provider**: Google Gemini via the supported modern `google-genai` Python SDK.
+- **Hybrid Autonomy**: Multi-tier autonomy levels with cryptographically bound human-in-the-loop checkpoint gates (Approve, Reject with corrective guidance, Modify).
+- **Isolated Execution Sandboxes**: Safe process sandboxing (`SandboxProvider`) with path traversal defenses, resource limits, and execution timeouts.
+- **First-Class MCP Integration**: Native Model Context Protocol (MCP) server (`syntra`) and client gateway.
+- **Deterministic State Graphs**: Cyclic, stateful workflow orchestration powered by LangGraph with PostgreSQL checkpointing.
+- **Production API & CLI**: Headless-first architecture operable via FastAPI REST/WebSocket endpoints and the `syntra` CLI.

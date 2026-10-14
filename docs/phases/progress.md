@@ -1,4 +1,4 @@
-# DevSwarm Phase Progress Tracker
+# SYNTRA Phase Progress Tracker
 
 ## Project Status Overview
 

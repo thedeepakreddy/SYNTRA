@@ -1,10 +1,10 @@
-# DevSwarm Module Boundaries & Dependency Architecture
+# SYNTRA Module Boundaries & Dependency Architecture
 
 ## 1. Monorepo / Package Structure
-DevSwarm adheres to clean modular boundaries structured into **Applications** (`apps/`), **Core Packages** (`packages/`), and **Skill Packages** (`skills/`).
+SYNTRA adheres to clean modular boundaries structured into **Applications** (`apps/`), **Core Packages** (`packages/`), and **Skill Packages** (`skills/`).
 
 ```
-devswarm/
+syntra/
 |-- apps/
 |   |-- api/                   # FastAPI REST & WebSocket entry point
 |   |-- orchestrator/          # LangGraph mission & task execution daemon

@@ -578,60 +578,6 @@ wheels = [
 ]
 
 [[package]]
-name = "devswarm"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "aiosqlite" },
-    { name = "asyncpg" },
-    { name = "fastapi" },
-    { name = "google-genai" },
-    { name = "greenlet" },
-    { name = "httpx" },
-    { name = "jinja2" },
-    { name = "psycopg", extra = ["binary"] },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-    { name = "python-dotenv" },
-    { name = "rich" },
-    { name = "sqlalchemy" },
-    { name = "typer" },
-    { name = "uvicorn", extra = ["standard"] },
-    { name = "websockets" },
-]
-
-[package.optional-dependencies]
-dev = [
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiosqlite", specifier = ">=0.20.0" },
-    { name = "asyncpg", specifier = ">=0.30.0" },
-    { name = "fastapi", specifier = ">=0.115.0" },
-    { name = "google-genai", specifier = ">=2.30.0" },
-    { name = "greenlet", specifier = ">=3.0.0" },
-    { name = "httpx", specifier = ">=0.28.0" },
-    { name = "jinja2", specifier = ">=3.1.4" },
-    { name = "psycopg", extras = ["binary"], specifier = ">=3.2.0" },
-    { name = "pydantic", specifier = ">=2.10.0" },
-    { name = "pydantic-settings", specifier = ">=2.6.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.0" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24.0" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.0.0" },
-    { name = "python-dotenv", specifier = ">=1.0.1" },
-    { name = "rich", specifier = ">=13.9.0" },
-    { name = "sqlalchemy", specifier = ">=2.0.36" },
-    { name = "typer", specifier = ">=0.15.0" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.32.0" },
-    { name = "websockets", specifier = ">=13.0" },
-]
-provides-extras = ["dev"]
-
-[[package]]
 name = "distro"
 version = "1.9.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1647,6 +1593,60 @@ sdist = { url = "https://files.pythonhosted.org/packages/e9/0c/6efb252d091ecccd7
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c1/b0/5742e4ac7af5eb58ec3470a537a49d7aa507e5539413e504b3a65ef50ba8/starlette-1.8.0-py3-none-any.whl", hash = "sha256:dfdd6b29c26483288088d990eee59631dedadd66ce20d203402a7ca8e3c4656f", size = 79612, upload-time = "2026-10-13T07:54:38.019Z" },
 ]
+
+[[package]]
+name = "syntra"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "aiosqlite" },
+    { name = "asyncpg" },
+    { name = "fastapi" },
+    { name = "google-genai" },
+    { name = "greenlet" },
+    { name = "httpx" },
+    { name = "jinja2" },
+    { name = "psycopg", extra = ["binary"] },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "python-dotenv" },
+    { name = "rich" },
+    { name = "sqlalchemy" },
+    { name = "typer" },
+    { name = "uvicorn", extra = ["standard"] },
+    { name = "websockets" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiosqlite", specifier = ">=0.20.0" },
+    { name = "asyncpg", specifier = ">=0.30.0" },
+    { name = "fastapi", specifier = ">=0.115.0" },
+    { name = "google-genai", specifier = ">=2.30.0" },
+    { name = "greenlet", specifier = ">=3.0.0" },
+    { name = "httpx", specifier = ">=0.28.0" },
+    { name = "jinja2", specifier = ">=3.1.4" },
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.2.0" },
+    { name = "pydantic", specifier = ">=2.10.0" },
+    { name = "pydantic-settings", specifier = ">=2.6.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.0" },
+    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.0.0" },
+    { name = "python-dotenv", specifier = ">=1.0.1" },
+    { name = "rich", specifier = ">=13.9.0" },
+    { name = "sqlalchemy", specifier = ">=2.0.36" },
+    { name = "typer", specifier = ">=0.15.0" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.32.0" },
+    { name = "websockets", specifier = ">=13.0" },
+]
+provides-extras = ["dev"]
 
 [[package]]
 name = "tenacity"

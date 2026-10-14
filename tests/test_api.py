@@ -1,11 +1,11 @@
-"""Integration tests for DevSwarm FastAPI REST endpoints."""
+"""Integration tests for SYNTRA FastAPI REST endpoints."""
 
 import httpx
 import pytest
-from devswarm.api.app import app
-from devswarm.checkpoints.engine import get_checkpoint_engine
-from devswarm.checkpoints.models import CheckpointActionType
-from devswarm.storage.database import get_db_manager
+from syntra.api.app import app
+from syntra.checkpoints.engine import get_checkpoint_engine
+from syntra.checkpoints.models import CheckpointActionType
+from syntra.storage.database import get_db_manager
 
 
 @pytest.fixture(autouse=True)

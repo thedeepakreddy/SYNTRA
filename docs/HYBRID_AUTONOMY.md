@@ -1,7 +1,7 @@
-# DevSwarm Hybrid Autonomy & Checkpoint Governance
+# SYNTRA Hybrid Autonomy & Checkpoint Governance
 
 ## 1. Philosophy: Human-in-the-Loop Safety
-DevSwarm combines full autonomous execution with enterprise safety gates through a 4-tier Hybrid Autonomy Model. Rather than requiring human confirmation for every trivial read operation or leaving dangerous operations unchecked, DevSwarm evaluates actions based on risk and operational policy.
+SYNTRA combines full autonomous execution with enterprise safety gates through a 4-tier Hybrid Autonomy Model. Rather than requiring human confirmation for every trivial read operation or leaving dangerous operations unchecked, SYNTRA evaluates actions based on risk and operational policy.
 
 ```mermaid
 flowchart TD
@@ -62,13 +62,13 @@ flowchart TD
 ### Via CLI
 ```bash
 # List all pending checkpoints
-devswarm checkpoint list
+syntra checkpoint list
 
 # Approve a pending checkpoint
-devswarm checkpoint resolve <checkpoint_id> --decision approve
+syntra checkpoint resolve <checkpoint_id> --decision approve
 
 # Reject with corrective guidance (injected into agent memory)
-devswarm checkpoint resolve <checkpoint_id> --decision reject --feedback "Use SQLite instead of Redis for caching."
+syntra checkpoint resolve <checkpoint_id> --decision reject --feedback "Use SQLite instead of Redis for caching."
 ```
 
 ### Via REST API

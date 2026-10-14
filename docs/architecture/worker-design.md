@@ -1,9 +1,9 @@
-# DevSwarm Sandbox Worker & Execution Plane Design
+# SYNTRA Sandbox Worker & Execution Plane Design
 
 ## 1. Overview & Abstraction Philosophy
 Agents perform real engineering work (compilation, package installation, test execution, file mutations) exclusively inside disposable, isolated sandbox workers.
 
-To prevent vendor lock-in and enable environment-appropriate security tiers, DevSwarm introduces the **`SandboxProvider` abstraction**.
+To prevent vendor lock-in and enable environment-appropriate security tiers, SYNTRA introduces the **`SandboxProvider` abstraction**.
 
 ```mermaid
 flowchart TD

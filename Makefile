@@ -1,4 +1,4 @@
-.PHONY: install test test-cov lint run serve docker-up docker-down clean
+.PHONY: install test test-cov lint run serve status docker-up docker-down clean
 
 install:
 	uv venv .venv --python 3.12
@@ -8,16 +8,16 @@ test:
 	uv run pytest
 
 test-cov:
-	uv run pytest --cov=devswarm --cov-report=term-missing
+	uv run pytest --cov=syntra --cov-report=term-missing
 
 run:
-	uv run devswarm run "$(TASK)"
+	uv run syntra run "$(TASK)"
 
 serve:
-	uv run devswarm serve --reload
+	uv run syntra serve --reload
 
 status:
-	uv run devswarm status
+	uv run syntra status
 
 docker-up:
 	docker compose up -d --build
@@ -26,4 +26,4 @@ docker-down:
 	docker compose down
 
 clean:
-	rm -rf .pytest_cache .coverage htmlcov .devswarm *.sqlite3 devswarm.db
+	rm -rf .pytest_cache .coverage htmlcov .syntra .devswarm *.sqlite3 syntra.db devswarm.db

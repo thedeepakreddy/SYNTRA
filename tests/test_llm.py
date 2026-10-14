@@ -1,9 +1,9 @@
-"""Tests for DevSwarm LLM integration module."""
+"""Tests for SYNTRA LLM integration module."""
 
 import pytest
 from pydantic import BaseModel
-from devswarm.core.exceptions import LLMError
-from devswarm.llm import (
+from syntra.core.exceptions import LLMError
+from syntra.llm import (
     GeminiClient,
     LLMMessage,
     LLMResponse,
@@ -74,7 +74,7 @@ async def test_mock_llm_client_structured_generation():
     client = MockLLMClient()
     client.queue_response(
         ArchitecturePlan(
-            title="DevSwarm Monolith",
+            title="SYNTRA Monolith",
             modules=["core", "llm", "sandbox", "agents"],
             estimated_effort_days=5,
         )
@@ -85,7 +85,7 @@ async def test_mock_llm_client_structured_generation():
         response_model=ArchitecturePlan,
     )
 
-    assert plan.title == "DevSwarm Monolith"
+    assert plan.title == "SYNTRA Monolith"
     assert len(plan.modules) == 4
     assert plan.estimated_effort_days == 5
 

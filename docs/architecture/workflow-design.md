@@ -1,7 +1,7 @@
-# DevSwarm LangGraph Workflow State Machine Design
+# SYNTRA LangGraph Workflow State Machine Design
 
 ## 1. Overview
-DevSwarm uses **LangGraph** for durable workflow orchestration. Workflows are organized hierarchically into two decoupled state graphs:
+SYNTRA uses **LangGraph** for durable workflow orchestration. Workflows are organized hierarchically into two decoupled state graphs:
 1. **Mission Graph**: Governs the macro lifecycle from objective intake to final delivery approval.
 2. **Task Execution Graph**: Governs the micro execution lifecycle for an individual task assigned to an agent.
 

@@ -1,7 +1,7 @@
-# DevSwarm Multi-Agent Architecture
+# SYNTRA Multi-Agent Architecture
 
 ## 1. Core Principle: Role Invocations, Not Chatbots
-In DevSwarm, agents are not ten continuously running chatbots chatting aimlessly. Agents are **stateless role configurations invoked by the orchestrator** to perform specific units of work.
+In SYNTRA, agents are not ten continuously running chatbots chatting aimlessly. Agents are **stateless role configurations invoked by the orchestrator** to perform specific units of work.
 
 Each agent invocation requires a formal contract:
 ```json
@@ -67,7 +67,7 @@ flowchart TD
 | 2 | **Software Architect** | Defines system boundaries, data models, schemas, and Architecture Decision Records (ADRs). | Project context, artifact submitter. | `system-architecture`, `database-engineering` |
 | 3 | **Engineering Manager** | Decomposes architecture into DAG tasks, sets priorities, detects blockers, plans iterations. | Task manager, blocker reporter. | `task-decomposition` |
 | 4 | **Backend Engineer** | Implements service logic, FastAPI routes, database models, and unit tests. | Scoped filesystem, sandbox runner, Git worktree. | `backend-api-development`, `test-driven-development` |
-| 5 | **Frontend Engineer** | Implements client-side code inside target repositories (does not build DevSwarm UI). | Scoped filesystem, sandbox runner, Git worktree. | `frontend-development` |
+| 5 | **Frontend Engineer** | Implements client-side code inside target repositories (does not build SYNTRA UI). | Scoped filesystem, sandbox runner, Git worktree. | `frontend-development` |
 | 6 | **QA Engineer** | Formulates test proposals, verifies acceptance criteria, executes regression suites. | Sandbox test runner, artifact reader. | `integration-testing`, `api-contract-testing` |
 | 7 | **DevOps Engineer** | Writes Dockerfiles, CI/CD pipeline definitions, verifies build configurations. | Scoped filesystem, build runner. | `devops-and-ci` |
 | 8 | **Security Reviewer** | Scrutinizes diffs for injection flaws, secret leakage, and permission escalations. | Code search, security scanner. | `security-review` |
@@ -77,7 +77,7 @@ flowchart TD
 ---
 
 ## 3. Skills System & Progressive Disclosure
-DevSwarm avoids prompt bloat by loading only the skill packages explicitly assigned to an agent's active task:
+SYNTRA avoids prompt bloat by loading only the skill packages explicitly assigned to an agent's active task:
 - Skills are stored in `skills/<skill-name>/` with `manifest.yaml` and `SKILL.md`.
 - When an agent is invoked, the `SkillRegistry` validates dependencies and injects only the relevant execution guidelines and schemas into working memory.
 - Skills cannot grant tool permissions; permissions are granted strictly by the Control Plane's capability policy.

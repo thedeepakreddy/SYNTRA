@@ -1,8 +1,8 @@
 """Tests for Swarm orchestration and StateGraph engine."""
 
 import pytest
-from devswarm.llm import MockLLMClient
-from devswarm.swarm import StateGraph, SwarmEngine, SwarmState
+from syntra.llm import MockLLMClient
+from syntra.swarm import StateGraph, SwarmEngine, SwarmState
 
 
 @pytest.mark.asyncio
@@ -72,7 +72,7 @@ async def test_swarm_engine_end_to_end_flow(tmp_path):
     # 6. Security
     mock_llm.queue_response("Security scan complete. No critical vulnerabilities found.")
 
-    from devswarm.core.config import AutonomyMode
+    from syntra.core.config import AutonomyMode
     engine = SwarmEngine(
         workspace_dir=tmp_path,
         llm_client=mock_llm,

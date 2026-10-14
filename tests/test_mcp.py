@@ -1,10 +1,10 @@
-"""Tests for DevSwarm Model Context Protocol (MCP) server."""
+"""Tests for SYNTRA Model Context Protocol (MCP) server."""
 
 import pytest
-from devswarm.agents.tools import create_standard_workspace_tools
-from devswarm.mcp.server import MCPServer
-from devswarm.sandbox.runner import SandboxRunner
-from devswarm.sandbox.workspace import WorkspaceManager
+from syntra.agents.tools import create_standard_workspace_tools
+from syntra.mcp.server import MCPServer
+from syntra.sandbox.runner import SandboxRunner
+from syntra.sandbox.workspace import WorkspaceManager
 
 
 @pytest.fixture
@@ -12,7 +12,7 @@ def mcp_server(tmp_path):
     ws = WorkspaceManager(tmp_path)
     runner = SandboxRunner(tmp_path)
     tools = create_standard_workspace_tools(ws, runner)
-    return MCPServer(tools=tools, server_name="devswarm-test-mcp")
+    return MCPServer(tools=tools, server_name="syntra-test-mcp")
 
 
 @pytest.mark.asyncio
@@ -31,7 +31,7 @@ async def test_mcp_initialize(mcp_server):
     assert resp["jsonrpc"] == "2.0"
     assert resp["id"] == 1
     result = resp["result"]
-    assert result["serverInfo"]["name"] == "devswarm-test-mcp"
+    assert result["serverInfo"]["name"] == "syntra-test-mcp"
     assert "tools" in result["capabilities"]
 
 

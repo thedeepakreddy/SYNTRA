@@ -1,7 +1,7 @@
-# DevSwarm Model Context Protocol (MCP) Architecture
+# SYNTRA Model Context Protocol (MCP) Architecture
 
 ## 1. Overview & Principles
-Model Context Protocol (MCP) is a first-class citizen in DevSwarm. DevSwarm acts as both an **MCP Tool Host** (running an internal MCP server exposing platform capabilities) and an **MCP Client Gateway** (connecting to approved external MCP servers).
+Model Context Protocol (MCP) is a first-class citizen in SYNTRA. SYNTRA acts as both an **MCP Tool Host** (running an internal MCP server exposing platform capabilities) and an **MCP Client Gateway** (connecting to approved external MCP servers).
 
 ### Core Security Rules:
 1. **Server-Side Authorization**: The LLM must never authorize its own tool access. Access is determined by capability grants assigned to the specific agent role and task attempt.
@@ -29,7 +29,7 @@ flowchart LR
     end
 
     subgraph ServerLayer["MCP Servers"]
-        InternalMCP["Internal DevSwarm MCP Server (Stdio)"]
+        InternalMCP["Internal SYNTRA MCP Server (Stdio)"]
         ExternalMCP["Authorized Remote MCP Servers (HTTP/SSE)"]
     end
 
@@ -44,20 +44,20 @@ flowchart LR
 
 ---
 
-## 3. DevSwarm Standard MCP Toolset
+## 3. SYNTRA Standard MCP Toolset
 
-The internal DevSwarm MCP Server exposes the following standard tools:
+The internal SYNTRA MCP Server exposes the following standard tools:
 
 | MCP Tool Name | Description | Mutation | Policy Gate |
 |---|---|---|---|
-| `devswarm.get_project_context` | Retrieves requirements, ADRs, and repository layout | No | Auto-Approved |
-| `devswarm.list_tasks` | Lists current mission tasks and statuses | No | Auto-Approved |
-| `devswarm.get_task` | Fetches details and inputs for an assigned task | No | Auto-Approved |
-| `devswarm.get_artifact` | Reads an artifact by ID or path | No | Auto-Approved |
-| `devswarm.submit_artifact` | Submits a patch, diff, or document deliverable | Yes | Scoped Write |
-| `devswarm.request_review` | Triggers independent code review of a submitted artifact | Yes | State Transition |
-| `devswarm.report_blocker` | Reports execution impediments to the Engineering Manager | Yes | Escalation |
-| `devswarm.get_verification_result` | Queries test and verification logs | No | Auto-Approved |
+| `syntra.get_project_context` | Retrieves requirements, ADRs, and repository layout | No | Auto-Approved |
+| `syntra.list_tasks` | Lists current mission tasks and statuses | No | Auto-Approved |
+| `syntra.get_task` | Fetches details and inputs for an assigned task | No | Auto-Approved |
+| `syntra.get_artifact` | Reads an artifact by ID or path | No | Auto-Approved |
+| `syntra.submit_artifact` | Submits a patch, diff, or document deliverable | Yes | Scoped Write |
+| `syntra.request_review` | Triggers independent code review of a submitted artifact | Yes | State Transition |
+| `syntra.report_blocker` | Reports execution impediments to the Engineering Manager | Yes | Escalation |
+| `syntra.get_verification_result` | Queries test and verification logs | No | Auto-Approved |
 
 ---
 
