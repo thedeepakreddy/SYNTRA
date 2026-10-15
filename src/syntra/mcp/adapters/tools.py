@@ -17,9 +17,11 @@ from syntra.persistence.unit_of_work import SqlAlchemyUnitOfWork
 def resolve_safe_path(workspace_root: Path, relative_path: str) -> Path:
     """Resolve a path and ensure it is strictly contained within the workspace boundary."""
     root = workspace_root.resolve()
-    # Strip any leading slashes to prevent absolute path hijacking
-    clean_rel = relative_path.lstrip("/")
-    target = (root / clean_rel).resolve()
+    if relative_path.startswith("/") or relative_path.startswith("\\") or Path(relative_path).is_absolute():
+        raise ScopeViolationError(
+            f"Absolute path '{relative_path}' is forbidden. All paths must be relative to the workspace boundary."
+        )
+    target = (root / relative_path).resolve()
     if not target.is_relative_to(root):
         raise ScopeViolationError(
             f"Path traversal detected: Path '{relative_path}' resolves to '{target}', escaping root '{root}'."

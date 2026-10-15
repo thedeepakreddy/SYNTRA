@@ -115,6 +115,7 @@ class MCPInvocationRequest(BaseModel):
     workspace_path: str | None = None
     approval_token: str | None = None
     approval_digest: str | None = None
+    approval_id: UUID | None = None
     timeout_seconds: float = Field(default=30.0, ge=1.0, le=300.0)
 
 

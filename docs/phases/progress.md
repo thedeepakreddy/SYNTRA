@@ -7,7 +7,7 @@
 | **Phase 0** | **System Architecture & Technical Planning** | **VERIFIED_COMPLETE** | 42/42 | All 12 architecture docs, 6 ADRs, contracts index, roadmap, and phase-00.md delivered. |
 | **Phase 1** | **Project Initialization** | **VERIFIED_COMPLETE** | 52/52 (3 skipped) | Monorepo layout, Compose (Postgres/Redis/MinIO), config guards, doctor/smoke-test, health/readiness endpoints, and unit test suites complete. |
 | **Phase 2** | **Database and Domain Foundation** | **VERIFIED_COMPLETE** | 63/63 (3 skipped) | 30 SQLAlchemy models, pure domain entities, Alembic migrations, Unit of Work, state machines, DAG validation, and transactional outbox. |
-| **Phase 4** | **MCP Infrastructure** | **VERIFIED_COMPLETE** | 99/99 (3 skipped, 17 Phase 4 tests) | Official MCP 2.x SDK integration, stdio/HTTP/in-process transports, Tool Gateway 14-step lifecycle, Capability Policy Engine, custom SYNTRA MCP server (8 tools), scoped workspace adapters, SSRF/stdio hardening, drift detection, and 14 acceptance tests. |
+| **Phase 4** | **MCP Infrastructure** | **VERIFIED_COMPLETE** | 125/125 (4 skipped, 34 Phase 4 tests) | Official MCP 2.x SDK integration, stdio/HTTP/in-process transports, Tool Gateway 14-step lifecycle, Capability Policy Engine, custom SYNTRA MCP server (8 tools), scoped workspace adapters, SSRF/stdio hardening, drift detection, live Streamable HTTP test server on ephemeral ports, single-use atomic human approval verification, and PostgreSQL DDL compilation. |
 | **Phase 5** | Skills and Capability Registry | NOT_STARTED | - | Prerequisite: Phase 4. |
 | **Phase 6** | Model Runtime | NOT_STARTED | - | Prerequisite: Phase 5. |
 | **Phase 7** | LangGraph Workflow Engine | NOT_STARTED | - | Prerequisite: Phase 6. |
@@ -53,7 +53,8 @@
 - [x] Phase 2 Verification Report: [`docs/phases/phase-02.md`](file:///Users/thedeepakreddy/SYNTRA/docs/phases/phase-02.md)
 - [x] Phase 3 Verification Report: [`docs/phases/phase-03.md`](file:///Users/thedeepakreddy/SYNTRA/docs/phases/phase-03.md)
 - [x] Phase 4 Verification Report: [`docs/phases/phase-04.md`](file:///Users/thedeepakreddy/SYNTRA/docs/phases/phase-04.md)
-- [x] Test Suite Status: **99 passed, 3 skipped in 12.86s (100% pass rate among runnable suites)**
+- [x] Phase 4 Final Verification & Gap Closure: [`docs/testing/phase-04-final-verification.md`](file:///Users/thedeepakreddy/SYNTRA/docs/testing/phase-04-final-verification.md)
+- [x] Test Suite Status: **125 passed, 4 skipped in 24.39s (100% pass rate among runnable suites)**
 - [x] Linter & Typecheck Status: **`ruff` 100% clean, `mypy` 0 errors across 87 source files**
 - [x] **Zero graphical frontend created.**
 

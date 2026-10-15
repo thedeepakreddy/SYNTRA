@@ -623,6 +623,112 @@ class ApprovalRepository:
         await self.session.flush()
         return approval
 
+    async def verify_and_consume_for_execution(
+        self,
+        approval_id: UUID,
+        org_id: UUID,
+        mission_id: UUID,
+        action_type: str,
+        provided_digest: str,
+        secret_key: str,
+        current_mission_version: int,
+        target_resource: str | None = None,
+    ) -> HumanApprovalModel:
+        """Verify that an approval is valid, approved, unexpired, matches action and mission,
+        and atomically consume it under the one-time-use policy.
+        """
+        approval = await self.get_by_id_for_org(approval_id, org_id)
+
+        # 1. Mission boundary check
+        if approval.mission_id != mission_id:
+            raise CrossTenantAccessError(
+                f"Approval {approval_id} is bound to mission {approval.mission_id}, not {mission_id}."
+            )
+
+        # 2. Decision state: Must be APPROVED, and not PENDING, REJECTED, EXPIRED, or already CONSUMED
+        if approval.decision == ApprovalDecision.PENDING:
+            raise ApprovalReplayError(
+                f"Approval request {approval_id} is still PENDING and has not been approved by an authorized user."
+            )
+        if approval.decision == ApprovalDecision.CONSUMED:
+            raise ApprovalReplayError(
+                f"Approval request {approval_id} has already been consumed (replay attack blocked)."
+            )
+        if approval.decision != ApprovalDecision.APPROVED:
+            raise ApprovalReplayError(f"Approval request {approval_id} has invalid status {approval.decision.value}.")
+
+        # 3. Approver principal check: must have been approved by a human principal
+        if approval.resolved_by is None:
+            raise ApprovalTamperedError(f"Approval {approval_id} has no recorded resolving principal.")
+
+        # 4. Action and resource match
+        if approval.action_type != action_type and not (
+            action_type.startswith(approval.action_type) or approval.action_type.startswith(action_type)
+        ):
+            raise ApprovalTamperedError(
+                f"Approval {approval_id} action '{approval.action_type}' does not match requested action '{action_type}'."
+            )
+        if target_resource and approval.target_resource and approval.target_resource != target_resource:
+            raise ApprovalTamperedError(
+                f"Approval {approval_id} target '{approval.target_resource}' does not match requested resource '{target_resource}'."
+            )
+
+        # 5. Expiration check
+        now = datetime.now(UTC)
+        expires_at = approval.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=UTC)
+        if now > expires_at:
+            approval.decision = ApprovalDecision.EXPIRED
+            approval.resolved_at = now
+            await self.session.flush()
+            raise ApprovalExpiredError(f"Approval request {approval_id} expired at {expires_at.isoformat()}.")
+
+        # 6. Mission version lock
+        if current_mission_version != approval.mission_version:
+            raise ApprovalTamperedError(
+                f"Mission state modified: approval version {approval.mission_version} does not match current version {current_mission_version}."
+            )
+
+        # 7. Action digest check
+        if provided_digest != approval.action_digest:
+            raise DigestMismatchError("Action digest mismatch: provided digest does not match registered digest.")
+
+        valid = verify_action_digest(
+            secret=secret_key,
+            expected_digest=approval.action_digest,
+            mission_id=approval.mission_id,
+            action_type=approval.action_type,
+            target_resource=approval.target_resource,
+            mission_version=approval.mission_version,
+            expires_at=approval.expires_at,
+        )
+        if not valid:
+            raise DigestMismatchError(f"Cryptographic verification failed for approval {approval_id}.")
+
+        # 8. Atomically consume the approval (one-time use) with concurrency lock
+        stmt = (
+            update(HumanApprovalModel)
+            .where(
+                HumanApprovalModel.id == approval_id,
+                HumanApprovalModel.decision == ApprovalDecision.APPROVED,
+            )
+            .values(
+                decision=ApprovalDecision.CONSUMED,
+                resolved_at=now,
+            )
+        )
+        update_res = await self.session.execute(stmt)
+        rowcount = getattr(update_res, "rowcount", 0)
+        if rowcount == 0:
+            raise ApprovalReplayError(
+                f"Approval request {approval_id} has already been consumed (concurrent race condition prevented)."
+            )
+        await self.session.flush()
+        approval.decision = ApprovalDecision.CONSUMED
+        approval.resolved_at = now
+        return approval
+
 
 class ArtifactRepository:
     def __init__(self, session: AsyncSession) -> None:

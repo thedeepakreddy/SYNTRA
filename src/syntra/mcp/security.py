@@ -150,11 +150,14 @@ class MCPSecurityService:
         return value
 
     @classmethod
-    def sanitize_untrusted_output(cls, raw_output: str) -> tuple[str, bool]:
-        """Scrub sensitive data and flag injection markers in untrusted tool outputs.
+    def sanitize_untrusted_output(cls, raw_output: str, max_chars: int = 1_000_000) -> tuple[str, bool]:
+        """Scrub sensitive data, cap excessive length, and flag injection markers in untrusted tool outputs.
 
         Returns: (sanitized_text, injection_detected)
         """
+        if len(raw_output) > max_chars:
+            raw_output = raw_output[:max_chars] + f"\n... [TRUNCATED: Exceeded {max_chars} character limit]"
+
         scrubbed = cls.redact_sensitive_data(raw_output)
         assert isinstance(scrubbed, str)
 

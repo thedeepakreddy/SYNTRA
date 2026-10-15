@@ -8,6 +8,8 @@ from uuid import UUID
 
 import jsonschema
 
+from syntra.core.config import get_settings
+from syntra.domain.entities import ActionClassification
 from syntra.mcp.client_manager import (
     MCPClientManager,
     MCPTimeoutError,
@@ -66,11 +68,13 @@ class ToolGateway:
 
         # Step 3: Resolve mission and task ownership
         mission_org_id: UUID | None = None
+        mission_version: int = 1
         budget_remaining_tokens: int | None = None
         if uow and request.mission_id:
             try:
                 mission = await uow.missions.get_by_id_for_org(request.mission_id, request.org_id)
                 mission_org_id = mission.org_id
+                mission_version = mission.version
                 budget = await uow.budgets.get_for_mission(request.mission_id)
                 if budget:
                     budget_remaining_tokens = budget.max_tokens - budget.consumed_tokens
@@ -118,8 +122,57 @@ class ToolGateway:
                     error_message=f"Argument schema validation failed: {exc.message}",
                 )
 
-        # Step 6: Check capability grant via Policy Engine
-        has_approval = bool(request.approval_digest or request.approval_token)
+        # Step 6: Check capability grant and human approval via Policy Engine & Persistence
+        is_sensitive = tool_def.action_classification in (
+            ActionClassification.EXTERNAL_WRITE,
+            ActionClassification.SENSITIVE_EXTERNAL_ACTION,
+        )
+
+        has_approval = False
+        approval_uuid = request.approval_id
+        if not approval_uuid and request.approval_token:
+            try:
+                approval_uuid = UUID(request.approval_token)
+            except (ValueError, TypeError):
+                approval_uuid = None
+
+        if is_sensitive:
+            if uow and request.mission_id:
+                if not approval_uuid or not request.approval_digest:
+                    return MCPInvocationResult(
+                        invocation_id=request.invocation_id,
+                        status="BLOCKED_BY_POLICY",
+                        is_error=True,
+                        error_code=-32000,
+                        error_message="External write action requires both approval_id/token and cryptographic approval_digest.",
+                    )
+                try:
+                    settings = get_settings()
+                    target_res = str(request.arguments.get("repo_name", request.arguments.get("target_resource", "")))
+                    await uow.approvals.verify_and_consume_for_execution(
+                        approval_id=approval_uuid,
+                        org_id=request.org_id,
+                        mission_id=request.mission_id,
+                        action_type=request.tool_name,
+                        provided_digest=request.approval_digest,
+                        secret_key=settings.approval_secret_key,
+                        current_mission_version=mission_version,
+                        target_resource=target_res,
+                    )
+                    await uow.commit()
+                    has_approval = True
+                except Exception as exc:
+                    return MCPInvocationResult(
+                        invocation_id=request.invocation_id,
+                        status="BLOCKED_BY_POLICY",
+                        is_error=True,
+                        error_code=-32000,
+                        error_message=f"Human approval verification failed: {exc}",
+                    )
+            elif not uow:
+                # Standalone unit test mode without persistence unit of work
+                has_approval = bool(request.approval_digest or request.approval_token)
+
         try:
             self.policy_engine.evaluate(
                 request=request,

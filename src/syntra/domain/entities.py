@@ -154,6 +154,7 @@ class ApprovalDecision(str, Enum):
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
     EXPIRED = "EXPIRED"
+    CONSUMED = "CONSUMED"
 
 
 class OutboxStatus(str, Enum):
