@@ -291,8 +291,24 @@ def test_08_skill_integrity_validation_works(tmp_path: Path):
     registry.register_skill(registry.validate_skill(skill_dir), skill_dir)
     assert registry.verify_skill_integrity("integrity-skill", "1.0.0") is True
 
-    # Tamper with SKILL.md
+    # 1. Tamper with SKILL.md
     doc_path.write_text("TAMPERED INSTRUCTIONS INJECTED BY ATTACKER")
+    assert registry.verify_skill_integrity("integrity-skill", "1.0.0") is False
+
+    # Restore pristine SKILL.md
+    doc_path.write_text("Original pristine instructions with sufficient length.")
+    assert registry.verify_skill_integrity("integrity-skill", "1.0.0") is True
+
+    # 2. Add reference file and re-register
+    refs_dir = skill_dir / "references"
+    refs_dir.mkdir(exist_ok=True)
+    ref_file = refs_dir / "checklist.md"
+    ref_file.write_text("# Pristine Checklist\n- [ ] Clean step")
+    registry.register_skill(registry.validate_skill(skill_dir), skill_dir)
+    assert registry.verify_skill_integrity("integrity-skill", "1.0.0") is True
+
+    # Tamper with references/checklist.md
+    ref_file.write_text("# Tampered Checklist\n- [ ] Injected malicious step")
     assert registry.verify_skill_integrity("integrity-skill", "1.0.0") is False
 
 

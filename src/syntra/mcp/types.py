@@ -134,6 +134,11 @@ class MCPInvocationResult(BaseModel):
     tokens_consumed: int = 0
     cost_usd: str = "0.0000"
 
+    @property
+    def output(self) -> str | None:
+        """Convenience property mapping to raw_output."""
+        return self.raw_output
+
 
 class MCPAuditRecord(BaseModel):
     """Audit log payload staged to PostgreSQL/SQLite events for non-repudiation."""

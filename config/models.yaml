@@ -1,23 +1,111 @@
+# SYNTRA Model Registry Configuration
+# Source: Google Cloud Vertex AI & Google AI Studio official pricing
+# Effective Date: October 2024
+
 models:
-  default: "gemini-2.5-flash"
-  reasoning: "gemini-2.5-pro"
-  fast: "gemini-2.0-flash-lite"
-  fallback: "mock"
-
-parameters:
-  temperature: 0.2
-  max_output_tokens: 8192
-  top_p: 0.95
-  max_retries: 3
-  retry_delay_seconds: 1.0
-
-costs:
   gemini-2.5-pro:
-    input_per_million_usd: 1.25
-    output_per_million_usd: 5.00
+    provider: gemini
+    model_id: gemini-2.5-pro
+    enabled: true
+    supported_capabilities:
+      - text_generation
+      - structured_output
+      - function_calling
+      - code_execution
+    max_output_tokens: 8192
+    context_policy:
+      context_window_tokens: 2097152
+      truncation_strategy: prioritize_system_and_recent
+    timeout_seconds: 90.0
+    retry_policy:
+      max_retries: 3
+      initial_delay_seconds: 1.0
+      backoff_multiplier: 2.0
+      max_delay_seconds: 10.0
+    pricing_configuration:
+      pricing_known: true
+      source: "Google Cloud Vertex AI Pricing"
+      effective_date: "2024-10-01"
+      input_per_million_usd: 1.25
+      output_per_million_usd: 5.00
+
   gemini-2.5-flash:
-    input_per_million_usd: 0.075
-    output_per_million_usd: 0.30
+    provider: gemini
+    model_id: gemini-2.5-flash
+    enabled: true
+    supported_capabilities:
+      - text_generation
+      - structured_output
+      - function_calling
+    max_output_tokens: 8192
+    context_policy:
+      context_window_tokens: 1048576
+      truncation_strategy: prioritize_system_and_recent
+    timeout_seconds: 60.0
+    retry_policy:
+      max_retries: 3
+      initial_delay_seconds: 1.0
+      backoff_multiplier: 2.0
+      max_delay_seconds: 10.0
+    pricing_configuration:
+      pricing_known: true
+      source: "Google Cloud Vertex AI Pricing"
+      effective_date: "2024-10-01"
+      input_per_million_usd: 0.15
+      output_per_million_usd: 0.60
+
   gemini-2.0-flash-lite:
-    input_per_million_usd: 0.0375
-    output_per_million_usd: 0.15
+    provider: gemini
+    model_id: gemini-2.0-flash-lite
+    enabled: true
+    supported_capabilities:
+      - text_generation
+      - structured_output
+      - function_calling
+    max_output_tokens: 8192
+    context_policy:
+      context_window_tokens: 1048576
+      truncation_strategy: prioritize_system_and_recent
+    timeout_seconds: 30.0
+    retry_policy:
+      max_retries: 3
+      initial_delay_seconds: 1.0
+      backoff_multiplier: 2.0
+      max_delay_seconds: 10.0
+    pricing_configuration:
+      pricing_known: true
+      source: "Google AI Studio Pricing"
+      effective_date: "2024-10-01"
+      input_per_million_usd: 0.075
+      output_per_million_usd: 0.30
+
+  mock-model:
+    provider: mock
+    model_id: mock-model
+    enabled: true
+    supported_capabilities:
+      - text_generation
+      - structured_output
+      - function_calling
+    max_output_tokens: 4096
+    context_policy:
+      context_window_tokens: 1000000
+      truncation_strategy: none
+    timeout_seconds: 10.0
+    retry_policy:
+      max_retries: 1
+      initial_delay_seconds: 0.1
+      backoff_multiplier: 1.0
+      max_delay_seconds: 1.0
+    pricing_configuration:
+      pricing_known: true
+      source: "Mock Deterministic Test Provider"
+      effective_date: "2024-01-01"
+      input_per_million_usd: 0.00
+      output_per_million_usd: 0.00
+
+tier_defaults:
+  reasoning: "gemini-2.5-pro"
+  balanced: "gemini-2.5-flash"
+  fast: "gemini-2.0-flash-lite"
+  mock: "mock-model"

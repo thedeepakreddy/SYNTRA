@@ -156,3 +156,6 @@ class SqlAlchemyUnitOfWork:
             self._approvals = None
             self._outbox = None
             self._idempotency = None
+
+
+UnitOfWork = SqlAlchemyUnitOfWork

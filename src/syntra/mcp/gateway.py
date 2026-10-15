@@ -46,6 +46,14 @@ class ToolGateway:
         self.client_manager = client_manager
         self.policy_engine = policy_engine
 
+    async def execute_tool(
+        self,
+        request: MCPInvocationRequest,
+        uow: SqlAlchemyUnitOfWork | None = None,
+    ) -> MCPInvocationResult:
+        """Alias method for execute_tool_call."""
+        return await self.execute_tool_call(request, uow=uow)
+
     async def execute_tool_call(
         self,
         request: MCPInvocationRequest,

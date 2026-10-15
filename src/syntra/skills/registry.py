@@ -103,6 +103,12 @@ class SkillRegistry:
             for p in sorted(schemas_dir.glob("*.json")):
                 hasher.update(p.read_bytes())
 
+        # Include references if present (e.g. checklists, standards)
+        refs_dir = skill_dir / "references"
+        if refs_dir.exists() and refs_dir.is_dir():
+            for p in sorted(refs_dir.glob("*.md")):
+                hasher.update(p.read_bytes())
+
         return hasher.hexdigest()
 
     def validate_skill(self, skill_dir: Path) -> SkillManifest:

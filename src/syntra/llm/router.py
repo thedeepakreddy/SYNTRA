@@ -1,20 +1,35 @@
 """Model routing and tier selection based on agent role and task complexity."""
 
 from syntra.core.config import get_settings
-from syntra.llm.models import ModelTier
+from syntra.llm.config import ModelTier
 
 
 class ModelRouter:
     """Routes agent requests to the most appropriate Gemini model."""
 
     ROLE_DEFAULTS: dict[str, ModelTier] = {
+        # AGENTS.md canonical roles
+        "product_manager": ModelTier.REASONING,
+        "software_architect": ModelTier.REASONING,
+        "engineering_manager": ModelTier.REASONING,
+        "backend_engineer": ModelTier.BALANCED,
+        "frontend_engineer": ModelTier.BALANCED,
+        "qa_engineer": ModelTier.BALANCED,
+        "devops_engineer": ModelTier.BALANCED,
+        "security_reviewer": ModelTier.REASONING,
+        "code_reviewer": ModelTier.REASONING,
+        "debugging_specialist": ModelTier.BALANCED,
+        # Short aliases
         "architect": ModelTier.REASONING,
+        "pm": ModelTier.REASONING,
+        "em": ModelTier.REASONING,
         "planner": ModelTier.REASONING,
         "security": ModelTier.REASONING,
         "coder": ModelTier.BALANCED,
         "reviewer": ModelTier.REASONING,
         "tester": ModelTier.BALANCED,
         "devops": ModelTier.BALANCED,
+        "debugger": ModelTier.BALANCED,
         "coordinator": ModelTier.BALANCED,
         "summarizer": ModelTier.FAST,
         "triage": ModelTier.FAST,
