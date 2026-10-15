@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     dev_auth_enabled: bool = True
 
     # Security & Authentication (OIDC / JWT)
-    jwt_secret_key: str | None = None
+    jwt_secret_key: str = "syntra-dev-secret-key-32bytes-long!"
     jwt_algorithm: str = "HS256"
     oidc_issuer: str | None = None
     oidc_audience: str | None = None
