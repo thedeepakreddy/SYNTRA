@@ -11,10 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from syntra.domain.entities import (
     ApprovalDecision,
     ArtifactType,
+    MCPTransportType,
     MissionState,
     OutboxStatus,
     TaskPlanStatus,
     TaskState,
+    VerificationVerdict,
     compute_action_digest,
     verify_action_digest,
 )
@@ -36,6 +38,9 @@ from syntra.persistence.models import (
     EventRecordModel,
     HumanApprovalModel,
     IdempotencyKeyModel,
+    MCPInvocationModel,
+    MCPServerModel,
+    MCPToolVersionModel,
     MissionModel,
     OrganizationModel,
     ProjectModel,
@@ -44,6 +49,7 @@ from syntra.persistence.models import (
     TaskPlanModel,
     TransactionalOutboxModel,
     UsageRecordModel,
+    VerificationRunModel,
     WorkerLeaseModel,
 )
 
@@ -352,6 +358,22 @@ class TaskRepository:
 
         await self.session.flush()
         return lease
+
+    async def update_status(
+        self,
+        task_id: UUID,
+        new_state: TaskState,
+        reason: str | None = None,
+    ) -> TaskModel:
+        stmt = select(TaskModel).where(TaskModel.id == task_id).with_for_update()
+        res = await self.session.execute(stmt)
+        task = res.scalar_one_or_none()
+        if not task:
+            raise ValueError(f"Task {task_id} not found.")
+        task.state = new_state
+        task.updated_at = datetime.now(UTC)
+        await self.session.flush()
+        return task
 
 
 class BudgetRepository:
@@ -699,6 +721,25 @@ class ArtifactRepository:
             next_cursor = None
         return items, next_cursor, has_more
 
+    async def get_by_id(
+        self,
+        artifact_id: UUID,
+    ) -> tuple[ArtifactModel, ArtifactVersionModel | None] | None:
+        query = (
+            select(ArtifactModel, ArtifactVersionModel)
+            .outerjoin(
+                ArtifactVersionModel,
+                (ArtifactModel.id == ArtifactVersionModel.artifact_id)
+                & (ArtifactModel.current_version == ArtifactVersionModel.version),
+            )
+            .where(ArtifactModel.id == artifact_id)
+        )
+        res = await self.session.execute(query)
+        row = res.first()
+        if not row:
+            return None
+        return row[0], row[1]
+
 
 class OutboxRepository:
     def __init__(self, session: AsyncSession) -> None:
@@ -826,3 +867,192 @@ class IdempotencyRepository:
         self.session.add(record)
         await self.session.flush()
         return record
+
+
+class VerificationRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def create_run(
+        self,
+        task_id: UUID,
+        artifact_version_id: UUID,
+        verdict: VerificationVerdict = VerificationVerdict.PASS,
+        tests_passed: int = 0,
+        tests_failed: int = 0,
+        coverage_percentage: Decimal | None = None,
+        raw_output: str | None = None,
+    ) -> VerificationRunModel:
+        run = VerificationRunModel(
+            task_id=task_id,
+            artifact_version_id=artifact_version_id,
+            verdict=verdict,
+            tests_passed=tests_passed,
+            tests_failed=tests_failed,
+            coverage_percentage=coverage_percentage,
+            raw_output=raw_output,
+        )
+
+        self.session.add(run)
+        await self.session.flush()
+        return run
+
+    async def get_latest_for_task(self, task_id: UUID) -> VerificationRunModel | None:
+        stmt = (
+            select(VerificationRunModel)
+            .where(VerificationRunModel.task_id == task_id)
+            .order_by(VerificationRunModel.verified_at.desc())
+            .limit(1)
+        )
+        res = await self.session.execute(stmt)
+        return res.scalar_one_or_none()
+
+
+class MCPRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def register_server(
+        self,
+        id: UUID,
+        name: str,
+        transport: MCPTransportType | str,
+        command_or_url: str,
+        is_enabled: bool = True,
+        trust_classification: str = "LOCAL_TRUSTED",
+        auth_policy: str = "NONE",
+        allowed_capabilities: list[str] | None = None,
+        version: str = "1.0.0",
+        verification_status: str = "VERIFIED",
+    ) -> MCPServerModel:
+        transport_enum = (
+            transport if isinstance(transport, MCPTransportType) else MCPTransportType(str(transport).lower())
+        )
+        stmt = select(MCPServerModel).where(MCPServerModel.name == name)
+        res = await self.session.execute(stmt)
+        server = res.scalar_one_or_none()
+        if server:
+            server.transport = transport_enum
+            server.command_or_url = command_or_url
+            server.is_enabled = is_enabled
+            server.trust_classification = trust_classification
+            server.auth_policy = auth_policy
+            server.allowed_capabilities = allowed_capabilities or []
+            server.version = version
+            server.verification_status = verification_status
+        else:
+            server = MCPServerModel(
+                id=id,
+                name=name,
+                transport=transport_enum,
+                command_or_url=command_or_url,
+                is_enabled=is_enabled,
+                trust_classification=trust_classification,
+                auth_policy=auth_policy,
+                allowed_capabilities=allowed_capabilities or [],
+                version=version,
+                verification_status=verification_status,
+            )
+            self.session.add(server)
+        await self.session.flush()
+        return server
+
+    async def get_server(self, name: str) -> MCPServerModel | None:
+        stmt = select(MCPServerModel).where(MCPServerModel.name == name)
+        res = await self.session.execute(stmt)
+        return res.scalar_one_or_none()
+
+    async def list_servers(self, enabled_only: bool = True) -> list[MCPServerModel]:
+        stmt = select(MCPServerModel)
+        if enabled_only:
+            stmt = stmt.where(MCPServerModel.is_enabled.is_(True))
+        res = await self.session.execute(stmt)
+        return list(res.scalars().all())
+
+    async def save_tool_version(
+        self,
+        id: UUID,
+        server_id: UUID,
+        tool_name: str,
+        version: str = "1.0.0",
+        input_schema: dict[str, Any] | None = None,
+        description: str | None = None,
+        action_classification: str = "READ_ONLY",
+        sha256_checksum: str = "",
+    ) -> MCPToolVersionModel:
+        stmt = select(MCPToolVersionModel).where(
+            MCPToolVersionModel.mcp_server_id == server_id,
+            MCPToolVersionModel.tool_name == tool_name,
+            MCPToolVersionModel.version == version,
+        )
+        res = await self.session.execute(stmt)
+        tool_ver = res.scalar_one_or_none()
+        if tool_ver:
+            tool_ver.input_schema = input_schema or {}
+            tool_ver.description = description
+            tool_ver.action_classification = action_classification
+            tool_ver.sha256_checksum = sha256_checksum
+        else:
+            tool_ver = MCPToolVersionModel(
+                id=id,
+                mcp_server_id=server_id,
+                tool_name=tool_name,
+                version=version,
+                input_schema=input_schema or {},
+                description=description,
+                action_classification=action_classification,
+                sha256_checksum=sha256_checksum,
+            )
+            self.session.add(tool_ver)
+        await self.session.flush()
+        return tool_ver
+
+    async def record_invocation(
+        self,
+        id: UUID,
+        org_id: UUID,
+        mission_id: UUID | None,
+        task_id: UUID | None,
+        server_name: str,
+        tool_name: str,
+        caller_role: str,
+        caller_user_id: UUID | None = None,
+        arguments_scrubbed: dict[str, Any] | None = None,
+    ) -> MCPInvocationModel:
+        inv = MCPInvocationModel(
+            id=id,
+            org_id=org_id,
+            mission_id=mission_id,
+            task_id=task_id,
+            server_name=server_name,
+            tool_name=tool_name,
+            caller_role=caller_role,
+            caller_user_id=caller_user_id,
+            arguments_scrubbed=arguments_scrubbed or {},
+            status="PENDING",
+        )
+        self.session.add(inv)
+        await self.session.flush()
+        return inv
+
+    async def complete_invocation(
+        self,
+        id: UUID,
+        status: str,
+        error_message: str | None = None,
+        result_summary: str | None = None,
+        result_hash: str | None = None,
+        duration_ms: int = 0,
+    ) -> MCPInvocationModel | None:
+        stmt = select(MCPInvocationModel).where(MCPInvocationModel.id == id).with_for_update()
+        res = await self.session.execute(stmt)
+        inv = res.scalar_one_or_none()
+        if inv:
+            inv.status = status
+            inv.error_message = error_message
+            inv.result_summary = result_summary
+            inv.result_hash = result_hash
+            inv.duration_ms = duration_ms
+            inv.completed_at = datetime.now(UTC)
+            await self.session.flush()
+        return inv

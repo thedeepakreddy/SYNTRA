@@ -36,6 +36,7 @@ dependencies = [
     "minio>=7.2.10",
     "pyyaml>=6.0.2",
     "pyjwt[crypto]>=2.9.0",
+    "mcp>=2.3.0",
 ]
 
 [project.optional-dependencies]

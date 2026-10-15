@@ -9,11 +9,13 @@ from syntra.persistence.repositories import (
     ArtifactRepository,
     BudgetRepository,
     IdempotencyRepository,
+    MCPRepository,
     MissionRepository,
     OrganizationRepository,
     OutboxRepository,
     ProjectRepository,
     TaskRepository,
+    VerificationRepository,
 )
 
 
@@ -39,6 +41,8 @@ class SqlAlchemyUnitOfWork:
         self._approvals: ApprovalRepository | None = None
         self._outbox: OutboxRepository | None = None
         self._idempotency: IdempotencyRepository | None = None
+        self._verifications: VerificationRepository | None = None
+        self._mcp: MCPRepository | None = None
 
         if self._session is not None:
             self._init_repositories(self._session)
@@ -53,6 +57,8 @@ class SqlAlchemyUnitOfWork:
         self._approvals = ApprovalRepository(session)
         self._outbox = OutboxRepository(session)
         self._idempotency = IdempotencyRepository(session)
+        self._verifications = VerificationRepository(session)
+        self._mcp = MCPRepository(session)
 
     @property
     def session(self) -> AsyncSession:
@@ -104,6 +110,16 @@ class SqlAlchemyUnitOfWork:
     def idempotency(self) -> IdempotencyRepository:
         assert self._idempotency is not None
         return self._idempotency
+
+    @property
+    def verifications(self) -> VerificationRepository:
+        assert self._verifications is not None
+        return self._verifications
+
+    @property
+    def mcp(self) -> MCPRepository:
+        assert self._mcp is not None
+        return self._mcp
 
     def publish_event(self, event_type: str, payload: dict[str, Any]) -> None:
         """Stage an event into the transactional outbox table within the active transaction."""

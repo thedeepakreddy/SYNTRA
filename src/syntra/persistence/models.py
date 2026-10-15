@@ -540,8 +540,13 @@ class MCPServerModel(Base):
         default=MCPTransportType.STDIO,
         nullable=False,
     )
+    trust_classification: Mapped[str] = mapped_column(String(50), default="LOCAL_TRUSTED", nullable=False)
     command_or_url: Mapped[str] = mapped_column(Text, nullable=False)
+    auth_policy: Mapped[str] = mapped_column(String(50), default="NONE", nullable=False)
+    allowed_capabilities: Mapped[list[str]] = mapped_column(UniversalJSON, default=list, nullable=False)
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    version: Mapped[str] = mapped_column(String(50), default="1.0.0", nullable=False)
+    verification_status: Mapped[str] = mapped_column(String(50), default="VERIFIED", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
@@ -566,12 +571,48 @@ class MCPToolVersionModel(Base):
     version: Mapped[str] = mapped_column(String(50), default="1.0.0", nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     input_schema: Mapped[dict[str, Any]] = mapped_column(UniversalJSON, default=dict, nullable=False)
+    action_classification: Mapped[str] = mapped_column(String(50), default="READ_ONLY", nullable=False)
+    sha256_checksum: Mapped[str] = mapped_column(String(64), default="", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
 
     server: Mapped["MCPServerModel"] = relationship(back_populates="tool_versions")
+
+
+class MCPInvocationModel(Base):
+    __tablename__ = "mcp_invocations"
+    __table_args__ = (
+        Index("idx_mcp_invocations_org", "org_id"),
+        Index("idx_mcp_invocations_mission", "mission_id"),
+        Index("idx_mcp_invocations_task", "task_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    org_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    mission_id: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("missions.id", ondelete="SET NULL"), nullable=True
+    )
+    task_id: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True
+    )
+    server_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    tool_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    caller_role: Mapped[str] = mapped_column(String(100), nullable=False)
+    caller_user_id: Mapped[UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    arguments_scrubbed: Mapped[dict[str, Any]] = mapped_column(UniversalJSON, default=dict, nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="PENDING", nullable=False)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    result_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    result_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    duration_ms: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class SkillModel(Base):
@@ -623,6 +664,7 @@ class CapabilityGrantModel(Base):
     tool_name_pattern: Mapped[str] = mapped_column(String(255), nullable=False)
     is_allowed: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     requires_approval: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )

@@ -108,6 +108,34 @@ class MCPTransportType(str, Enum):
     STDIO = "stdio"
     SSE = "sse"
     HTTP = "http"
+    STREAMABLE_HTTP = "streamable_http"
+
+
+class TrustClassification(str, Enum):
+    LOCAL_TRUSTED = "LOCAL_TRUSTED"
+    VERIFIED_ENTERPRISE = "VERIFIED_ENTERPRISE"
+    UNTRUSTED_EXTERNAL = "UNTRUSTED_EXTERNAL"
+
+
+class AuthPolicyType(str, Enum):
+    NONE = "NONE"
+    BEARER_TOKEN = "BEARER_TOKEN"
+    API_KEY = "API_KEY"
+    MTLS = "MTLS"
+
+
+class VerificationStatus(str, Enum):
+    UNVERIFIED = "UNVERIFIED"
+    VERIFIED = "VERIFIED"
+    FAILED = "FAILED"
+
+
+class ActionClassification(str, Enum):
+    READ_ONLY = "READ_ONLY"
+    SANDBOX_WRITE = "SANDBOX_WRITE"
+    SANDBOX_EXECUTION = "SANDBOX_EXECUTION"
+    EXTERNAL_WRITE = "EXTERNAL_WRITE"
+    SENSITIVE_EXTERNAL_ACTION = "SENSITIVE_EXTERNAL_ACTION"
 
 
 class ApprovalActionType(str, Enum):
@@ -421,9 +449,46 @@ class MCPServer:
     id: UUID = field(default_factory=uuid4)
     name: str = ""
     transport: MCPTransportType = MCPTransportType.STDIO
+    trust_classification: TrustClassification = TrustClassification.LOCAL_TRUSTED
     command_or_url: str = ""
+    auth_policy: AuthPolicyType = AuthPolicyType.NONE
+    allowed_capabilities: list[str] = field(default_factory=list)
     is_enabled: bool = True
+    version: str = "1.0.0"
+    verification_status: VerificationStatus = VerificationStatus.VERIFIED
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class MCPServerVersion:
+    id: UUID = field(default_factory=uuid4)
+    server_id: UUID = field(default_factory=uuid4)
+    version: str = "1.0.0"
+    protocol_version: str = "2024-11-05"
+    server_info: dict[str, Any] = field(default_factory=dict)
+    capabilities: dict[str, Any] = field(default_factory=dict)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class MCPConnection:
+    connection_id: UUID = field(default_factory=uuid4)
+    server_name: str = ""
+    transport: MCPTransportType = MCPTransportType.STDIO
+    status: str = "DISCONNECTED"
+    last_connected_at: datetime | None = None
+    last_error: str | None = None
+    reconnect_attempts: int = 0
+
+
+@dataclass
+class MCPToolDefinition:
+    name: str = ""
+    server_name: str = ""
+    description: str | None = None
+    input_schema: dict[str, Any] = field(default_factory=dict)
+    action_classification: ActionClassification = ActionClassification.READ_ONLY
 
 
 @dataclass
@@ -434,8 +499,56 @@ class MCPToolVersion:
     version: str = "1.0.0"
     description: str | None = None
     input_schema: dict[str, Any] = field(default_factory=dict)
+    action_classification: ActionClassification = ActionClassification.READ_ONLY
+    sha256_checksum: str = ""
     is_active: bool = True
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class MCPToolSchemaVersion:
+    id: UUID = field(default_factory=uuid4)
+    server_name: str = ""
+    tool_name: str = ""
+    version: str = "1.0.0"
+    description: str | None = None
+    input_schema: dict[str, Any] = field(default_factory=dict)
+    schema_hash: str = ""
+    is_active: bool = True
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class MCPInvocation:
+    id: UUID = field(default_factory=uuid4)
+    org_id: UUID = field(default_factory=uuid4)
+    mission_id: UUID | None = None
+    task_id: UUID | None = None
+    server_name: str = ""
+    tool_name: str = ""
+    caller_role: str = ""
+    caller_user_id: UUID | None = None
+    arguments_scrubbed: dict[str, Any] = field(default_factory=dict)
+    status: str = "PENDING"
+    error_message: str | None = None
+    result_summary: str | None = None
+    result_hash: str | None = None
+    duration_ms: int = 0
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    completed_at: datetime | None = None
+
+
+@dataclass
+class MCPInvocationResult:
+    invocation_id: UUID = field(default_factory=uuid4)
+    status: str = "SUCCESS"
+    content: list[dict[str, Any]] = field(default_factory=list)
+    raw_output: str | None = None
+    is_error: bool = False
+    error_code: int | None = None
+    error_message: str | None = None
+    duration_ms: int = 0
+    result_hash: str | None = None
 
 
 @dataclass
@@ -467,6 +580,7 @@ class CapabilityGrant:
     tool_name_pattern: str = ""
     is_allowed: bool = True
     requires_approval: bool = False
+    expires_at: datetime | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
