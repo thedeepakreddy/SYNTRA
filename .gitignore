@@ -31,13 +31,15 @@ ENV/
 htmlcov/
 .pytest_cache/
 
-# DevSwarm workspaces & data
+# SYNTRA workspaces & data
+.syntra/
 .devswarm/
 *.sqlite3
 *.db
 
 # Environment variables
 .env
+.env.*
 .env.local
 
 # IDE

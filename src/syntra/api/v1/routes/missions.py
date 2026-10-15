@@ -332,11 +332,12 @@ async def get_mission_usage(
     await uow.missions.get_by_id_for_org(mission_id, user.org_id)
     budget = await uow.budgets.get_for_mission(mission_id)
     records_raw = await uow.budgets.list_usage_records(mission_id, user.org_id)
-    total_tokens = (
-        budget.consumed_tokens if budget else sum((r.prompt_tokens + r.completion_tokens for r in records_raw), 0)
-    )
+    records_tokens = sum((r.prompt_tokens + r.completion_tokens for r in records_raw), 0)
+    records_cost: Decimal = sum((r.cost_usd for r in records_raw), Decimal("0.0000"))
+
+    total_tokens = budget.consumed_tokens if (budget and budget.consumed_tokens > 0) else records_tokens
     total_cost: Decimal = (
-        budget.consumed_cost_usd if budget else sum((r.cost_usd for r in records_raw), Decimal("0.0000"))
+        budget.consumed_cost_usd if (budget and budget.consumed_cost_usd > Decimal("0.0000")) else records_cost
     )
 
     records = [

@@ -1,6 +1,6 @@
 """Pydantic v2 schemas for SYNTRA Control Plane API v1."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any, Generic, TypeVar
 from uuid import UUID
@@ -115,7 +115,7 @@ class PlanningCapabilityResponse(BaseModel):
     )
     mission_id: UUID
     project_id: UUID
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 # =====================================================================
