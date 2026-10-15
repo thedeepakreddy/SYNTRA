@@ -1,0 +1,26 @@
+{
+  "type": "object",
+  "required": [
+    "system_overview",
+    "component_boundaries",
+    "data_flow",
+    "adrs"
+  ],
+  "properties": {
+    "system_overview": {
+      "type": "string"
+    },
+    "component_boundaries": {
+      "type": "array"
+    },
+    "data_flow": {
+      "type": "string"
+    },
+    "adrs": {
+      "type": "array"
+    },
+    "invariants": {
+      "type": "array"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "required": [
+    "sqlalchemy_models",
+    "migration_script_rev",
+    "downgrade_verified"
+  ],
+  "properties": {
+    "sqlalchemy_models": {
+      "type": "array"
+    },
+    "migration_script_rev": {
+      "type": "string"
+    },
+    "downgrade_verified": {
+      "type": "boolean"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "required": [
+    "audit_status",
+    "findings",
+    "secrets_detected"
+  ],
+  "properties": {
+    "audit_status": {
+      "type": "string"
+    },
+    "findings": {
+      "type": "array"
+    },
+    "owasp_category_analysis": {
+      "type": "object"
+    },
+    "secrets_detected": {
+      "type": "boolean"
+    }
+  }
+}

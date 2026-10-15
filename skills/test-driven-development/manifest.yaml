@@ -1,12 +1,53 @@
+id: test-driven-development
 name: test-driven-development
 version: 1.0.0
-description: Executes Red-Green-Refactor cycles with pytest, fixtures, and contract
-  assertions.
+description: Applies rigorous red-green-refactor workflows, writing unit and integration
+  tests before implementation code.
 category: quality
-compatible_roles:
-- qa_engineer
+supported_roles: &id001
 - backend_engineer
+- qa_engineer
+- debugging_specialist
+compatible_roles: *id001
+required_inputs:
+- task_specification
+- acceptance_criteria
+required_capabilities:
+- syntra.read_file
+- syntra.write_file
+- syntra.run_command
 required_tools:
 - syntra.read_file
 - syntra.write_file
 - syntra.run_command
+output_schema:
+  type: object
+  required:
+  - test_file_path
+  - initial_failing_state
+  - passing_state_asserted
+  properties:
+    test_file_path:
+      type: string
+    initial_failing_state:
+      type: boolean
+    passing_state_asserted:
+      type: boolean
+    coverage_percent:
+      type: number
+verification_rules:
+- Tests must be executed and confirmed failing before implementation logic is written.
+- All assertions must be deterministic and free of nondeterministic sleep statements.
+- Edge cases and error conditions must be explicitly asserted.
+dependencies:
+- task-decomposition>=1.0.0
+references:
+- title: Kent Beck Test-Driven Development by Example
+  uri: https://www.oreilly.com/library/view/test-driven-development/0321146530/
+- title: Pytest Official Guide
+  uri: https://docs.pytest.org/
+evaluation_cases:
+- name: tdd_calculator_service
+  input_data:
+    feature: TaxCalculationService
+  expected_status: SUCCESS

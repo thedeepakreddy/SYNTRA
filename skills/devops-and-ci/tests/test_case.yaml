@@ -1,0 +1,5 @@
+- expected_status: SUCCESS
+  input_data:
+    port: 8000
+    service: api
+  name: generate_fastapi_dockerfile

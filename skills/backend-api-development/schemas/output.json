@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "required": [
+    "unified_diff",
+    "changed_files",
+    "unit_test_results"
+  ],
+  "properties": {
+    "unified_diff": {
+      "type": "string"
+    },
+    "changed_files": {
+      "type": "array"
+    },
+    "unit_test_results": {
+      "type": "object"
+    }
+  }
+}

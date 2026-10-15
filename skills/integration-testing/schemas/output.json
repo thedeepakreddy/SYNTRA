@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "required": [
+    "scenario_name",
+    "given_when_then_results",
+    "all_scenarios_passed"
+  ],
+  "properties": {
+    "scenario_name": {
+      "type": "string"
+    },
+    "given_when_then_results": {
+      "type": "array"
+    },
+    "all_scenarios_passed": {
+      "type": "boolean"
+    },
+    "trace_log": {
+      "type": "string"
+    }
+  }
+}

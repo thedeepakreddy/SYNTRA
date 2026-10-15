@@ -22,6 +22,19 @@ class MembershipRole(str, Enum):
     VIEWER = "viewer"
 
 
+class AgentRole(str, Enum):
+    PRODUCT_MANAGER = "product_manager"
+    SOFTWARE_ARCHITECT = "software_architect"
+    ENGINEERING_MANAGER = "engineering_manager"
+    BACKEND_ENGINEER = "backend_engineer"
+    FRONTEND_ENGINEER = "frontend_engineer"
+    QA_ENGINEER = "qa_engineer"
+    DEVOPS_ENGINEER = "devops_engineer"
+    SECURITY_REVIEWER = "security_reviewer"
+    CODE_REVIEWER = "code_reviewer"
+    DEBUGGING_SPECIALIST = "debugging_specialist"
+
+
 class MissionState(str, Enum):
     DRAFT = "DRAFT"
     PLANNING = "PLANNING"

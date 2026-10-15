@@ -1,0 +1,4 @@
+- expected_status: SUCCESS
+  input_data:
+    scenario: create_and_execute_mission
+  name: test_e2e_mission_lifecycle

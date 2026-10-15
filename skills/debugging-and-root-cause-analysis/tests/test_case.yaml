@@ -1,0 +1,4 @@
+- expected_status: SUCCESS
+  input_data:
+    error: 'TypeError: ''NoneType'' object is not subscriptable'
+  name: diagnose_null_pointer_exception

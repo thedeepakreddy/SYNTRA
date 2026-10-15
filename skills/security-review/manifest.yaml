@@ -1,10 +1,54 @@
+id: security-review
 name: security-review
 version: 1.0.0
-description: Audits code changes for injection flaws, secret leakage, authorization
-  bypasses, and CVEs.
+description: Performs static and dynamic security audits for OWASP Top 10 vulnerabilities,
+  secret leakage, and permission escalations.
 category: security
-compatible_roles:
+supported_roles: &id001
 - security_reviewer
+compatible_roles: *id001
+required_inputs:
+- unified_diff
+- dependency_lockfile
+- task_specification
+required_capabilities:
+- syntra.read_file
+- syntra.workspace_search
+- syntra.security_scan
+- syntra.artifact_write
 required_tools:
 - syntra.read_file
 - syntra.workspace_search
+- syntra.security_scan
+- syntra.artifact_write
+output_schema:
+  type: object
+  required:
+  - audit_status
+  - findings
+  - secrets_detected
+  properties:
+    audit_status:
+      type: string
+    findings:
+      type: array
+    owasp_category_analysis:
+      type: object
+    secrets_detected:
+      type: boolean
+verification_rules:
+- Must scan for OWASP Top 10 vulnerabilities (SQLi, SSRF, path traversal, command
+  injection, auth bypass).
+- Must scan for hardcoded credentials, API keys, and high-entropy secret tokens.
+- Must reject patches containing any unresolved Critical or High severity findings.
+dependencies: []
+references:
+- title: OWASP Top 10 API Security Risks
+  uri: https://owasp.org/www-project-api-security/
+- title: SYNTRA AGENTS.md Security Reviewer Mandate
+  uri: AGENTS.md#28-security-reviewer
+evaluation_cases:
+- name: scan_clean_diff
+  input_data:
+    diff: print('hello world')
+  expected_status: SUCCESS

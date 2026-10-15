@@ -1,0 +1,12 @@
+- expected_status: SUCCESS
+  input_data:
+    diff: '--- a/file.py
+
+      +++ b/file.py
+
+      @@ -1 +1 @@
+
+      -old
+
+      +new'
+  name: review_clean_feature_patch

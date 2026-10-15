@@ -1,0 +1,30 @@
+{
+  "type": "object",
+  "required": [
+    "title",
+    "problem_statement",
+    "functional_requirements",
+    "non_functional_requirements",
+    "acceptance_criteria"
+  ],
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "problem_statement": {
+      "type": "string"
+    },
+    "functional_requirements": {
+      "type": "array"
+    },
+    "non_functional_requirements": {
+      "type": "array"
+    },
+    "acceptance_criteria": {
+      "type": "array"
+    },
+    "ambiguity_log": {
+      "type": "array"
+    }
+  }
+}

@@ -1,12 +1,52 @@
+id: dependency-management
 name: dependency-management
 version: 1.0.0
-description: Maintains pinned dependencies, lockfiles, security updates, and minimal
-  build trees.
+description: Manages package manifests, lockfiles, version pinning, and audits dependencies
+  against vulnerability advisories.
 category: platform
-compatible_roles:
+supported_roles: &id001
 - devops_engineer
 - backend_engineer
+compatible_roles: *id001
+required_inputs:
+- dependency_request
+- lockfile_path
+- vulnerability_advisory_feed
+required_capabilities:
+- syntra.read_file
+- syntra.write_file
+- syntra.run_command
 required_tools:
 - syntra.read_file
 - syntra.write_file
 - syntra.run_command
+output_schema:
+  type: object
+  required:
+  - package_name
+  - version_pinned
+  - lockfile_hash
+  properties:
+    package_name:
+      type: string
+    version_pinned:
+      type: string
+    lockfile_hash:
+      type: string
+    cve_audit_clean:
+      type: boolean
+verification_rules:
+- All production dependencies must be pinned to exact semantic versions.
+- Lockfiles (`uv.lock`) must remain synchronized with manifests (`pyproject.toml`).
+- Zero dependencies with known High or Critical CVEs may be introduced.
+dependencies: []
+references:
+- title: uv Python Package Manager Guide
+  uri: https://docs.astral.sh/uv/
+- title: Python Packaging User Guide
+  uri: https://packaging.python.org/
+evaluation_cases:
+- name: add_pydantic_settings_dependency
+  input_data:
+    package: pydantic-settings
+  expected_status: SUCCESS

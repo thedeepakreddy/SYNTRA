@@ -1,10 +1,56 @@
+id: system-architecture
 name: system-architecture
 version: 1.0.0
-description: Designs modular, maintainable, and scalable component architectures with
-  formal boundaries.
+description: Defines modular subsystem boundaries, data models, persistence contracts,
+  and Architecture Decision Records (ADRs).
 category: architecture
-compatible_roles:
-- architect
+supported_roles: &id001
+- software_architect
+compatible_roles: *id001
+required_inputs:
+- prd_document
+- repository_baseline
+required_capabilities:
+- syntra.workspace_search
+- syntra.read_file
+- syntra.list_directory
+- syntra.artifact_write
 required_tools:
 - syntra.workspace_search
 - syntra.read_file
+- syntra.list_directory
+- syntra.artifact_write
+output_schema:
+  type: object
+  required:
+  - system_overview
+  - component_boundaries
+  - data_flow
+  - adrs
+  properties:
+    system_overview:
+      type: string
+    component_boundaries:
+      type: array
+    data_flow:
+      type: string
+    adrs:
+      type: array
+    invariants:
+      type: array
+verification_rules:
+- All inter-component communication must define clear data flow and schema contracts.
+- Architectural tradeoffs must be recorded in ADR format (Context, Decision, Consequences).
+- Must preserve backend-first modular monolith architecture and anti-collusion invariants.
+dependencies:
+- requirements-analysis>=1.0.0
+references:
+- title: ADR Template (Michael Nygard)
+  uri: https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions
+- title: SYNTRA Layer 1-7 System Overview
+  uri: docs/architecture/system-overview.md
+evaluation_cases:
+- name: jwt_auth_architecture_design
+  input_data:
+    prd_id: prd-jwt-auth
+  expected_status: SUCCESS

@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "required": [
+    "doc_path",
+    "title",
+    "sections_rendered"
+  ],
+  "properties": {
+    "doc_path": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "sections_rendered": {
+      "type": "array"
+    },
+    "mermaid_diagrams_count": {
+      "type": "integer"
+    }
+  }
+}

@@ -1,11 +1,52 @@
+id: backend-api-development
 name: backend-api-development
 version: 1.0.0
-description: Implements robust, strongly typed FastAPI endpoints, services, and domain
-  logic.
+description: Implements robust, strongly typed FastAPI endpoints, pure domain business
+  services, and database persistence.
 category: implementation
-compatible_roles:
+supported_roles: &id001
 - backend_engineer
+compatible_roles: *id001
+required_inputs:
+- task_specification
+- api_contracts
+- sandbox_workspace
+required_capabilities:
+- syntra.read_file
+- syntra.write_file
+- syntra.run_command
+- syntra.git_diff
 required_tools:
 - syntra.read_file
 - syntra.write_file
 - syntra.run_command
+- syntra.git_diff
+output_schema:
+  type: object
+  required:
+  - unified_diff
+  - changed_files
+  - unit_test_results
+  properties:
+    unified_diff:
+      type: string
+    changed_files:
+      type: array
+    unit_test_results:
+      type: object
+verification_rules:
+- All endpoints must use Pydantic v2 models for request and response validation.
+- All business logic must reside in domain services or entities, not in route handlers.
+- Local unit tests must pass with 100% success inside the worker sandbox.
+dependencies:
+- task-decomposition>=1.0.0
+references:
+- title: FastAPI Production Best Practices
+  uri: https://fastapi.tiangolo.com/
+- title: Pydantic v2 Documentation
+  uri: https://docs.pydantic.dev/latest/
+evaluation_cases:
+- name: create_item_endpoint
+  input_data:
+    task: implement POST /items
+  expected_status: SUCCESS

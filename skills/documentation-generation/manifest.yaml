@@ -1,11 +1,55 @@
+id: documentation-generation
 name: documentation-generation
 version: 1.0.0
-description: Produces clear, structured technical documentation, architecture specs,
-  and user guides.
+description: Authors and maintains authoritative markdown specifications, architectural
+  overviews, API guides, and Mermaid diagrams.
 category: documentation
-compatible_roles:
+supported_roles: &id001
 - product_manager
-- architect
-required_tools:
+- software_architect
+- code_reviewer
+compatible_roles: *id001
+required_inputs:
+- source_files
+- architecture_spec
+- api_routes
+required_capabilities:
+- syntra.workspace_search
 - syntra.read_file
-- syntra.write_file
+- syntra.list_directory
+- syntra.artifact_write
+required_tools:
+- syntra.workspace_search
+- syntra.read_file
+- syntra.list_directory
+- syntra.artifact_write
+output_schema:
+  type: object
+  required:
+  - doc_path
+  - title
+  - sections_rendered
+  properties:
+    doc_path:
+      type: string
+    title:
+      type: string
+    sections_rendered:
+      type: array
+    mermaid_diagrams_count:
+      type: integer
+verification_rules:
+- All documentation must use standard GitHub Flavored Markdown.
+- Architecture and workflow diagrams must use valid Mermaid syntax.
+- All file and symbol references must provide clickable relative markdown links.
+dependencies: []
+references:
+- title: Mermaid Diagram Syntax Documentation
+  uri: https://mermaid.js.org/
+- title: Google Technical Writing Style Guide
+  uri: https://developers.google.com/style
+evaluation_cases:
+- name: generate_system_overview_doc
+  input_data:
+    module: mcp_gateway
+  expected_status: SUCCESS

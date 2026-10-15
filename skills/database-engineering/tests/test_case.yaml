@@ -1,0 +1,4 @@
+- expected_status: SUCCESS
+  input_data:
+    model_name: UserPreferences
+  name: add_user_preferences_table

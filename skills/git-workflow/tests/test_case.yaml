@@ -1,0 +1,5 @@
+- expected_status: SUCCESS
+  input_data:
+    branch: feat/user-auth
+    task_id: tsk-01
+  name: create_worktree_branch

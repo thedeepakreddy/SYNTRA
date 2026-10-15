@@ -1,0 +1,4 @@
+- expected_status: SUCCESS
+  input_data:
+    spec_id: arch-spec-01
+  name: decompose_api_and_db_tasks

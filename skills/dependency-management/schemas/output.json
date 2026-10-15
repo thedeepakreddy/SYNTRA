@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "required": [
+    "package_name",
+    "version_pinned",
+    "lockfile_hash"
+  ],
+  "properties": {
+    "package_name": {
+      "type": "string"
+    },
+    "version_pinned": {
+      "type": "string"
+    },
+    "lockfile_hash": {
+      "type": "string"
+    },
+    "cve_audit_clean": {
+      "type": "boolean"
+    }
+  }
+}

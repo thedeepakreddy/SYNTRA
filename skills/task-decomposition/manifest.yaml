@@ -1,10 +1,54 @@
+id: task-decomposition
 name: task-decomposition
 version: 1.0.0
-description: Breaks high-level architectures into a cycle-free directed acyclic graph
-  (DAG) of actionable tasks.
+description: Decomposes architectural blueprints into an ordered, cycle-free Directed
+  Acyclic Graph (DAG) of actionable tasks.
 category: planning
-compatible_roles:
+supported_roles: &id001
 - engineering_manager
-- architect
+compatible_roles: *id001
+required_inputs:
+- architecture_spec
+- prd_document
+required_capabilities:
+- syntra.workspace_search
+- syntra.read_file
+- syntra.validate_dag
+- syntra.artifact_write
 required_tools:
 - syntra.workspace_search
+- syntra.read_file
+- syntra.validate_dag
+- syntra.artifact_write
+output_schema:
+  type: object
+  required:
+  - tasks
+  - topological_order
+  - concurrency_limit
+  properties:
+    tasks:
+      type: array
+    topological_order:
+      type: array
+    critical_path:
+      type: array
+    concurrency_limit:
+      type: integer
+verification_rules:
+- Task dependency graph must be strictly acyclic (DAG).
+- Each task must have an assigned engineering role, clear input artifacts, and verifiable
+  outcome.
+- Token and cost budgets must be allocated per task.
+dependencies:
+- system-architecture>=1.0.0
+references:
+- title: DAG Topological Sort Algorithms
+  uri: https://en.wikipedia.org/wiki/Topological_sorting
+- title: SYNTRA Task DAG Validator
+  uri: src/syntra/domain/dag_validator.py
+evaluation_cases:
+- name: decompose_api_and_db_tasks
+  input_data:
+    spec_id: arch-spec-01
+  expected_status: SUCCESS

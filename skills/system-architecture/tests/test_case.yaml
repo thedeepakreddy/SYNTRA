@@ -1,0 +1,4 @@
+- expected_status: SUCCESS
+  input_data:
+    prd_id: prd-jwt-auth
+  name: jwt_auth_architecture_design

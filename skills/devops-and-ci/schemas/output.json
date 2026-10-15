@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "required": [
+    "dockerfile_path",
+    "compose_entry",
+    "non_root_verified"
+  ],
+  "properties": {
+    "dockerfile_path": {
+      "type": "string"
+    },
+    "compose_entry": {
+      "type": "string"
+    },
+    "ci_workflow_path": {
+      "type": "string"
+    },
+    "non_root_verified": {
+      "type": "boolean"
+    }
+  }
+}

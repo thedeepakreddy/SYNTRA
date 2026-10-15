@@ -1,11 +1,53 @@
+id: database-engineering
 name: database-engineering
 version: 1.0.0
-description: Designs relational schemas, indexes, and Alembic migrations for PostgreSQL.
-category: database
-compatible_roles:
+description: Designs normalized relational schemas, authors SQLAlchemy models, and
+  creates reversible Alembic migrations.
+category: persistence
+supported_roles: &id001
 - backend_engineer
-- architect
+- software_architect
+compatible_roles: *id001
+required_inputs:
+- data_model_spec
+- alembic_config
+- existing_models
+required_capabilities:
+- syntra.read_file
+- syntra.write_file
+- syntra.run_command
 required_tools:
 - syntra.read_file
 - syntra.write_file
 - syntra.run_command
+output_schema:
+  type: object
+  required:
+  - sqlalchemy_models
+  - migration_script_rev
+  - downgrade_verified
+  properties:
+    sqlalchemy_models:
+      type: array
+    migration_script_rev:
+      type: string
+    downgrade_verified:
+      type: boolean
+verification_rules:
+- Every database change must include a forward upgrade and complete backward downgrade
+  in Alembic.
+- All tables must define UUID primary keys, created_at timestamps, and proper indexes.
+- Destructive schema alterations on production tables must provide a non-breaking
+  multi-phase migration plan.
+dependencies:
+- system-architecture>=1.0.0
+references:
+- title: Alembic Migration Documentation
+  uri: https://alembic.sqlalchemy.org/en/latest/
+- title: PostgreSQL 16 Relational Guidelines
+  uri: https://www.postgresql.org/docs/16/
+evaluation_cases:
+- name: add_user_preferences_table
+  input_data:
+    model_name: UserPreferences
+  expected_status: SUCCESS

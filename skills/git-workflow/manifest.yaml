@@ -1,10 +1,58 @@
+id: git-workflow
 name: git-workflow
 version: 1.0.0
-description: Manages isolated Git worktrees, atomic commits, branch lifecycles, and
-  unified patches.
+description: Manages Git worktrees, isolated branches, atomic conventional commits,
+  and clean patch extraction.
 category: platform
-compatible_roles:
+supported_roles: &id001
 - devops_engineer
 - engineering_manager
-required_tools:
+compatible_roles: *id001
+required_inputs:
+- branch_target
+- worktree_path
+- commit_message
+required_capabilities:
+- syntra.read_file
+- syntra.write_file
 - syntra.run_command
+- syntra.git_branch
+- syntra.git_diff
+required_tools:
+- syntra.read_file
+- syntra.write_file
+- syntra.run_command
+- syntra.git_branch
+- syntra.git_diff
+output_schema:
+  type: object
+  required:
+  - branch_created
+  - commit_sha
+  - clean_tree_verified
+  properties:
+    branch_created:
+      type: string
+    commit_sha:
+      type: string
+    clean_tree_verified:
+      type: boolean
+verification_rules:
+- All commits must follow Conventional Commits standard (feat, fix, refactor, test,
+  docs, chore).
+- Each worker must operate inside an isolated worktree branch without dirtying main
+  branch.
+- No direct push to remote repository without explicit cryptographic human approval
+  digest.
+dependencies: []
+references:
+- title: Conventional Commits 1.0.0
+  uri: https://www.conventionalcommits.org/
+- title: Git Worktree Documentation
+  uri: https://git-scm.com/docs/git-worktree
+evaluation_cases:
+- name: create_worktree_branch
+  input_data:
+    branch: feat/user-auth
+    task_id: tsk-01
+  expected_status: SUCCESS

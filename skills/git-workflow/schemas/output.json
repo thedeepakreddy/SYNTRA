@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "required": [
+    "branch_created",
+    "commit_sha",
+    "clean_tree_verified"
+  ],
+  "properties": {
+    "branch_created": {
+      "type": "string"
+    },
+    "commit_sha": {
+      "type": "string"
+    },
+    "clean_tree_verified": {
+      "type": "boolean"
+    }
+  }
+}

@@ -1,10 +1,52 @@
+id: api-contract-testing
 name: api-contract-testing
 version: 1.0.0
-description: Validates REST and RPC interfaces against published OpenAPI schemas and
-  proto contracts.
+description: Verifies API schemas against OpenAPI specifications and detects breaking
+  changes and contract drift.
 category: testing
-compatible_roles:
+supported_roles: &id001
 - qa_engineer
+compatible_roles: *id001
+required_inputs:
+- openapi_spec_or_schema
+- endpoint_url_or_client
+required_capabilities:
+- syntra.read_file
+- syntra.write_file
+- syntra.run_command
 required_tools:
 - syntra.read_file
+- syntra.write_file
 - syntra.run_command
+output_schema:
+  type: object
+  required:
+  - endpoint_verified
+  - schema_compliance
+  - drift_detected
+  properties:
+    endpoint_verified:
+      type: string
+    schema_compliance:
+      type: boolean
+    drift_detected:
+      type: boolean
+    response_status_codes:
+      type: array
+verification_rules:
+- All responses must adhere strictly to declared OpenAPI schemas.
+- Breaking changes (removed fields, altered types, new required request fields) must
+  be flagged as drift.
+- Error responses must validate against RFC 7807 Problem Details schemas.
+dependencies:
+- backend-api-development>=1.0.0
+references:
+- title: OpenAPI Specification 3.1.0
+  uri: https://spec.openapis.org/oas/v3.1.0
+- title: RFC 7807 Problem Details for HTTP APIs
+  uri: https://datatracker.ietf.org/doc/html/rfc7807
+evaluation_cases:
+- name: verify_missions_api_contract
+  input_data:
+    endpoint: /v1/missions
+  expected_status: SUCCESS

@@ -1,11 +1,52 @@
+id: debugging-and-root-cause-analysis
 name: debugging-and-root-cause-analysis
 version: 1.0.0
-description: Isolates defects, inspects execution traces, and crafts minimal regression-proof
-  fixes.
-category: debugging
-compatible_roles:
+description: Systematically diagnoses execution errors, test failures, and crashes
+  to produce minimal reproducing tests and surgical fixes.
+category: remediation
+supported_roles: &id001
 - debugging_specialist
+compatible_roles: *id001
+required_inputs:
+- failing_test_stderr
+- stacktrace
+- affected_files
+required_capabilities:
+- syntra.read_file
+- syntra.write_file
+- syntra.run_command
 required_tools:
 - syntra.read_file
 - syntra.write_file
 - syntra.run_command
+output_schema:
+  type: object
+  required:
+  - failure_classification
+  - root_cause_explanation
+  - reproducing_test_case
+  - minimal_patch
+  properties:
+    failure_classification:
+      type: string
+    root_cause_explanation:
+      type: string
+    reproducing_test_case:
+      type: string
+    minimal_patch:
+      type: string
+verification_rules:
+- Must construct a minimal automated reproducing test before altering code.
+- Must not disable, comment out, or weaken existing test assertions.
+- Fix patch must be minimal, surgical, and localized.
+dependencies: []
+references:
+- title: The Art of Debugging
+  uri: https://nostarch.com/debugging.htm
+- title: SYNTRA Debugging Specialist Persona
+  uri: AGENTS.md#210-debugging-specialist
+evaluation_cases:
+- name: diagnose_null_pointer_exception
+  input_data:
+    error: 'TypeError: ''NoneType'' object is not subscriptable'
+  expected_status: SUCCESS

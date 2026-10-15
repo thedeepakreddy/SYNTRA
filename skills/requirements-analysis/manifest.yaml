@@ -1,11 +1,60 @@
+id: requirements-analysis
 name: requirements-analysis
 version: 1.0.0
-description: Dissects ambiguous problem statements into structured, verifiable functional
-  and non-functional requirements.
+description: Transforms ambiguous user objectives into structured, testable Product
+  Requirements Documents (PRDs).
 category: specification
-compatible_roles:
+supported_roles: &id001
 - product_manager
-- architect
+compatible_roles: *id001
+required_inputs:
+- user_objective
+- existing_documentation
+- repository_readme
+required_capabilities:
+- syntra.workspace_search
+- syntra.read_file
+- syntra.list_directory
+- syntra.artifact_write
 required_tools:
 - syntra.workspace_search
 - syntra.read_file
+- syntra.list_directory
+- syntra.artifact_write
+output_schema:
+  type: object
+  required:
+  - title
+  - problem_statement
+  - functional_requirements
+  - non_functional_requirements
+  - acceptance_criteria
+  properties:
+    title:
+      type: string
+    problem_statement:
+      type: string
+    functional_requirements:
+      type: array
+    non_functional_requirements:
+      type: array
+    acceptance_criteria:
+      type: array
+    ambiguity_log:
+      type: array
+verification_rules:
+- All functional requirements must map to at least one Given-When-Then acceptance
+  criterion.
+- Ambiguities must be explicitly recorded in the ambiguity log with assumed defaults.
+- No source code or execution commands may be included in the PRD artifact.
+dependencies: []
+references:
+- title: Gherkin Acceptance Criteria Standard
+  uri: https://cucumber.io/docs/gherkin/reference/
+- title: SYNTRA AGENTS.md Product Manager Mandate
+  uri: AGENTS.md#21-product-manager-pm
+evaluation_cases:
+- name: basic_feature_prd_generation
+  input_data:
+    user_objective: Add user authentication with JWT
+  expected_status: SUCCESS

@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "required": [
+    "endpoint_verified",
+    "schema_compliance",
+    "drift_detected"
+  ],
+  "properties": {
+    "endpoint_verified": {
+      "type": "string"
+    },
+    "schema_compliance": {
+      "type": "boolean"
+    },
+    "drift_detected": {
+      "type": "boolean"
+    },
+    "response_status_codes": {
+      "type": "array"
+    }
+  }
+}

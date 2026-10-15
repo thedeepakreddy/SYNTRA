@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "required": [
+    "target_repo_diff",
+    "component_tests",
+    "build_status"
+  ],
+  "properties": {
+    "target_repo_diff": {
+      "type": "string"
+    },
+    "component_tests": {
+      "type": "object"
+    },
+    "build_status": {
+      "type": "string"
+    }
+  }
+}

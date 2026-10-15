@@ -1,0 +1,4 @@
+- expected_status: SUCCESS
+  input_data:
+    package: pydantic-settings
+  name: add_pydantic_settings_dependency

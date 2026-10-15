@@ -1,11 +1,53 @@
+id: devops-and-ci
 name: devops-and-ci
 version: 1.0.0
-description: Configures containerization, GitHub Actions workflows, healthchecks,
-  and build scripts.
-category: devops
-compatible_roles:
+description: Authors reproducible container definitions, multi-stage Dockerfiles,
+  compose files, and GitHub Actions CI pipelines.
+category: infrastructure
+supported_roles: &id001
 - devops_engineer
+compatible_roles: *id001
+required_inputs:
+- system_architecture_spec
+- dependency_manifests
+- service_ports
+required_capabilities:
+- syntra.read_file
+- syntra.write_file
+- syntra.run_command
 required_tools:
 - syntra.read_file
 - syntra.write_file
 - syntra.run_command
+output_schema:
+  type: object
+  required:
+  - dockerfile_path
+  - compose_entry
+  - non_root_verified
+  properties:
+    dockerfile_path:
+      type: string
+    compose_entry:
+      type: string
+    ci_workflow_path:
+      type: string
+    non_root_verified:
+      type: boolean
+verification_rules:
+- All containers must run as non-root users with explicit UID/GID.
+- Container builds must use multi-stage Dockerfiles to minimize image attack surface.
+- Health check probes and resource limits must be declared for all Compose services.
+dependencies:
+- system-architecture>=1.0.0
+references:
+- title: CIS Docker Benchmark Guidelines
+  uri: https://www.cisecurity.org/benchmark/docker
+- title: GitHub Actions Workflow Syntax
+  uri: https://docs.github.com/en/actions
+evaluation_cases:
+- name: generate_fastapi_dockerfile
+  input_data:
+    service: api
+    port: 8000
+  expected_status: SUCCESS

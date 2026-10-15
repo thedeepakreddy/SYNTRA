@@ -1,0 +1,5 @@
+- expected_status: SUCCESS
+  input_data:
+    target_repo: acme/web-app
+    task: Add metrics widget
+  name: create_dashboard_widget

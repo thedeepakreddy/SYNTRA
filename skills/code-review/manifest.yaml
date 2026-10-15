@@ -1,10 +1,68 @@
+id: code-review
 name: code-review
 version: 1.0.0
-description: Evaluates code diffs for correctness, architectural compliance, readability,
-  and security.
-category: review
-compatible_roles:
+description: Performs independent peer review of proposed diffs for architectural
+  alignment, style, typing, and test completeness.
+category: governance
+supported_roles: &id001
 - code_reviewer
+compatible_roles: *id001
+required_inputs:
+- unified_diff
+- task_specification
+- qa_verification_evidence
+- security_report
+required_capabilities:
+- syntra.read_file
+- syntra.workspace_search
+- syntra.list_directory
+- syntra.artifact_write
 required_tools:
 - syntra.read_file
 - syntra.workspace_search
+- syntra.list_directory
+- syntra.artifact_write
+output_schema:
+  type: object
+  required:
+  - verdict
+  - summary
+  - comments
+  properties:
+    verdict:
+      type: string
+    summary:
+      type: string
+    comments:
+      type: array
+    blockers:
+      type: array
+    approval_digest:
+      type: string
+verification_rules:
+- Reviewer must not have authored the unified diff being reviewed (Anti-Collusion
+  Invariant).
+- All acceptance criteria in task specification must be fully satisfied without scope
+  creep.
+- Must reject patches if QA regression tests failed or Security report has open High/Critical
+  findings.
+dependencies:
+- test-driven-development>=1.0.0
+references:
+- title: 'Google Engineering Practices: Code Review'
+  uri: https://google.github.io/eng-practices/review/
+- title: SYNTRA AGENTS.md Code Reviewer Mandate
+  uri: AGENTS.md#29-code-reviewer
+evaluation_cases:
+- name: review_clean_feature_patch
+  input_data:
+    diff: '--- a/file.py
+
+      +++ b/file.py
+
+      @@ -1 +1 @@
+
+      -old
+
+      +new'
+  expected_status: SUCCESS

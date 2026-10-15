@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "required": [
+    "verdict",
+    "summary",
+    "comments"
+  ],
+  "properties": {
+    "verdict": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "comments": {
+      "type": "array"
+    },
+    "blockers": {
+      "type": "array"
+    },
+    "approval_digest": {
+      "type": "string"
+    }
+  }
+}

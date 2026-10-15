@@ -1,0 +1,4 @@
+- expected_status: SUCCESS
+  input_data:
+    user_objective: Add user authentication with JWT
+  name: basic_feature_prd_generation

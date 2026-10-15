@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "required": [
+    "failure_classification",
+    "root_cause_explanation",
+    "reproducing_test_case",
+    "minimal_patch"
+  ],
+  "properties": {
+    "failure_classification": {
+      "type": "string"
+    },
+    "root_cause_explanation": {
+      "type": "string"
+    },
+    "reproducing_test_case": {
+      "type": "string"
+    },
+    "minimal_patch": {
+      "type": "string"
+    }
+  }
+}

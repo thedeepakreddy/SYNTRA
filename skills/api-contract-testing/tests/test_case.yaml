@@ -1,0 +1,4 @@
+- expected_status: SUCCESS
+  input_data:
+    endpoint: /v1/missions
+  name: verify_missions_api_contract

@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "required": [
+    "tasks",
+    "topological_order",
+    "concurrency_limit"
+  ],
+  "properties": {
+    "tasks": {
+      "type": "array"
+    },
+    "topological_order": {
+      "type": "array"
+    },
+    "critical_path": {
+      "type": "array"
+    },
+    "concurrency_limit": {
+      "type": "integer"
+    }
+  }
+}

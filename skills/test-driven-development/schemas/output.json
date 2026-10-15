@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "required": [
+    "test_file_path",
+    "initial_failing_state",
+    "passing_state_asserted"
+  ],
+  "properties": {
+    "test_file_path": {
+      "type": "string"
+    },
+    "initial_failing_state": {
+      "type": "boolean"
+    },
+    "passing_state_asserted": {
+      "type": "boolean"
+    },
+    "coverage_percent": {
+      "type": "number"
+    }
+  }
+}

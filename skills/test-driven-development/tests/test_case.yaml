@@ -1,0 +1,4 @@
+- expected_status: SUCCESS
+  input_data:
+    feature: TaxCalculationService
+  name: tdd_calculator_service

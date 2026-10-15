@@ -1,10 +1,54 @@
+id: frontend-development
 name: frontend-development
 version: 1.0.0
-description: Develops web and client applications inside target repositories.
+description: Implements client-side user interfaces, state management, and API clients
+  exclusively inside target repositories.
 category: implementation
-compatible_roles:
+supported_roles: &id001
 - frontend_engineer
+compatible_roles: *id001
+required_inputs:
+- task_specification
+- api_openapi_spec
+- target_repo_workspace
+required_capabilities:
+- syntra.read_file
+- syntra.write_file
+- syntra.run_command
+- syntra.git_diff
 required_tools:
 - syntra.read_file
 - syntra.write_file
 - syntra.run_command
+- syntra.git_diff
+output_schema:
+  type: object
+  required:
+  - target_repo_diff
+  - component_tests
+  - build_status
+  properties:
+    target_repo_diff:
+      type: string
+    component_tests:
+      type: object
+    build_status:
+      type: string
+verification_rules:
+- Must never create or modify UI components for the SYNTRA core platform.
+- All client-side code must execute exclusively inside target repository sandboxes.
+- Components must have automated component tests (e.g. Jest, Vitest, React Testing
+  Library).
+dependencies:
+- task-decomposition>=1.0.0
+references:
+- title: React Best Practices
+  uri: https://react.dev/learn
+- title: SYNTRA AGENTS.md Frontend Invariant
+  uri: AGENTS.md#25-frontend-engineer-target-repositories-only
+evaluation_cases:
+- name: create_dashboard_widget
+  input_data:
+    target_repo: acme/web-app
+    task: Add metrics widget
+  expected_status: SUCCESS
