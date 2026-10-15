@@ -88,8 +88,8 @@ def test_01_provider_selection():
     assert "flash" in ModelRouter.resolve_model(AgentRole.BACKEND_ENGINEER.value)
     assert "flash" in ModelRouter.resolve_model(AgentRole.QA_ENGINEER.value)
 
-    # Summarizer resolves to fast tier
-    assert "lite" in ModelRouter.resolve_model("summarizer")
+    # Summarizer resolves to fast tier (gemini-2.5-flash)
+    assert "flash" in ModelRouter.resolve_model("summarizer")
 
     # Explicit request overrides default
     assert ModelRouter.resolve_model(requested_model="custom-model") == "custom-model"

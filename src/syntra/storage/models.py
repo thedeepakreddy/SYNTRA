@@ -21,9 +21,11 @@ class SessionModel(Base):
     objective: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(String(32), default="pending", nullable=False)
     autonomy_mode: Mapped[str] = mapped_column(String(32), default="semi_autonomous", nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), nullable=False
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), nullable=False
     )
     metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
@@ -51,7 +53,9 @@ class LegacyAgentExecutionModel(Base):
     output: Mapped[str | None] = mapped_column(Text, nullable=True)
     steps_taken: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     tool_calls_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
 
     session: Mapped["SessionModel"] = relationship(back_populates="executions")
 
@@ -59,7 +63,7 @@ class LegacyAgentExecutionModel(Base):
 class CheckpointModel(Base):
     """Stores human-in-the-loop checkpoint decisions and states (legacy prototype)."""
 
-    __tablename__ = "checkpoints"
+    __tablename__ = "legacy_checkpoints"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     session_id: Mapped[str] = mapped_column(String(64), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
@@ -73,8 +77,10 @@ class CheckpointModel(Base):
     target_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="pending", nullable=False)
     human_feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
-    resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     session: Mapped["SessionModel"] = relationship(back_populates="checkpoints")
 
@@ -91,7 +97,9 @@ class LegacyEventModel(Base):
     )
     agent_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     agent_role: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    timestamp: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False, index=True)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False, index=True
+    )
     data_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     session: Mapped["SessionModel | None"] = relationship(back_populates="events")
@@ -106,7 +114,9 @@ class LegacyArtifactModel(Base):
     session_id: Mapped[str] = mapped_column(String(64), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
     file_path: Mapped[str] = mapped_column(String(255), nullable=False)
     file_size_bytes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
 
     session: Mapped["SessionModel"] = relationship(back_populates="artifacts")
 

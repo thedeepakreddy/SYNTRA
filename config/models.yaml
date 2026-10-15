@@ -1,12 +1,13 @@
 # SYNTRA Model Registry Configuration
-# Source: Google Cloud Vertex AI & Google AI Studio official pricing
-# Effective Date: October 2024
+# Source: Google Cloud Vertex AI & Google AI Studio official documentation & pricing
+# Effective Date: 2026-10-15
 
 models:
   gemini-2.5-pro:
     provider: gemini
     model_id: gemini-2.5-pro
     enabled: true
+    lifecycle_status: ACTIVE
     supported_capabilities:
       - text_generation
       - structured_output
@@ -25,14 +26,18 @@ models:
     pricing_configuration:
       pricing_known: true
       source: "Google Cloud Vertex AI Pricing"
-      effective_date: "2024-10-01"
+      effective_date: "2026-10-15"
       input_per_million_usd: 1.25
       output_per_million_usd: 5.00
+      unknown_cost_policy: conservative_fallback
+      fallback_input_per_million_usd: 2.50
+      fallback_output_per_million_usd: 10.00
 
   gemini-2.5-flash:
     provider: gemini
     model_id: gemini-2.5-flash
     enabled: true
+    lifecycle_status: ACTIVE
     supported_capabilities:
       - text_generation
       - structured_output
@@ -50,14 +55,21 @@ models:
     pricing_configuration:
       pricing_known: true
       source: "Google Cloud Vertex AI Pricing"
-      effective_date: "2024-10-01"
+      effective_date: "2026-10-15"
       input_per_million_usd: 0.15
       output_per_million_usd: 0.60
+      unknown_cost_policy: conservative_fallback
+      fallback_input_per_million_usd: 2.50
+      fallback_output_per_million_usd: 10.00
 
   gemini-2.0-flash-lite:
     provider: gemini
     model_id: gemini-2.0-flash-lite
-    enabled: true
+    enabled: false
+    deprecated: true
+    shutdown_date: "2026-06-01"
+    replacement: "gemini-2.5-flash"
+    lifecycle_status: SHUTDOWN
     supported_capabilities:
       - text_generation
       - structured_output
@@ -73,16 +85,20 @@ models:
       backoff_multiplier: 2.0
       max_delay_seconds: 10.0
     pricing_configuration:
-      pricing_known: true
-      source: "Google AI Studio Pricing"
-      effective_date: "2024-10-01"
+      pricing_known: false
+      source: "Google AI Studio Historical (Retired)"
+      effective_date: "2026-06-01"
       input_per_million_usd: 0.075
       output_per_million_usd: 0.30
+      unknown_cost_policy: reject
+      fallback_input_per_million_usd: 2.50
+      fallback_output_per_million_usd: 10.00
 
   mock-model:
     provider: mock
     model_id: mock-model
     enabled: true
+    lifecycle_status: ACTIVE
     supported_capabilities:
       - text_generation
       - structured_output
@@ -100,12 +116,15 @@ models:
     pricing_configuration:
       pricing_known: true
       source: "Mock Deterministic Test Provider"
-      effective_date: "2024-01-01"
+      effective_date: "2026-01-01"
       input_per_million_usd: 0.00
       output_per_million_usd: 0.00
+      unknown_cost_policy: conservative_fallback
+      fallback_input_per_million_usd: 2.50
+      fallback_output_per_million_usd: 10.00
 
 tier_defaults:
   reasoning: "gemini-2.5-pro"
   balanced: "gemini-2.5-flash"
-  fast: "gemini-2.0-flash-lite"
+  fast: "gemini-2.5-flash"
   mock: "mock-model"

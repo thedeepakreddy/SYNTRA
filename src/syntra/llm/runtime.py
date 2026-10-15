@@ -18,11 +18,13 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel
 
 from syntra.core.telemetry import get_telemetry
-from syntra.llm.config import compute_token_cost, get_model_spec
+from syntra.llm.config import UnknownCostPolicy, compute_token_cost, get_model_spec
 from syntra.llm.context import AgentContextBuilder
 from syntra.llm.exceptions import (
     ModelBudgetExceededError,
     ModelOutputValidationError,
+    ModelPricingError,
+    ModelProviderUnavailableError,
     ModelToolExecutionError,
 )
 from syntra.llm.models import LLMMessage, MessageRole, ToolCall, ToolDefinition
@@ -106,6 +108,17 @@ class ModelRuntime:
         target_model = model_name or ModelRouter.resolve_model(agent_role)
         spec = get_model_spec(target_model)
 
+        if not spec.enabled or spec.lifecycle_status == "SHUTDOWN":
+            raise ModelProviderUnavailableError(
+                f"Model '{spec.model_id}' is disabled or shut down (lifecycle: {spec.lifecycle_status}). "
+                f"Active replacement: '{spec.replacement or 'gemini-2.5-flash'}'."
+            )
+
+        if not spec.is_pricing_known and spec.pricing_configuration.unknown_cost_policy == UnknownCostPolicy.REJECT:
+            raise ModelPricingError(
+                f"Model '{spec.model_id}' has unverified pricing and unknown-cost policy is REJECT."
+            )
+
         # 2. Build Agent Context (System Instruction + Messages)
         system_instruction, messages = self.context_builder.build_context(
             agent_role=agent_role,
@@ -171,7 +184,7 @@ class ModelRuntime:
                                 f"Cost budget exceeded for mission '{mission_id}'. "
                                 f"Limit: ${budget.max_cost_usd}, Attempted: ${budget.consumed_cost_usd + accumulated_cost}"
                             )
-                except ModelBudgetExceededError:
+                except (ModelBudgetExceededError, ModelPricingError):
                     raise
                 except Exception as exc:
                     logger.debug("Budget check skipped: %s", exc)

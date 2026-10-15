@@ -19,7 +19,7 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - SYNTRA_DEFAULT_MODEL=${SYNTRA_DEFAULT_MODEL:-gemini-2.5-flash}
       - SYNTRA_REASONING_MODEL=${SYNTRA_REASONING_MODEL:-gemini-2.5-pro}
-      - SYNTRA_FAST_MODEL=${SYNTRA_FAST_MODEL:-gemini-2.0-flash-lite}
+      - SYNTRA_FAST_MODEL=${SYNTRA_FAST_MODEL:-gemini-2.5-flash}
       - SYNTRA_AUTONOMY_MODE=${SYNTRA_AUTONOMY_MODE:-semi_autonomous}
       - SYNTRA_DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-syntra}:${POSTGRES_PASSWORD:-syntra_secret}@postgres:5432/${POSTGRES_DB:-syntra_db}
       - SYNTRA_REDIS_URL=redis://redis:6379/0

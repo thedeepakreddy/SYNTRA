@@ -10,6 +10,16 @@ from typing import Any
 import yaml
 from pydantic import BaseModel, Field
 
+from syntra.llm.exceptions import ModelPricingError
+
+
+class UnknownCostPolicy(str, Enum):
+    """Policy for handling models with unverified or missing pricing."""
+
+    REJECT = "reject"
+    CONSERVATIVE_FALLBACK = "conservative_fallback"
+    FLAG_UNVERIFIED = "flag_unverified"
+
 
 class ModelTier(str, Enum):
     """Model capability and cost tiers."""
@@ -46,6 +56,18 @@ class PricingConfiguration(BaseModel):
     effective_date: str | None = Field(default=None, description="Date pricing was verified (YYYY-MM-DD)")
     input_per_million_usd: Decimal | None = Field(default=None, description="USD per 1,000,000 prompt tokens")
     output_per_million_usd: Decimal | None = Field(default=None, description="USD per 1,000,000 completion tokens")
+    unknown_cost_policy: UnknownCostPolicy = Field(
+        default=UnknownCostPolicy.CONSERVATIVE_FALLBACK,
+        description="Policy applied when pricing_known is False or rates are None",
+    )
+    fallback_input_per_million_usd: Decimal = Field(
+        default=Decimal("2.50"),
+        description="Ceiling prompt token rate per million USD when unverified",
+    )
+    fallback_output_per_million_usd: Decimal = Field(
+        default=Decimal("10.00"),
+        description="Ceiling completion token rate per million USD when unverified",
+    )
 
 
 class ModelSpec(BaseModel):
@@ -56,6 +78,10 @@ class ModelSpec(BaseModel):
     name: str = Field(default="", description="Alias identifier (defaults to model_id)")
     enabled: bool = Field(default=True, description="Whether model is enabled for agent execution")
     tier: ModelTier = Field(default=ModelTier.BALANCED, description="Operational capability tier")
+    lifecycle_status: str = Field(default="ACTIVE", description="Lifecycle status: ACTIVE, DEPRECATED, or SHUTDOWN")
+    deprecated: bool = Field(default=False, description="Whether model has been deprecated")
+    shutdown_date: str | None = Field(default=None, description="Official shutdown date if deprecated (YYYY-MM-DD)")
+    replacement: str | None = Field(default=None, description="Recommended active replacement model")
     supported_capabilities: list[str] = Field(
         default_factory=lambda: ["text_generation", "structured_output", "function_calling"],
         description="Capabilities verified for this model",
@@ -79,13 +105,13 @@ class ModelSpec(BaseModel):
     def cost_per_input_token(self) -> Decimal:
         if self.pricing_configuration.pricing_known and self.pricing_configuration.input_per_million_usd is not None:
             return self.pricing_configuration.input_per_million_usd / Decimal(1_000_000)
-        return Decimal("0.0")
+        return self.pricing_configuration.fallback_input_per_million_usd / Decimal(1_000_000)
 
     @property
     def cost_per_output_token(self) -> Decimal:
         if self.pricing_configuration.pricing_known and self.pricing_configuration.output_per_million_usd is not None:
             return self.pricing_configuration.output_per_million_usd / Decimal(1_000_000)
-        return Decimal("0.0")
+        return self.pricing_configuration.fallback_output_per_million_usd / Decimal(1_000_000)
 
     @property
     def supports_tools(self) -> bool:
@@ -97,7 +123,11 @@ class ModelSpec(BaseModel):
 
     @property
     def is_pricing_known(self) -> bool:
-        return self.pricing_configuration.pricing_known
+        return (
+            self.pricing_configuration.pricing_known
+            and self.pricing_configuration.input_per_million_usd is not None
+            and self.pricing_configuration.output_per_million_usd is not None
+        )
 
 
 def load_model_registry(config_path: Path | None = None) -> dict[str, ModelSpec]:
@@ -125,6 +155,10 @@ def load_model_registry(config_path: Path | None = None) -> dict[str, ModelSpec]
                         name=m_key,
                         enabled=m_val.get("enabled", True),
                         tier=tier,
+                        lifecycle_status=m_val.get("lifecycle_status", "ACTIVE"),
+                        deprecated=m_val.get("deprecated", False),
+                        shutdown_date=m_val.get("shutdown_date"),
+                        replacement=m_val.get("replacement"),
                         supported_capabilities=m_val.get(
                             "supported_capabilities", ["text_generation", "structured_output", "function_calling"]
                         ),
@@ -153,15 +187,19 @@ def _default_registry() -> dict[str, ModelSpec]:
             name="gemini-2.5-pro",
             enabled=True,
             tier=ModelTier.REASONING,
+            lifecycle_status="ACTIVE",
             max_output_tokens=8192,
             context_policy=ContextPolicy(context_window_tokens=2_097_152),
             timeout_seconds=90.0,
             pricing_configuration=PricingConfiguration(
                 pricing_known=True,
                 source="Google Cloud Vertex AI Pricing",
-                effective_date="2024-10-01",
+                effective_date="2026-10-15",
                 input_per_million_usd=Decimal("1.25"),
                 output_per_million_usd=Decimal("5.00"),
+                unknown_cost_policy=UnknownCostPolicy.CONSERVATIVE_FALLBACK,
+                fallback_input_per_million_usd=Decimal("2.50"),
+                fallback_output_per_million_usd=Decimal("10.00"),
             ),
             default_temperature=0.1,
         ),
@@ -171,15 +209,19 @@ def _default_registry() -> dict[str, ModelSpec]:
             name="gemini-2.5-flash",
             enabled=True,
             tier=ModelTier.BALANCED,
+            lifecycle_status="ACTIVE",
             max_output_tokens=8192,
             context_policy=ContextPolicy(context_window_tokens=1_048_576),
             timeout_seconds=60.0,
             pricing_configuration=PricingConfiguration(
                 pricing_known=True,
                 source="Google Cloud Vertex AI Pricing",
-                effective_date="2024-10-01",
+                effective_date="2026-10-15",
                 input_per_million_usd=Decimal("0.15"),
                 output_per_million_usd=Decimal("0.60"),
+                unknown_cost_policy=UnknownCostPolicy.CONSERVATIVE_FALLBACK,
+                fallback_input_per_million_usd=Decimal("2.50"),
+                fallback_output_per_million_usd=Decimal("10.00"),
             ),
             default_temperature=0.2,
         ),
@@ -187,17 +229,24 @@ def _default_registry() -> dict[str, ModelSpec]:
             provider="gemini",
             model_id="gemini-2.0-flash-lite",
             name="gemini-2.0-flash-lite",
-            enabled=True,
+            enabled=False,
             tier=ModelTier.FAST,
+            lifecycle_status="SHUTDOWN",
+            deprecated=True,
+            shutdown_date="2026-06-01",
+            replacement="gemini-2.5-flash",
             max_output_tokens=8192,
             context_policy=ContextPolicy(context_window_tokens=1_048_576),
             timeout_seconds=30.0,
             pricing_configuration=PricingConfiguration(
-                pricing_known=True,
-                source="Google AI Studio Pricing",
-                effective_date="2024-10-01",
+                pricing_known=False,
+                source="Google AI Studio Historical (Retired)",
+                effective_date="2026-06-01",
                 input_per_million_usd=Decimal("0.075"),
                 output_per_million_usd=Decimal("0.30"),
+                unknown_cost_policy=UnknownCostPolicy.REJECT,
+                fallback_input_per_million_usd=Decimal("2.50"),
+                fallback_output_per_million_usd=Decimal("10.00"),
             ),
             default_temperature=0.2,
         ),
@@ -207,16 +256,20 @@ def _default_registry() -> dict[str, ModelSpec]:
             name="mock-model",
             enabled=True,
             tier=ModelTier.FAST,
+            lifecycle_status="ACTIVE",
             max_output_tokens=4096,
             context_policy=ContextPolicy(context_window_tokens=1_000_000, truncation_strategy="none"),
             timeout_seconds=10.0,
             retry_policy=RetryPolicy(max_retries=1, initial_delay_seconds=0.1),
             pricing_configuration=PricingConfiguration(
                 pricing_known=True,
-                source="Mock Test Provider",
-                effective_date="2024-01-01",
+                source="Mock Deterministic Test Provider",
+                effective_date="2026-01-01",
                 input_per_million_usd=Decimal("0.0"),
                 output_per_million_usd=Decimal("0.0"),
+                unknown_cost_policy=UnknownCostPolicy.CONSERVATIVE_FALLBACK,
+                fallback_input_per_million_usd=Decimal("2.50"),
+                fallback_output_per_million_usd=Decimal("10.00"),
             ),
             default_temperature=0.0,
         ),
@@ -241,11 +294,43 @@ def get_model_spec(model_name: str | None = None) -> ModelSpec:
     return MODEL_REGISTRY.get("gemini-2.5-flash", next(iter(MODEL_REGISTRY.values())))
 
 
-def compute_token_cost(model_name: str, prompt_tokens: int, completion_tokens: int) -> Decimal:
-    """Calculate estimated USD cost based on token counts and documented model pricing."""
+def compute_token_cost(
+    model_name: str,
+    prompt_tokens: int,
+    completion_tokens: int,
+    unknown_policy: UnknownCostPolicy | None = None,
+) -> Decimal:
+    """Calculate estimated USD cost based on token counts and documented model pricing.
+
+    Unknown pricing must NOT evaluate to $0.00. An unpriced model will apply its
+    configured unknown_cost_policy (REJECT, CONSERVATIVE_FALLBACK, or FLAG_UNVERIFIED).
+    """
     spec = get_model_spec(model_name)
-    if not spec.pricing_configuration.pricing_known:
-        return Decimal("0.0")
+    pricing = spec.pricing_configuration
+    policy = unknown_policy or pricing.unknown_cost_policy
+
+    if not spec.is_pricing_known:
+        if policy == UnknownCostPolicy.REJECT:
+            raise ModelPricingError(
+                f"Model '{spec.model_id}' has unverified pricing and unknown-cost policy is REJECT. "
+                "Execution prohibited to preserve budget integrity."
+            )
+        # Apply conservative ceiling reservation
+        in_rate = pricing.fallback_input_per_million_usd / Decimal(1_000_000)
+        out_rate = pricing.fallback_output_per_million_usd / Decimal(1_000_000)
+        estimated = (Decimal(prompt_tokens) * in_rate) + (Decimal(completion_tokens) * out_rate)
+        if policy == UnknownCostPolicy.FLAG_UNVERIFIED:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "UNVERIFIED_PRICING_FLAG: Model '%s' pricing is not verified. "
+                "Applied conservative ceiling reservation of $%.6f (policy=%s).",
+                spec.model_id,
+                estimated,
+                policy.value,
+            )
+        return estimated
+
     input_cost = Decimal(prompt_tokens) * spec.cost_per_input_token
     output_cost = Decimal(completion_tokens) * spec.cost_per_output_token
     return input_cost + output_cost

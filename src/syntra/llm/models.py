@@ -20,7 +20,7 @@ class MessageRole(str, Enum):
 class ModelTier(str, Enum):
     """Model selection tiers."""
 
-    FAST = "gemini-2.0-flash-lite"
+    FAST = "gemini-2.5-flash"
     BALANCED = "gemini-2.5-flash"
     REASONING = "gemini-2.5-pro"
 

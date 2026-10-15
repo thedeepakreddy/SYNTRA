@@ -11,12 +11,16 @@ import os
 from uuid import uuid4
 
 import pytest
+from dotenv import load_dotenv
 from sqlalchemy import text
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.schema import CreateIndex, CreateTable
 
+from syntra.domain.entities import MCPTransportType
 from syntra.persistence.models import Base, MCPServerModel
+
+load_dotenv()
 
 POSTGRES_TEST_URL = os.environ.get(
     "SYNTRA_TEST_POSTGRES_URL",
@@ -104,7 +108,7 @@ async def test_live_postgresql_lifecycle():
             server = MCPServerModel(
                 id=uuid4(),
                 name="pg_test_server",
-                transport="stdio",
+                transport=MCPTransportType.STDIO,
                 command_or_url="uv",
                 is_enabled=True,
             )
@@ -112,10 +116,26 @@ async def test_live_postgresql_lifecycle():
             async with conn.begin_nested() as savepoint:
                 await conn.execute(
                     text(
-                        "INSERT INTO mcp_servers (id, name, transport, command_or_url, is_enabled) "
-                        "VALUES (:id, :name, :transport, :cmd, :enabled)"
+                        "INSERT INTO mcp_servers ("
+                        "id, name, transport, trust_classification, command_or_url, auth_policy, "
+                        "allowed_capabilities, is_enabled, version, verification_status, created_at"
+                        ") VALUES ("
+                        ":id, :name, :transport, :trust_class, :cmd, :auth_policy, "
+                        "CAST(:caps AS jsonb), :enabled, :version, :verification_status, CURRENT_TIMESTAMP"
+                        ")"
                     ),
-                    {"id": server.id, "name": server.name, "transport": "stdio", "cmd": "uv", "enabled": True},
+                    {
+                        "id": server.id,
+                        "name": server.name,
+                        "transport": "STDIO",
+                        "trust_class": "LOCAL_TRUSTED",
+                        "cmd": "uv",
+                        "auth_policy": "NONE",
+                        "caps": "[]",
+                        "enabled": True,
+                        "version": "1.0.0",
+                        "verification_status": "VERIFIED",
+                    },
                 )
                 await savepoint.rollback()
 

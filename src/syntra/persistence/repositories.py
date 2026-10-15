@@ -3,7 +3,7 @@
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from syntra.domain.entities import (
     ApprovalDecision,
     ArtifactType,
+    AttemptState,
     MCPTransportType,
     MissionState,
     OutboxStatus,
@@ -44,6 +45,7 @@ from syntra.persistence.models import (
     MissionModel,
     OrganizationModel,
     ProjectModel,
+    TaskAttemptModel,
     TaskDependencyModel,
     TaskModel,
     TaskPlanModel,
@@ -331,6 +333,18 @@ class TaskRepository:
         res = await self.session.execute(stmt)
         return res.scalar_one_or_none()
 
+    async def get_plan_by_version(self, mission_id: UUID, plan_version: int) -> TaskPlanModel | None:
+        stmt = (
+            select(TaskPlanModel)
+            .where(
+                TaskPlanModel.mission_id == mission_id,
+                TaskPlanModel.plan_version == plan_version,
+            )
+            .limit(1)
+        )
+        res = await self.session.execute(stmt)
+        return res.scalar_one_or_none()
+
     async def claim_lease(
         self,
         task_id: UUID,
@@ -374,6 +388,207 @@ class TaskRepository:
         task.updated_at = datetime.now(UTC)
         await self.session.flush()
         return task
+
+    async def create_attempt(
+        self,
+        task_id: UUID,
+        attempt_number: int,
+        state: AttemptState = AttemptState.INITIALIZING,
+    ) -> TaskAttemptModel:
+        attempt = TaskAttemptModel(
+            id=uuid4(),
+            task_id=task_id,
+            attempt_number=attempt_number,
+            state=state,
+            started_at=datetime.now(UTC),
+        )
+        self.session.add(attempt)
+        await self.session.flush()
+        return attempt
+
+    async def get_latest_attempt(self, task_id: UUID) -> TaskAttemptModel | None:
+        stmt = (
+            select(TaskAttemptModel)
+            .where(TaskAttemptModel.task_id == task_id)
+            .order_by(TaskAttemptModel.attempt_number.desc())
+            .limit(1)
+        )
+        res = await self.session.execute(stmt)
+        return res.scalar_one_or_none()
+
+    async def update_attempt_state(
+        self,
+        attempt_id: UUID,
+        state: AttemptState,
+        exit_code: int | None = None,
+        error_message: str | None = None,
+    ) -> TaskAttemptModel:
+        stmt = select(TaskAttemptModel).where(TaskAttemptModel.id == attempt_id).with_for_update()
+        res = await self.session.execute(stmt)
+        attempt = res.scalar_one_or_none()
+        if not attempt:
+            raise ValueError(f"TaskAttempt {attempt_id} not found.")
+        attempt.state = state
+        if exit_code is not None:
+            attempt.exit_code = exit_code
+        if error_message is not None:
+            attempt.error_message = error_message
+        if state in {AttemptState.SUCCEEDED, AttemptState.FAILED, AttemptState.TIMED_OUT}:
+            attempt.completed_at = datetime.now(UTC)
+        await self.session.flush()
+        return attempt
+
+    async def claim_ready_tasks_atomic(
+        self,
+        mission_id: UUID,
+        limit: int,
+        worker_id: str,
+        lease_duration_seconds: int = 60,
+    ) -> list[tuple[TaskModel, WorkerLeaseModel]]:
+        bind = self.session.bind
+        dialect_name = bind.dialect.name if bind else "postgresql"
+        if dialect_name == "postgresql":
+            stmt = (
+                select(TaskModel)
+                .where(
+                    TaskModel.mission_id == mission_id,
+                    TaskModel.state == TaskState.READY,
+                )
+                .order_by(TaskModel.priority.desc(), TaskModel.created_at.asc())
+                .limit(limit)
+                .with_for_update(skip_locked=True)
+            )
+        else:
+            stmt = (
+                select(TaskModel)
+                .where(
+                    TaskModel.mission_id == mission_id,
+                    TaskModel.state == TaskState.READY,
+                )
+                .order_by(TaskModel.priority.desc(), TaskModel.created_at.asc())
+                .limit(limit)
+                .with_for_update()
+            )
+
+        res = await self.session.execute(stmt)
+        claimed_tasks = list(res.scalars().all())
+        results: list[tuple[TaskModel, WorkerLeaseModel]] = []
+
+        now = datetime.now(UTC)
+        expires_at = now + timedelta(seconds=lease_duration_seconds)
+
+        for task in claimed_tasks:
+            task.state = TaskState.ASSIGNED
+            task.attempt_count += 1
+            task.updated_at = now
+
+            # Atomically create authoritative task attempt record
+            attempt = TaskAttemptModel(
+                id=uuid4(),
+                task_id=task.id,
+                attempt_number=task.attempt_count,
+                state=AttemptState.INITIALIZING,
+                started_at=now,
+            )
+            self.session.add(attempt)
+
+            stmt_lease = select(WorkerLeaseModel).where(WorkerLeaseModel.task_id == task.id).with_for_update()
+            res_lease = await self.session.execute(stmt_lease)
+            lease = res_lease.scalar_one_or_none()
+
+            new_token = task.attempt_count
+            if lease:
+                lease.worker_id = worker_id
+                lease.fencing_token = new_token
+                lease.lease_expires_at = expires_at
+                lease.acquired_at = now
+            else:
+                lease = WorkerLeaseModel(
+                    task_id=task.id,
+                    worker_id=worker_id,
+                    fencing_token=new_token,
+                    lease_expires_at=expires_at,
+                    acquired_at=now,
+                )
+                self.session.add(lease)
+
+            results.append((task, lease))
+
+        await self.session.flush()
+        return results
+
+    async def renew_lease(
+        self,
+        task_id: UUID,
+        worker_id: str,
+        fencing_token: int,
+        extension_seconds: int = 60,
+    ) -> WorkerLeaseModel:
+        stmt = select(WorkerLeaseModel).where(WorkerLeaseModel.task_id == task_id).with_for_update()
+        res = await self.session.execute(stmt)
+        lease = res.scalar_one_or_none()
+        if not lease:
+            raise ValueError(f"No lease found for task {task_id}")
+        if lease.worker_id != worker_id or lease.fencing_token != fencing_token:
+            from syntra.scheduling.exceptions import StaleLeaseError
+
+            raise StaleLeaseError(
+                f"Lease for task {task_id} superseded: active worker={lease.worker_id}, token={lease.fencing_token}, provided token={fencing_token}"
+            )
+        lease.lease_expires_at = datetime.now(UTC) + timedelta(seconds=extension_seconds)
+        await self.session.flush()
+        return lease
+
+    async def validate_worker_lease(
+        self,
+        task_id: UUID,
+        worker_id: str,
+        fencing_token: int,
+    ) -> bool:
+        stmt = select(WorkerLeaseModel).where(WorkerLeaseModel.task_id == task_id)
+        res = await self.session.execute(stmt)
+        lease = res.scalar_one_or_none()
+        if not lease:
+            return False
+        now = datetime.now(UTC)
+        expires = (
+            lease.lease_expires_at if lease.lease_expires_at.tzinfo else lease.lease_expires_at.replace(tzinfo=UTC)
+        )
+        if now > expires:
+            return False
+        if lease.worker_id in (worker_id, "scheduler-dispatcher", "unassigned"):
+            if lease.worker_id != worker_id:
+                lease.worker_id = worker_id
+            return bool(lease.fencing_token == fencing_token)
+        return False
+
+    async def release_lease(self, task_id: UUID, worker_id: str) -> bool:
+        stmt = select(WorkerLeaseModel).where(WorkerLeaseModel.task_id == task_id).with_for_update()
+        res = await self.session.execute(stmt)
+        lease = res.scalar_one_or_none()
+        if lease and lease.worker_id in (worker_id, "scheduler-dispatcher", "unassigned"):
+            await self.session.delete(lease)
+            await self.session.flush()
+            return True
+        return False
+
+    async def get_expired_leases(self, cutoff: datetime | None = None) -> list[WorkerLeaseModel]:
+        cutoff_dt = cutoff or datetime.now(UTC)
+        stmt = select(WorkerLeaseModel).where(WorkerLeaseModel.lease_expires_at < cutoff_dt)
+        res = await self.session.execute(stmt)
+        return list(res.scalars().all())
+
+    async def list_tasks_by_states(
+        self,
+        mission_id: UUID,
+        states: list[TaskState],
+    ) -> list[TaskModel]:
+        stmt = select(TaskModel).where(
+            TaskModel.mission_id == mission_id,
+            TaskModel.state.in_(states),
+        )
+        res = await self.session.execute(stmt)
+        return list(res.scalars().all())
 
 
 class BudgetRepository:
@@ -459,6 +674,24 @@ class BudgetRepository:
         budget.consumed_tokens += tokens
         budget.reserved_cost_usd = max(Decimal("0.0000"), budget.reserved_cost_usd - cost_usd)
         budget.consumed_cost_usd += cost_usd
+        budget.version += 1
+        await self.session.flush()
+        return budget
+
+    async def release_reservation(
+        self,
+        mission_id: UUID,
+        tokens: int = 0,
+        cost_usd: Decimal = Decimal("0.0000"),
+    ) -> BudgetModel:
+        stmt = select(BudgetModel).where(BudgetModel.mission_id == mission_id).with_for_update()
+        res = await self.session.execute(stmt)
+        budget = res.scalar_one_or_none()
+        if not budget:
+            raise ValueError(f"No budget found for mission {mission_id}")
+
+        budget.reserved_tokens = max(0, budget.reserved_tokens - tokens)
+        budget.reserved_cost_usd = max(Decimal("0.0000"), budget.reserved_cost_usd - cost_usd)
         budget.version += 1
         await self.session.flush()
         return budget

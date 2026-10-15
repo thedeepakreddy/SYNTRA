@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = Field(default=None, alias="GEMINI_API_KEY")
     default_model: str = "gemini-2.5-flash"
     reasoning_model: str = "gemini-2.5-pro"
-    fast_model: str = "gemini-2.0-flash-lite"
+    fast_model: str = "gemini-2.5-flash"
     max_tokens_per_request: int = 8192
     temperature: float = 0.2
     max_retries: int = 3

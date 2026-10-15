@@ -1,40 +1,63 @@
 """Integration tests verifying PostgreSQL, Redis, and MinIO connectivity when Docker is available."""
 
+import os
 import shutil
+import socket
 
 import pytest
 import redis.asyncio as aioredis
 from minio import Minio
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from syntra.core.config import get_settings
-from syntra.storage.database import get_db_manager
 
 docker_installed = shutil.which("docker") is not None
 
 
+def is_service_reachable(host: str, port: int) -> bool:
+    try:
+        sock = socket.socket()
+        sock.settimeout(1.0)
+        res = sock.connect_ex((host, port))
+        sock.close()
+        return res == 0
+    except Exception:
+        return False
+
+
+postgres_available = is_service_reachable("127.0.0.1", 5432)
+redis_available = is_service_reachable("127.0.0.1", 6379)
+minio_available = is_service_reachable("127.0.0.1", 9000)
+
+
 @pytest.mark.integration
-@pytest.mark.docker
-@pytest.mark.skipif(not docker_installed, reason="Docker is not installed on host machine")
+@pytest.mark.skipif(not (postgres_available or docker_installed), reason="PostgreSQL service not reachable on 5432")
 @pytest.mark.asyncio
 async def test_containerized_postgres_connectivity():
-    """Verify live PostgreSQL container responds to queries."""
+    """Verify live PostgreSQL instance responds to queries."""
     settings = get_settings()
-    if "sqlite" in settings.database_url:
-        pytest.skip("Test requires PostgreSQL connection string in SYNTRA_DATABASE_URL")
+    db_url = settings.database_url
+    if "sqlite" in db_url:
+        db_url = os.environ.get(
+            "SYNTRA_TEST_POSTGRES_URL",
+            "postgresql+asyncpg://postgres:postgres@localhost:5432/syntra_test",
+        )
 
-    db = get_db_manager()
-    async with db.session() as session:
-        result = await session.execute(text("SELECT 1"))
-        assert result.scalar() == 1
+    engine = create_async_engine(db_url)
+    try:
+        async with engine.connect() as conn:
+            result = await conn.execute(text("SELECT 1"))
+            assert result.scalar() == 1
+    finally:
+        await engine.dispose()
 
 
 @pytest.mark.integration
-@pytest.mark.docker
-@pytest.mark.skipif(not docker_installed, reason="Docker is not installed on host machine")
+@pytest.mark.skipif(not (redis_available or docker_installed), reason="Redis service not reachable on 6379")
 @pytest.mark.asyncio
 async def test_containerized_redis_connectivity():
-    """Verify live Redis container responds to PING."""
+    """Verify live Redis instance responds to PING."""
     settings = get_settings()
     client = aioredis.from_url(settings.redis_url, socket_connect_timeout=2.0)
     try:
@@ -45,8 +68,7 @@ async def test_containerized_redis_connectivity():
 
 
 @pytest.mark.integration
-@pytest.mark.docker
-@pytest.mark.skipif(not docker_installed, reason="Docker is not installed on host machine")
+@pytest.mark.skipif(not minio_available, reason="MinIO service / Docker is not available on host machine")
 def test_containerized_minio_connectivity():
     """Verify live MinIO container responds to API requests."""
     settings = get_settings()

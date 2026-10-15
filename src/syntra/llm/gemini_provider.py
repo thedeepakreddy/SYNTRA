@@ -44,9 +44,37 @@ class GeminiModelProvider(ModelProvider):
             except Exception as exc:
                 logger.warning("Failed to initialize Google GenAI SDK: %s", exc)
 
+    def __repr__(self) -> str:
+        status = "configured" if self.is_configured() else "unconfigured"
+        return f"<GeminiModelProvider(status={status}, api_key=[REDACTED])>"
+
+    def __str__(self) -> str:
+        return self.__repr__()
+
     def is_configured(self) -> bool:
         """Check if valid credentials are available for real API connectivity."""
         return bool(self._raw_api_key and not self._raw_api_key.startswith("your_"))
+
+    async def list_available_models(self) -> list[str]:
+        """List available model IDs for the authenticated account using official SDK."""
+        client = self._ensure_client()
+        model_ids: list[str] = []
+        try:
+            pager = await client.aio.models.list()
+            async for m in pager:
+                name = getattr(m, "name", "")
+                if name:
+                    clean = name.replace("models/", "")
+                    model_ids.append(clean)
+        except Exception as exc:
+            raise self.classify_error(exc) from exc
+        return model_ids
+
+    async def verify_model_access(self, model_id: str) -> bool:
+        """Verify whether a specific model ID is enabled and accessible for the current account."""
+        available = await self.list_available_models()
+        clean = model_id.replace("models/", "").lower()
+        return any(clean == m.lower() for m in available)
 
     def _ensure_client(self) -> Any:
         if self._client is None:
@@ -383,6 +411,8 @@ class GeminiModelProvider(ModelProvider):
 
     def classify_error(self, error: Exception) -> Exception:
         """Classify raw Gemini/API exceptions into strongly typed SYNTRA LLM exceptions."""
+        from syntra.llm.context import redact_secrets
+
         if isinstance(
             error,
             (
@@ -396,13 +426,21 @@ class GeminiModelProvider(ModelProvider):
         ):
             return error
 
-        err_msg = str(error).lower()
-        if "quota" in err_msg or "429" in err_msg or "rate limit" in err_msg or "resource_exhausted" in err_msg:
-            return ModelQuotaExceededError(f"Gemini API rate limit or quota exceeded: {error}")
-        if "timeout" in err_msg or "timed out" in err_msg:
-            return ModelTimeoutError(f"Gemini request timed out: {error}")
-        if "auth" in err_msg or "api_key" in err_msg or "permission" in err_msg or "403" in err_msg or "401" in err_msg:
-            return ModelAuthenticationError(f"Gemini authentication failed: {error}")
-        if "503" in err_msg or "unavailable" in err_msg or "connection" in err_msg or "reset" in err_msg:
-            return ModelProviderUnavailableError(f"Gemini service unavailable: {error}")
-        return ModelProviderUnavailableError(f"Gemini request failed: {error}")
+        sanitized_msg = redact_secrets(str(error))
+        err_lower = sanitized_msg.lower()
+        if "quota" in err_lower or "429" in err_lower or "rate limit" in err_lower or "resource_exhausted" in err_lower:
+            return ModelQuotaExceededError(f"Gemini API rate limit or quota exceeded: {sanitized_msg}")
+        if "timeout" in err_lower or "timed out" in err_lower:
+            return ModelTimeoutError(f"Gemini request timed out: {sanitized_msg}")
+        if (
+            "auth" in err_lower
+            or "api_key" in err_lower
+            or "permission" in err_lower
+            or "403" in err_lower
+            or "401" in err_lower
+            or "unauthenticated" in err_lower
+        ):
+            return ModelAuthenticationError(f"Gemini authentication failed: {sanitized_msg}")
+        if "503" in err_lower or "unavailable" in err_lower or "connection" in err_lower or "reset" in err_lower:
+            return ModelProviderUnavailableError(f"Gemini service unavailable: {sanitized_msg}")
+        return ModelProviderUnavailableError(f"Gemini request failed: {sanitized_msg}")

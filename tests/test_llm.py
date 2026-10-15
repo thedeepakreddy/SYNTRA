@@ -24,7 +24,7 @@ def test_model_router():
     assert "pro" in ModelRouter.resolve_model("architect")
     assert "pro" in ModelRouter.resolve_model("reviewer")
     assert "flash" in ModelRouter.resolve_model("coder")
-    assert "lite" in ModelRouter.resolve_model("summarizer")
+    assert "flash" in ModelRouter.resolve_model("summarizer")
     assert ModelRouter.resolve_model(requested_model="custom-gemini") == "custom-gemini"
 
 

@@ -10,14 +10,18 @@ from syntra.llm.config import (
     MODEL_REGISTRY,
     ModelSpec,
     ModelTier,
+    PricingConfiguration,
+    UnknownCostPolicy,
     compute_token_cost,
     get_model_spec,
+    load_model_registry,
 )
 from syntra.llm.context import AgentContextBuilder
 from syntra.llm.exceptions import (
     ModelAuthenticationError,
     ModelBudgetExceededError,
     ModelOutputValidationError,
+    ModelPricingError,
     ModelProviderUnavailableError,
     ModelQuotaExceededError,
     ModelRetryExhaustedError,
@@ -96,7 +100,10 @@ __all__ = [
     "ToolResult",
     "ModelTier",
     "ModelSpec",
+    "PricingConfiguration",
+    "UnknownCostPolicy",
     "MODEL_REGISTRY",
+    "load_model_registry",
     "get_model_spec",
     "compute_token_cost",
     # Prompts & Routing
@@ -123,4 +130,5 @@ __all__ = [
     "ModelToolExecutionError",
     "ModelProviderUnavailableError",
     "ModelBudgetExceededError",
+    "ModelPricingError",
 ]

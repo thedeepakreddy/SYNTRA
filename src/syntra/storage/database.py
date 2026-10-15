@@ -1,5 +1,4 @@
-"""Database configuration, async SQLAlchemy engine, and session management."""
-
+import asyncio
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -30,10 +29,27 @@ class DatabaseManager:
         self.url = database_url or get_settings().database_url
         self._engine: AsyncEngine | None = None
         self._session_factory: async_sessionmaker[AsyncSession] | None = None
+        self._loop: asyncio.AbstractEventLoop | None = None
 
     def get_engine(self) -> AsyncEngine:
         """Get or initialize AsyncEngine."""
+        current_loop = None
+        try:
+            current_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            pass
+
+        if (
+            self._engine is not None
+            and self._loop is not None
+            and current_loop is not None
+            and self._loop != current_loop
+        ):
+            self._engine = None
+            self._session_factory = None
+
         if self._engine is None:
+            self._loop = current_loop
             connect_args = {}
             if "sqlite" in self.url:
                 connect_args["check_same_thread"] = False
@@ -43,6 +59,7 @@ class DatabaseManager:
                 echo=False,
                 future=True,
                 connect_args=connect_args,
+                pool_pre_ping=True,
             )
             self._session_factory = async_sessionmaker(
                 bind=self._engine,
@@ -53,8 +70,7 @@ class DatabaseManager:
 
     def get_session_factory(self) -> async_sessionmaker[AsyncSession]:
         """Get session factory."""
-        if self._session_factory is None:
-            self.get_engine()
+        self.get_engine()
         assert self._session_factory is not None
         return self._session_factory
 

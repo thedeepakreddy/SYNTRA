@@ -49,3 +49,7 @@ class ModelProviderUnavailableError(ModelRuntimeError):
 
 class ModelBudgetExceededError(ModelRuntimeError):
     """Raised when token or USD cost budget reserved for the task is exceeded."""
+
+
+class ModelPricingError(ModelRuntimeError):
+    """Raised when model pricing is missing, unverified, or violates cost policies."""
