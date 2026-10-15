@@ -1431,9 +1431,14 @@ async def test_cancellation_mid_model_call_preserves_known_worker_usage_in_ledge
 )
 def test_audit_p1_worker_result_rejects_negative_usage(field, value):
     values = {
-        "task_id": uuid4(), "attempt_number": 1, "worker_id": "independent-qa-worker",
-        "fencing_token": 1, "status": AttemptState.FAILED,
-        "actual_prompt_tokens": 0, "actual_completion_tokens": 0, "actual_cost_usd": Decimal("0"),
+        "task_id": uuid4(),
+        "attempt_number": 1,
+        "worker_id": "independent-qa-worker",
+        "fencing_token": 1,
+        "status": AttemptState.FAILED,
+        "actual_prompt_tokens": 0,
+        "actual_completion_tokens": 0,
+        "actual_cost_usd": Decimal("0"),
     }
     with pytest.raises(ValidationError) as failure:
         TaskExecutionResult(**(values | {field: value}))

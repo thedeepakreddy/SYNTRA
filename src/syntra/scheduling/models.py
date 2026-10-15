@@ -104,9 +104,9 @@ class TaskExecutionResult(BaseModel):
     changed_files: list[str] = Field(default_factory=list)
     produced_artifact_ids: list[UUID] = Field(default_factory=list)
     execution_evidence: list[dict[str, object]] = Field(default_factory=list)
-    actual_prompt_tokens: int = 0
-    actual_completion_tokens: int = 0
-    actual_cost_usd: Decimal = Field(default_factory=lambda: Decimal("0.000000"))
+    actual_prompt_tokens: int = Field(default=0, ge=0)
+    actual_completion_tokens: int = Field(default=0, ge=0)
+    actual_cost_usd: Decimal = Field(default_factory=lambda: Decimal("0.000000"), ge=Decimal("0"))
     cost_classification: Literal["ESTIMATED_FROM_USAGE", "CONSERVATIVE_UNVERIFIED"] = "ESTIMATED_FROM_USAGE"
     error_message: str | None = None
     submitted_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
