@@ -11,6 +11,7 @@ from syntra.cli.commands import (
     serve_command,
     status_command,
 )
+from syntra.cli.engineering import engineering_app
 
 app = typer.Typer(
     name="syntra",
@@ -36,6 +37,7 @@ app.add_typer(checkpoint_app, name="checkpoint")
 mcp_app = typer.Typer(name="mcp", help="Model Context Protocol (MCP) server commands")
 mcp_app.command("serve", help="Start MCP server over stdio for IDE / agent integration")(mcp_serve_command)
 app.add_typer(mcp_app, name="mcp")
+app.add_typer(engineering_app, name="engineering")
 
 
 if __name__ == "__main__":

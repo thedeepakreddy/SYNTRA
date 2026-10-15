@@ -1,0 +1,106 @@
+Last login: Thu Oct 15 02:08:44 on ttys001
+thedeepakreddy@Deepaks-MacBook-Pro SYNTRA % curl -s -i http://localhost:8000/v1/health      
+HTTP/1.1 200 OK
+date: Thu, 15 Oct 2026 00:10:37 GMT
+server: uvicorn
+content-length: 312
+content-type: application/json
+x-correlation-id: 7f50a040-e66e-4514-86f2-bda4cab4f54c
+vary: Origin
+
+{"status":"healthy","version":"0.1.0","gemini_configured":false,"autonomy_mode":"semi_autonomous","telemetry":{"total_invocations":0,"successful_invocations":0,"failed_invocations":0,"total_prompt_tokens":0,"total_completion_tokens":0,"total_tokens":0,"total_estimated_cost_usd":0,"average_latency_seconds":0.0}}%                                                                                       thedeepakreddy@Deepaks-MacBook-Pro SYNTRA % curl -s -i http://localhost:8000/v1/projects \
+  -H "X-Dev-User-Id: 00000000-0000-0000-0000-000000000001" \
+  -H "X-Dev-Org-Id: 00000000-0000-0000-0000-000000000002" \
+  -H "X-Dev-Role: developer"
+HTTP/1.1 200 OK
+date: Thu, 15 Oct 2026 00:11:30 GMT
+server: uvicorn
+content-length: 316
+content-type: application/json
+x-correlation-id: f98e09a7-2dd6-4f6c-88da-928400084b25
+vary: Origin
+
+[{"id":"00000000-0000-0000-0000-000000000010","org_id":"00000000-0000-0000-0000-000000000002","name":"SYNTRA Demo Project","slug":"syntra-demo-project","description":"Seeded project for manual verification","default_branch":"main","created_at":"2026-10-15T00:04:26.464672","updated_at":"2026-10-15T00:04:26.464675"}]%                                                                                   thedeepakreddy@Deepaks-MacBook-Pro SYNTRA % curl -s -i -X POST http://localhost:8000/v1/projects \
+  -H "Content-Type: application/json" \
+  -H "X-Dev-User-Id: 00000000-0000-0000-0000-000000000001" \
+  -H "X-Dev-Org-Id: 00000000-0000-0000-0000-000000000002" \
+  -H "X-Dev-Role: developer" \
+  -d '{"name": "Auth Microservice Fleet", "description": "Identity service"}'
+HTTP/1.1 201 Created
+date: Thu, 15 Oct 2026 00:11:58 GMT
+server: uvicorn
+content-length: 302
+content-type: application/json
+x-correlation-id: e1f59c1a-bc2b-4386-913b-00c3a8858d27
+vary: Origin
+
+{"id":"18416951-0ed6-4b6b-965d-b24a42a892f2","org_id":"00000000-0000-0000-0000-000000000002","name":"Auth Microservice Fleet","slug":"auth-microservice-fleet","description":"Identity service","default_branch":"main","created_at":"2026-10-15T00:11:59.207997Z","updated_at":"2026-10-15T00:11:59.208004Z"}%                                                                                                 thedeepakreddy@Deepaks-MacBook-Pro SYNTRA % curl -s -i -X POST http://localhost:8000/v1/projects \
+  -H "Content-Type: application/json" \
+  -H "X-Dev-User-Id: 00000000-0000-0000-0000-000000000001" \
+  -H "X-Dev-Org-Id: 00000000-0000-0000-0000-000000000002" \
+  -H "X-Dev-Role: developer" \
+  -d '{"name": ""}'
+HTTP/1.1 422 Unprocessable Entity
+date: Thu, 15 Oct 2026 00:12:18 GMT
+server: uvicorn
+content-length: 363
+content-type: application/problem+json
+x-correlation-id: a3c964dd-41a4-438f-8659-428b897e2ed4
+vary: Origin
+
+{"type":"about:blank","title":"Validation Error","status":422,"detail":"The request body or parameters failed schema validation.","instance":"/v1/projects","correlation_id":"a3c964dd-41a4-438f-8659-428b897e2ed4","invalid_params":[{"type":"string_too_short","loc":["body","name"],"msg":"String should have at least 1 character","input":"","ctx":{"min_length":1}}]}%                                    thedeepakreddy@Deepaks-MacBook-Pro SYNTRA % curl -s -i -X POST http://localhost:8000/v1/projects \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Unauthorized Project"}'
+HTTP/1.1 401 Unauthorized
+date: Thu, 15 Oct 2026 00:12:30 GMT
+server: uvicorn
+content-length: 292
+content-type: application/problem+json
+x-correlation-id: dcd7be94-b7b8-4ad2-93d2-dac8090b0bd3
+vary: Origin
+
+{"type":"about:blank","title":"Authentication credentials missing. Provide 'Authorization: Bearer <token>'.","status":401,"detail":"Authentication credentials missing. Provide 'Authorization: Bearer <token>'.","instance":"/v1/projects","correlation_id":"dcd7be94-b7b8-4ad2-93d2-dac8090b0bd3"}%       thedeepakreddy@Deepaks-MacBook-Pro SYNTRA % curl -s -i -X POST http://localhost:8000/v1/approvals/00000000-0000-0000-0000-000000000030/decision \
+  -H "Content-Type: application/json" \
+  -H "X-Dev-User-Id: 00000000-0000-0000-0000-000000000003" \
+  -H "X-Dev-Org-Id: 00000000-0000-0000-0000-000000000002" \
+  -H "X-Dev-Role: admin" \
+  -d '{
+    "decision": "APPROVED",
+    "action_digest": "1f422a586ac4b73bc1fbcebb5ff1b49ca2b4ebc5e94be047086f3c83bf0e4b55",
+    "reason": "Authorized by Security Lead for Production Deployment"
+  }'
+HTTP/1.1 200 OK
+date: Thu, 15 Oct 2026 00:12:59 GMT
+server: uvicorn
+content-length: 575
+content-type: application/json
+x-correlation-id: 4ac8a262-ad2f-4fe8-8acc-61fd634c52c3
+vary: Origin
+
+{"id":"00000000-0000-0000-0000-000000000030","mission_id":"00000000-0000-0000-0000-000000000020","org_id":"00000000-0000-0000-0000-000000000002","action_type":"DEPLOYMENT","target_resource":"production-cluster","mission_version":1,"decision":"APPROVED","action_digest":"1f422a586ac4b73bc1fbcebb5ff1b49ca2b4ebc5e94be047086f3c83bf0e4b55","expires_at":"2026-10-25T00:00:00","resolved_at":"2026-10-15T00:13:00.482624Z","resolved_by":"00000000-0000-0000-0000-000000000003","reason":"Authorized by Security Lead for Production Deployment","created_at":"2026-10-15T00:04:26.465791"}%                        thedeepakreddy@Deepaks-MacBook-Pro SYNTRA % curl -s -i -X POST http://localhost:8000/v1/missions/00000000-0000-0000-0000-000000000020/plan \
+  -H "X-Dev-User-Id: 00000000-0000-0000-0000-000000000001" \
+  -H "X-Dev-Org-Id: 00000000-0000-0000-0000-000000000002" \
+  -H "X-Dev-Role: developer"
+HTTP/1.1 501 Not Implemented
+date: Thu, 15 Oct 2026 00:13:17 GMT
+server: uvicorn
+content-length: 540
+content-type: application/json
+x-correlation-id: 368863a2-5bf1-4e60-9386-a85505fe664b
+vary: Origin
+
+{"status":"CAPABILITY_SCHEDULED","capability":"autonomous_planning_agent_dag","phase":"PHASE_3_API_CONTROL_PLANE","target_phase":"PHASE_4_AGENT_EXECUTION_FABRIC","message":"Mission plan request accepted and validated. Autonomous agent execution (Product Manager, Software Architect, Engineering Manager DAG synthesis) is scheduled for Phase 4. The API schema and control boundary are active.","mission_id":"00000000-0000-0000-0000-000000000020","project_id":"00000000-0000-0000-0000-000000000010","created_at":"2026-10-15T00:13:18.393848Z"}%                                                           thedeepakreddy@Deepaks-MacBook-Pro SYNTRA % {
+  "status": "CAPABILITY_SCHEDULED",
+  "phase": "PHASE_3_API_CONTROL_PLANE",
+  "target_phase": "PHASE_4_AGENT_EXECUTION_FABRIC",
+  "message": "Autonomous multi-agent task planning and DAG synthesis capability begins in Phase 4."
+}
+zsh: command not found: status:
+zsh: command not found: phase:
+zsh: command not found: target_phase:
+zsh: command not found: message:
+thedeepakreddy@Deepaks-MacBook-Pro SYNTRA % sqlite3 syntra.db "SELECT id, name, slug FROM projects; SELECT id, state, objective FROM missions;"
+00000000000000000000000000000010|SYNTRA Demo Project|syntra-demo-project
+184169510ed64b6b965db24a42a892f2|Auth Microservice Fleet|auth-microservice-fleet
+00000000000000000000000000000020|DRAFT|Verify human approval and budget governance
+thedeepakreddy@Deepaks-MacBook-Pro SYNTRA % 

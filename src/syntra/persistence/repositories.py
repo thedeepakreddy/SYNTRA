@@ -663,6 +663,8 @@ class BudgetRepository:
         mission_id: UUID,
         tokens: int = 0,
         cost_usd: Decimal = Decimal("0.0000"),
+        reserved_tokens: int | None = None,
+        reserved_cost_usd: Decimal | None = None,
     ) -> BudgetModel:
         stmt = select(BudgetModel).where(BudgetModel.mission_id == mission_id).with_for_update()
         res = await self.session.execute(stmt)
@@ -670,9 +672,13 @@ class BudgetRepository:
         if not budget:
             raise ValueError(f"No budget found for mission {mission_id}")
 
-        budget.reserved_tokens = max(0, budget.reserved_tokens - tokens)
+        budget.reserved_tokens = max(
+            0, budget.reserved_tokens - (tokens if reserved_tokens is None else reserved_tokens)
+        )
         budget.consumed_tokens += tokens
-        budget.reserved_cost_usd = max(Decimal("0.0000"), budget.reserved_cost_usd - cost_usd)
+        budget.reserved_cost_usd = max(
+            Decimal("0.0000"), budget.reserved_cost_usd - (cost_usd if reserved_cost_usd is None else reserved_cost_usd)
+        )
         budget.consumed_cost_usd += cost_usd
         budget.version += 1
         await self.session.flush()

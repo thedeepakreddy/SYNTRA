@@ -56,6 +56,9 @@ class PricingConfiguration(BaseModel):
     effective_date: str | None = Field(default=None, description="Date pricing was verified (YYYY-MM-DD)")
     input_per_million_usd: Decimal | None = Field(default=None, description="USD per 1,000,000 prompt tokens")
     output_per_million_usd: Decimal | None = Field(default=None, description="USD per 1,000,000 completion tokens")
+    long_context_threshold_tokens: int | None = None
+    long_context_input_per_million_usd: Decimal | None = None
+    long_context_output_per_million_usd: Decimal | None = None
     unknown_cost_policy: UnknownCostPolicy = Field(
         default=UnknownCostPolicy.CONSERVATIVE_FALLBACK,
         description="Policy applied when pricing_known is False or rates are None",
@@ -193,13 +196,16 @@ def _default_registry() -> dict[str, ModelSpec]:
             timeout_seconds=90.0,
             pricing_configuration=PricingConfiguration(
                 pricing_known=True,
-                source="Google Cloud Vertex AI Pricing",
+                source="https://ai.google.dev/gemini-api/docs/pricing",
                 effective_date="2026-10-15",
                 input_per_million_usd=Decimal("1.25"),
-                output_per_million_usd=Decimal("5.00"),
+                output_per_million_usd=Decimal("10.00"),
+                long_context_threshold_tokens=200000,
+                long_context_input_per_million_usd=Decimal("2.50"),
+                long_context_output_per_million_usd=Decimal("15.00"),
                 unknown_cost_policy=UnknownCostPolicy.CONSERVATIVE_FALLBACK,
                 fallback_input_per_million_usd=Decimal("2.50"),
-                fallback_output_per_million_usd=Decimal("10.00"),
+                fallback_output_per_million_usd=Decimal("15.00"),
             ),
             default_temperature=0.1,
         ),
@@ -215,10 +221,10 @@ def _default_registry() -> dict[str, ModelSpec]:
             timeout_seconds=60.0,
             pricing_configuration=PricingConfiguration(
                 pricing_known=True,
-                source="Google Cloud Vertex AI Pricing",
+                source="https://ai.google.dev/gemini-api/docs/pricing",
                 effective_date="2026-10-15",
-                input_per_million_usd=Decimal("0.15"),
-                output_per_million_usd=Decimal("0.60"),
+                input_per_million_usd=Decimal("0.30"),
+                output_per_million_usd=Decimal("2.50"),
                 unknown_cost_policy=UnknownCostPolicy.CONSERVATIVE_FALLBACK,
                 fallback_input_per_million_usd=Decimal("2.50"),
                 fallback_output_per_million_usd=Decimal("10.00"),
@@ -331,6 +337,13 @@ def compute_token_cost(
             )
         return estimated
 
+    if pricing.long_context_threshold_tokens and prompt_tokens > pricing.long_context_threshold_tokens:
+        if pricing.long_context_input_per_million_usd is None or pricing.long_context_output_per_million_usd is None:
+            raise ModelPricingError("Missing long-context pricing rates")
+        return (
+            Decimal(prompt_tokens) * pricing.long_context_input_per_million_usd
+            + Decimal(completion_tokens) * pricing.long_context_output_per_million_usd
+        ) / Decimal(1000000)
     input_cost = Decimal(prompt_tokens) * spec.cost_per_input_token
     output_cost = Decimal(completion_tokens) * spec.cost_per_output_token
     return input_cost + output_cost

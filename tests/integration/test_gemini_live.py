@@ -185,8 +185,8 @@ def test_04_usage_metadata_extraction_adapter_logic():
     """Scenario 4 (offline check): TokenUsage correctly maps tokens and pricing."""
     cost = compute_token_cost("gemini-2.5-flash", 1500, 350)
     assert cost > Decimal("0.0")
-    # Prompt: 1500 * (0.15 / 1M) = 0.000225; Completion: 350 * (0.60 / 1M) = 0.000210; Total = 0.000435
-    assert cost == Decimal("0.000435")
+    # Standard text rates verified at https://ai.google.dev/gemini-api/docs/pricing (2026-10-15).
+    assert cost == Decimal("0.001325")  # 1500 * 0.30/M + 350 * 2.50/M
 
 
 # ------------------------------------------------------------------------------

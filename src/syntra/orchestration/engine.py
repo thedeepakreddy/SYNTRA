@@ -41,10 +41,12 @@ class WorkflowOrchestrationEngine:
         runtime: ModelRuntime | None = None,
         checkpointer: BaseCheckpointSaver | None = None,
         skill_registry: SkillRegistry | None = None,
+        engineering_service: Any | None = None,
     ) -> None:
         self.runtime = runtime or ModelRuntime(provider=MockModelProvider())
         self.checkpointer = checkpointer or MemorySaver()
         self.skill_registry = skill_registry or SkillRegistry()
+        self.engineering_service = engineering_service
 
         # Compile LangGraph instances
         self.mission_graph = compile_mission_graph(checkpointer=self.checkpointer)
@@ -63,6 +65,14 @@ class WorkflowOrchestrationEngine:
         m_id_str = str(mission_id)
         org_id_str = str(org_id)
         thread_id = build_mission_thread_id(m_id_str)
+        if self.engineering_service and uow is None:
+            raise ValueError("Operational missions require an authoritative UnitOfWork")
+        from syntra.core.config import get_settings
+
+        if self.engineering_service is None and (
+            get_settings().environment == "production" or not isinstance(self.runtime.provider, MockModelProvider)
+        ):
+            raise RuntimeError("Operational missions require EngineeringMissionService; legacy simulation is test-only")
 
         initial_state: MissionWorkflowState = {
             "mission_id": m_id_str,
@@ -89,6 +99,7 @@ class WorkflowOrchestrationEngine:
                 "runtime": self.runtime,
                 "uow": uow,
                 "skill_registry": self.skill_registry,
+                "engineering_service": self.engineering_service,
             }
         }
 
@@ -105,6 +116,13 @@ class WorkflowOrchestrationEngine:
     ) -> dict[str, Any]:
         """Resume a suspended mission graph from a human approval interrupt."""
         decision_data = decision_payload if decision_payload is not None else (payload or {})
+        if self.engineering_service:
+            if uow is None:
+                raise ValueError("Operational missions require an authoritative UnitOfWork")
+            if decision_data.get("decision"):
+                await self.engineering_service.validate_approver(
+                    UUID(str(decision_data["org_id"])), UUID(str(decision_data["user_id"]))
+                )
         thread_id = build_mission_thread_id(mission_id)
         config = {
             "configurable": {
@@ -112,6 +130,7 @@ class WorkflowOrchestrationEngine:
                 "runtime": self.runtime,
                 "uow": uow,
                 "skill_registry": self.skill_registry,
+                "engineering_service": self.engineering_service,
             }
         }
 

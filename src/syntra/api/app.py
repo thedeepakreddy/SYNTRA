@@ -39,6 +39,9 @@ async def lifespan(app: FastAPI):
     # Initialize persistence schema
     db = get_db_manager()
     await db.init_tables()
+    from syntra.cli.engineering import registry
+
+    app.state.agent_registry = registry()
 
     yield
 

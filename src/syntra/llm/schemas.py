@@ -7,6 +7,7 @@ never convert invalid data into successful results with silent defaults.
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -29,6 +30,9 @@ class RequirementsAnalysis(BaseModel):
         default_factory=list, description="Explicit assumptions recorded to eliminate ambiguity"
     )
     risk_assessment: str = Field(..., min_length=5, description="Identified risks and operational failure modes")
+    user_requirements: list[str] = Field(default_factory=list)
+    open_questions: list[str] = Field(default_factory=list)
+    out_of_scope: list[str] = Field(default_factory=list)
 
     @field_validator("summary", "risk_assessment")
     @classmethod
@@ -59,6 +63,9 @@ class ArchitectureProposal(BaseModel):
     tradeoffs_and_alternatives: list[str] = Field(
         ..., min_length=1, description="Considered alternatives and technical tradeoffs"
     )
+    requirement_refs: list[str] = Field(default_factory=list)
+    technology_choices: list[str] = Field(default_factory=list)
+    risks_and_mitigations: list[str] = Field(default_factory=list)
 
 
 class TaskPlanItem(BaseModel):
@@ -72,6 +79,11 @@ class TaskPlanItem(BaseModel):
     dependencies: list[str] = Field(default_factory=list, description="Task keys that must complete before this task")
     acceptance_criteria: list[str] = Field(..., min_length=1, description="Verification criteria for task signoff")
     estimated_tokens: int = Field(default=8192, ge=100, le=1000000)
+    estimated_cost_usd: Decimal = Field(default=Decimal("0.25"), gt=0)
+    required_skills: list[str] = Field(default_factory=list)
+    required_capabilities: list[str] = Field(default_factory=list)
+    expected_artifacts: list[str] = Field(default_factory=list)
+    verification_requirements: list[str] = Field(default_factory=list)
 
 
 class TaskPlanProposal(BaseModel):
@@ -146,7 +158,7 @@ class CodeReviewProposal(BaseModel):
     verdict: Literal["APPROVED", "REJECTED", "CHANGES_REQUESTED"] = Field(..., description="Peer review verdict")
     summary_evaluation: str = Field(..., min_length=10, description="Holistic assessment of patch quality")
     checklist_verifications: dict[str, bool] = Field(
-        ..., description="Verification checklist (e.g. tests_pass, no_secrets, typed)"
+        ..., min_length=1, description="Verification checklist (e.g. tests_pass, no_secrets, typed)"
     )
     line_level_comments: list[CodeReviewComment] = Field(
         default_factory=list, description="Granular code review comments"

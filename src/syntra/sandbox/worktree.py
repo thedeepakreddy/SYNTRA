@@ -116,7 +116,9 @@ class GitWorktreeManager:
         # Mark all untracked files with intent-to-add so they appear in git diff
         await self._run_git("add", "-N", ".", cwd=worktree_path)
 
-        code, stdout, stderr = await self._run_git("diff", "-u", base_commit, cwd=worktree_path)
+        code, stdout, stderr = await self._run_git(
+            "diff", "--no-ext-diff", "--no-textconv", "--binary", "-u", base_commit, cwd=worktree_path
+        )
         if code != 0:
             logger.warning("git diff returned code %d: %s", code, stderr)
             # Fallback to diff against HEAD

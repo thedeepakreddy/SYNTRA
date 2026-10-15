@@ -99,12 +99,12 @@ def test_01_provider_selection():
     assert pro_spec.tier == ModelTier.REASONING
     assert pro_spec.context_window_tokens >= 2_000_000
     assert pro_spec.cost_per_input_token == Decimal("0.00000125")
-    assert pro_spec.cost_per_output_token == Decimal("0.00000500")
+    assert pro_spec.cost_per_output_token == Decimal("0.00001000")
 
     flash_spec = get_model_spec("gemini-2.5-flash")
     assert flash_spec.tier == ModelTier.BALANCED
-    assert flash_spec.cost_per_input_token == Decimal("0.00000015")
-    assert flash_spec.cost_per_output_token == Decimal("0.00000060")
+    assert flash_spec.cost_per_input_token == Decimal("0.00000030")
+    assert flash_spec.cost_per_output_token == Decimal("0.00000250")
 
 
 # ==============================================================================
@@ -234,10 +234,10 @@ async def test_07_budget_accounting_and_reconciliation(skill_registry: SkillRegi
     """Verify budget reservation, token accounting, and mission limit halts."""
     # Pricing formula check
     cost = compute_token_cost("gemini-2.5-flash", prompt_tokens=1_000_000, completion_tokens=1_000_000)
-    assert cost == Decimal("0.75")  # $0.15 + $0.60 = $0.75
+    assert cost == Decimal("2.80")  # Current standard text rates: $0.30 + $2.50
 
     pro_cost = compute_token_cost("gemini-2.5-pro", prompt_tokens=1_000_000, completion_tokens=1_000_000)
-    assert pro_cost == Decimal("6.25")  # $1.25 + $5.00 = $6.25
+    assert pro_cost == Decimal("17.50")  # >200K prompt tier: $2.50 + $15.00
 
     # Budget limit enforcement
     provider = MockModelProvider()

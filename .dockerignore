@@ -1,0 +1,13 @@
+.git
+.env
+.env.*
+.venv
+.syntra
+.pytest_cache
+.mypy_cache
+.ruff_cache
+__pycache__
+**/__pycache__
+*.sqlite3
+*.db
+syntra phase 0-3 test backend results..txt

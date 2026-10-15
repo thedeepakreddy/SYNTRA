@@ -6,23 +6,25 @@ atomic budget reservations, and transactional dispatch staging.
 
 from __future__ import annotations
 
+import json
 import logging
 from collections import defaultdict
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
 
-from syntra.domain.entities import AgentRole, AttemptState, MissionState, TaskState
+from syntra.domain.entities import AgentRole, ArtifactType, AttemptState, MissionState, TaskPlanStatus, TaskState
 from syntra.domain.exceptions import CrossTenantAccessError
-from syntra.persistence.models import MissionModel, TaskModel
+from syntra.persistence.models import MissionModel, TaskAttemptModel, TaskModel, TaskPlanModel, WorkerLeaseModel
 from syntra.scheduling.dag_engine import TaskDAGEngine
 from syntra.scheduling.exceptions import (
     StaleLeaseError,
 )
 from syntra.scheduling.models import (
+    EngineeringTaskSpecification,
     TaskDispatchPayload,
     TaskExecutionResult,
 )
@@ -64,6 +66,14 @@ class TaskScheduler:
             **(role_concurrency_limits or {}),
         }
         self.default_role_limit = default_role_limit
+
+    def reservation_for(self, task: TaskModel) -> tuple[int, Decimal]:
+        if task.description and task.description.startswith("{"):
+            data = json.loads(task.description)
+            if data.get("phase10_task"):
+                spec = EngineeringTaskSpecification.model_validate(data)
+                return spec.estimated_tokens, spec.estimated_cost_usd
+        return self.DEFAULT_ESTIMATED_TOKENS, self.DEFAULT_ESTIMATED_COST
 
     async def schedule_ready_tasks(
         self,
@@ -184,13 +194,14 @@ class TaskScheduler:
                 task = res_t.scalar_one_or_none()
                 if not task or task.state != TaskState.READY:
                     continue
+                reserved_tokens, reserved_cost = self.reservation_for(task)
 
                 # Atomic budget reservation
                 if budget:
                     await uow.budgets.reserve(
                         mission_id=mission_id,
-                        tokens=self.DEFAULT_ESTIMATED_TOKENS,
-                        cost_usd=self.DEFAULT_ESTIMATED_COST,
+                        tokens=reserved_tokens,
+                        cost_usd=reserved_cost,
                     )
 
                 task.state = TaskState.ASSIGNED
@@ -198,7 +209,7 @@ class TaskScheduler:
                 task.updated_at = now
 
                 # Create attempt record atomically
-                await uow.tasks.create_attempt(
+                attempt = await uow.tasks.create_attempt(
                     task_id=task.id,
                     attempt_number=task.attempt_count,
                     state=AttemptState.INITIALIZING,
@@ -222,8 +233,10 @@ class TaskScheduler:
                     fencing_token=lease.fencing_token,
                     lease_expires_at=lease.lease_expires_at,
                     specification=task.description or task.title,
-                    budget_reserved_tokens=self.DEFAULT_ESTIMATED_TOKENS,
-                    budget_reserved_cost_usd=self.DEFAULT_ESTIMATED_COST,
+                    plan_version=plan.plan_version,
+                    task_attempt_id=attempt.id,
+                    budget_reserved_tokens=reserved_tokens,
+                    budget_reserved_cost_usd=reserved_cost,
                 )
 
                 # Stage in transactional outbox
@@ -237,6 +250,171 @@ class TaskScheduler:
 
         return dispatches
 
+    async def _validate_dispatch(self, uow: Any, dispatch: TaskDispatchPayload, worker_id: str) -> Any:
+        mission = (
+            await uow.session.execute(
+                select(MissionModel)
+                .where(
+                    MissionModel.id == dispatch.mission_id,
+                    MissionModel.org_id == dispatch.org_id,
+                )
+                .with_for_update()
+            )
+        ).scalar_one_or_none()
+        if not mission or mission.state not in {MissionState.READY, MissionState.RUNNING}:
+            raise StaleLeaseError("Mission is not authorized for execution")
+        task = (
+            await uow.session.execute(
+                select(TaskModel)
+                .where(
+                    TaskModel.id == dispatch.task_id,
+                    TaskModel.org_id == dispatch.org_id,
+                    TaskModel.mission_id == dispatch.mission_id,
+                )
+                .with_for_update()
+            )
+        ).scalar_one_or_none()
+        if not task or task.state not in {TaskState.ASSIGNED, TaskState.IN_PROGRESS}:
+            raise StaleLeaseError("Task is not assigned to an active worker")
+        plan = await uow.session.get(TaskPlanModel, task.task_plan_id)
+        attempt = await uow.tasks.get_latest_attempt(task.id)
+        lease = (
+            await uow.session.execute(
+                select(WorkerLeaseModel)
+                .where(
+                    WorkerLeaseModel.task_id == task.id,
+                )
+                .with_for_update()
+            )
+        ).scalar_one_or_none()
+        if (
+            not plan
+            or plan.plan_version != mission.active_plan_version
+            or plan.plan_version != dispatch.plan_version
+            or plan.status not in {TaskPlanStatus.APPROVED, TaskPlanStatus.ACTIVE}
+            or task.assigned_role != dispatch.assigned_role
+            or (task.description or task.title) != dispatch.specification
+            or not attempt
+            or attempt.attempt_number != dispatch.attempt_number
+            or (dispatch.task_attempt_id and attempt.id != dispatch.task_attempt_id)
+            or task.attempt_count != dispatch.attempt_number
+            or not lease
+            or lease.fencing_token != dispatch.fencing_token
+            or lease.worker_id not in {worker_id, "scheduler-dispatcher", "unassigned"}
+        ):
+            raise StaleLeaseError("Dispatch does not match authoritative task, plan, attempt or lease")
+        reserved_tokens, reserved_cost = self.reservation_for(task)
+        if dispatch.budget_reserved_tokens != reserved_tokens or dispatch.budget_reserved_cost_usd != reserved_cost:
+            raise StaleLeaseError("Dispatch budget does not match authoritative reservation")
+        expires = (
+            lease.lease_expires_at.replace(tzinfo=UTC) if not lease.lease_expires_at.tzinfo else lease.lease_expires_at
+        )
+        if expires <= datetime.now(UTC):
+            raise StaleLeaseError("Worker lease has expired")
+        return task, attempt, lease
+
+    async def begin_dispatch(self, dispatch: TaskDispatchPayload, worker_id: str) -> bool:
+        """Atomically consume INITIALIZING once; duplicate Redis messages cannot execute."""
+        try:
+            async with self.uow_factory() as uow:
+                task, attempt, lease = await self._validate_dispatch(uow, dispatch, worker_id)
+                if attempt.state != AttemptState.INITIALIZING or task.state != TaskState.ASSIGNED:
+                    return False
+                lease.worker_id = worker_id
+                await uow.idempotency.record(
+                    f"phase10:started:{attempt.id}",
+                    dispatch.org_id,
+                    200,
+                    {"worker_id": worker_id, "fencing_token": dispatch.fencing_token},
+                )
+                attempt.state = AttemptState.RUNNING
+                task.state = TaskState.IN_PROGRESS
+                uow.publish_event(
+                    "WORKER_STARTED",
+                    {
+                        "task_id": str(task.id),
+                        "attempt_id": str(attempt.id),
+                        "org_id": str(dispatch.org_id),
+                        "mission_id": str(dispatch.mission_id),
+                        "worker_id": worker_id,
+                    },
+                )
+                await uow.commit()
+                return True
+        except StaleLeaseError:
+            return False
+
+    async def assert_dispatch_active(self, dispatch: TaskDispatchPayload, worker_id: str, renew: bool = False) -> None:
+        """Fail closed before tool effects and during heartbeat; never resurrect expired ownership."""
+        async with self.uow_factory() as uow:
+            _, attempt, lease = await self._validate_dispatch(uow, dispatch, worker_id)
+            if attempt.state != AttemptState.RUNNING or lease.worker_id != worker_id:
+                raise StaleLeaseError("Worker does not own a running attempt")
+            if renew:
+                lease.lease_expires_at = datetime.now(UTC) + timedelta(seconds=self.DEFAULT_LEASE_DURATION_SECONDS)
+                await uow.commit()
+
+    async def _settle_usage(
+        self, uow: Any, task: TaskModel, attempt: TaskAttemptModel, result: TaskExecutionResult
+    ) -> None:
+        key = f"phase10:usage:{attempt.id}"
+        if await uow.idempotency.get(key, task.org_id):
+            return
+        reserved_tokens, reserved_cost = self.reservation_for(task)
+        await uow.budgets.commit_usage(
+            task.mission_id,
+            result.actual_prompt_tokens + result.actual_completion_tokens,
+            result.actual_cost_usd,
+            reserved_tokens=reserved_tokens,
+            reserved_cost_usd=reserved_cost,
+        )
+        await uow.budgets.add_usage_record(
+            task.org_id,
+            task.mission_id,
+            "agent-task-aggregate",
+            result.actual_prompt_tokens,
+            result.actual_completion_tokens,
+            result.actual_cost_usd,
+            task.id,
+        )
+        await uow.idempotency.record(
+            key,
+            task.org_id,
+            200,
+            {
+                "tokens": result.actual_prompt_tokens + result.actual_completion_tokens,
+                "cost_usd": str(result.actual_cost_usd),
+                "classification": result.cost_classification,
+            },
+        )
+
+    async def record_aborted_completion(self, mission_id: UUID, org_id: UUID, result: TaskExecutionResult) -> None:
+        """Account previously authorized work after revocation without accepting its task outcome."""
+        async with self.uow_factory() as uow:
+            mission = await uow.missions.get_by_id_for_org(mission_id, org_id)
+            await uow.session.refresh(mission, with_for_update=True)
+            task = await uow.tasks.get_by_id_for_org(result.task_id, org_id)
+            if task.mission_id != mission_id:
+                raise StaleLeaseError("Cannot settle cross-mission usage")
+            attempt = (
+                await uow.session.execute(
+                    select(TaskAttemptModel).where(
+                        TaskAttemptModel.task_id == task.id,
+                        TaskAttemptModel.attempt_number == result.attempt_number,
+                    )
+                )
+            ).scalar_one_or_none()
+            if not attempt:
+                raise StaleLeaseError("Cannot settle an unknown attempt")
+            proof = await uow.idempotency.get(f"phase10:started:{attempt.id}", org_id)
+            if not proof or proof.response_body != {
+                "worker_id": result.worker_id,
+                "fencing_token": result.fencing_token,
+            }:
+                raise StaleLeaseError("Usage does not match the recorded worker start")
+            await self._settle_usage(uow, task, attempt, result)
+            await uow.commit()
+
     async def handle_task_completion(
         self,
         mission_id: UUID,
@@ -245,7 +423,32 @@ class TaskScheduler:
     ) -> TaskModel:
         """Process authoritative result submitted by a worker with strict fencing token validation."""
         async with self.uow_factory() as uow:
+            mission = (
+                await uow.session.execute(
+                    select(MissionModel)
+                    .where(
+                        MissionModel.id == mission_id,
+                        MissionModel.org_id == org_id,
+                    )
+                    .with_for_update()
+                )
+            ).scalar_one_or_none()
+            if not mission or mission.state not in {MissionState.READY, MissionState.RUNNING}:
+                raise StaleLeaseError("Mission no longer permits task results")
             task = await uow.tasks.get_by_id_for_org(task_id=result.task_id, org_id=org_id)
+            # Serialize duplicate completions and require exact mission/attempt ownership.
+            await uow.session.refresh(task, with_for_update=True)
+            plan = await uow.session.get(TaskPlanModel, task.task_plan_id)
+            latest_attempt = await uow.tasks.get_latest_attempt(task.id)
+            if (
+                task.mission_id != mission_id
+                or not plan
+                or plan.plan_version != mission.active_plan_version
+                or task.state not in {TaskState.ASSIGNED, TaskState.IN_PROGRESS}
+                or not latest_attempt
+                or latest_attempt.attempt_number != result.attempt_number
+            ):
+                raise StaleLeaseError("Result rejected: stale fencing token, attempt or cross-mission task result")
 
             # 1. Fencing token validation (Rejects superseded workers)
             is_valid_lease = await uow.tasks.validate_worker_lease(
@@ -257,6 +460,39 @@ class TaskScheduler:
                 raise StaleLeaseError(
                     f"Result rejected: Worker '{result.worker_id}' submitted with stale fencing token {result.fencing_token} for task {task.id}."
                 )
+
+            from syntra.persistence.artifact_store import store_artifact
+
+            reserved_tokens, reserved_cost = self.reservation_for(task)
+            if (
+                task.description
+                and task.description.startswith("{")
+                and json.loads(task.description).get("phase10_task")
+                and result.status == AttemptState.SUCCEEDED
+            ):
+                from syntra.agents.handoffs import validate_task_reviews
+
+                await validate_task_reviews(uow, task, latest_attempt, result.unified_diff or "")
+            await self._settle_usage(uow, task, latest_attempt, result)
+            if result.unified_diff:
+                await store_artifact(
+                    uow,
+                    mission_id=mission_id,
+                    org_id=org_id,
+                    task_id=task.id,
+                    title=f"Patch attempt {result.attempt_number}",
+                    content=result.unified_diff,
+                    type=ArtifactType.UNIFIED_DIFF,
+                )
+            await store_artifact(
+                uow,
+                mission_id=mission_id,
+                org_id=org_id,
+                task_id=task.id,
+                title=f"Execution attempt {result.attempt_number}",
+                content=json.dumps(result.model_dump(mode="json"), sort_keys=True),
+                type=ArtifactType.TEST_REPORT,
+            )
 
             # 2. Update latest attempt
             latest_attempt = await uow.tasks.get_latest_attempt(task_id=task.id)
@@ -274,11 +510,6 @@ class TaskScheduler:
                 task.updated_at = datetime.now(UTC)
 
                 # Reconcile budget: commit actuals and release unneeded reservation
-                await uow.budgets.commit_usage(
-                    mission_id=mission_id,
-                    tokens=result.actual_prompt_tokens + result.actual_completion_tokens,
-                    cost_usd=result.actual_cost_usd,
-                )
 
                 # Release lease
                 await uow.tasks.release_lease(task_id=task.id, worker_id=result.worker_id)
@@ -290,26 +521,17 @@ class TaskScheduler:
                 )
 
             else:
+                # Failed attempts also consumed model resources.
                 # Failure branch: check remaining retry attempts
                 if task.attempt_count < task.max_attempts:
                     task.state = TaskState.READY  # Re-queue
                     task.updated_at = datetime.now(UTC)
                     await uow.tasks.release_lease(task_id=task.id, worker_id=result.worker_id)
                     # Release unused reservation so it can be re-reserved on next attempt
-                    await uow.budgets.release_reservation(
-                        mission_id=mission_id,
-                        tokens=self.DEFAULT_ESTIMATED_TOKENS,
-                        cost_usd=self.DEFAULT_ESTIMATED_COST,
-                    )
                 else:
                     task.state = TaskState.FAILED
                     task.updated_at = datetime.now(UTC)
                     await uow.tasks.release_lease(task_id=task.id, worker_id=result.worker_id)
-                    await uow.budgets.release_reservation(
-                        mission_id=mission_id,
-                        tokens=self.DEFAULT_ESTIMATED_TOKENS,
-                        cost_usd=self.DEFAULT_ESTIMATED_COST,
-                    )
 
                     # Propagate failure: mark downstream dependents as BLOCKED
                     all_tasks, _, _ = await uow.tasks.list_for_mission(mission_id=mission_id, org_id=org_id, limit=500)

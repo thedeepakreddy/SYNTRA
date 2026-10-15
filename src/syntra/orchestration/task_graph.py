@@ -116,6 +116,7 @@ async def execute_agent_node(state: TaskExecutionState, config: RunnableConfig) 
         comp_tokens = 150
         cost = 0.0001
     else:
+        raise RuntimeError("Operational tasks must run through the authoritative sandbox worker consumer")
         req = ModelRequest(
             messages=[LLMMessage(role=MessageRole.USER, content=state.get("task_specification", "Implement task"))],
             agent_role=state.get("agent_role", "backend_engineer"),

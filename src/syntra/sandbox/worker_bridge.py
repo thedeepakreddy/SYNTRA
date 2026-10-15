@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
+from collections.abc import Awaitable, Callable
+from dataclasses import asdict
 from decimal import Decimal
 from pathlib import Path
 from typing import Mapping
-from uuid import uuid4
+from uuid import NAMESPACE_URL, uuid5
 
 from syntra.domain.entities import AttemptState
 from syntra.sandbox.models import ContainerConfig
@@ -46,8 +49,9 @@ class SandboxWorkerAdapter:
         dispatch: TaskDispatchPayload,
         code_changes: Mapping[str, str] | None = None,
         commands_to_run: list[str] | None = None,
-        tokens_consumed: int = 500,
-        cost_usd: Decimal = Decimal("0.001000"),
+        tokens_consumed: int = 0,
+        cost_usd: Decimal = Decimal("0"),
+        before_effect: Callable[[], Awaitable[None]] | None = None,
     ) -> TaskExecutionResult:
         """Execute an engineering task inside an ephemeral worktree and isolated container."""
         logger.info(
@@ -57,6 +61,12 @@ class SandboxWorkerAdapter:
             dispatch.assigned_role,
         )
 
+        executor = getattr(self, "agent_executor", None)
+        if executor and before_effect is None:
+            raise ValueError("Autonomous execution requires an authoritative lease guard")
+
+        if before_effect:
+            await before_effect()
         sandbox = await self.provider.create_sandbox(
             task_id=dispatch.task_id,
             attempt_number=dispatch.attempt_number,
@@ -70,17 +80,25 @@ class SandboxWorkerAdapter:
         overall_exit_code = 0
         timed_out = False
         error_msg: str | None = None
+        evidence: list[dict[str, object]] = []
 
         try:
+            if executor:
+                return await executor(sandbox, dispatch, before_effect)
             # 1. Apply code changes if provided (e.g. agent edits)
             if code_changes:
                 for rel_path, content in code_changes.items():
+                    if before_effect:
+                        await before_effect()
                     sandbox.write_file(rel_path, content)
 
             # 2. Execute commands inside the isolated container
             if commands_to_run:
                 for cmd in commands_to_run:
+                    if before_effect:
+                        await before_effect()
                     exec_res = await sandbox.execute_command(cmd)
+                    evidence.append(asdict(exec_res))
                     all_stdout.append(f"$ {cmd}\n{exec_res.stdout}")
                     if exec_res.stderr:
                         all_stderr.append(exec_res.stderr)
@@ -97,6 +115,15 @@ class SandboxWorkerAdapter:
 
             # 3. Extract unified diff from the worktree
             diff = await sandbox.get_unified_diff()
+            artifact_ids = []
+            if diff:
+                # Standalone adapter evidence is durable locally; the consumer also
+                # persists the authoritative copy through ArtifactRepository.
+                digest = hashlib.sha256(diff.encode()).hexdigest()
+                artifact_dir = self.repo_path / ".syntra" / "artifacts"
+                artifact_dir.mkdir(parents=True, exist_ok=True)
+                (artifact_dir / f"{digest}.patch").write_text(diff, encoding="utf-8")
+                artifact_ids.append(uuid5(NAMESPACE_URL, f"syntra:patch:{digest}"))
 
             status = AttemptState.SUCCEEDED if overall_exit_code == 0 and not timed_out else AttemptState.FAILED
             summary = (
@@ -115,7 +142,8 @@ class SandboxWorkerAdapter:
                 output_summary=summary,
                 error_message=error_msg,
                 unified_diff=diff if diff else None,
-                produced_artifact_ids=[uuid4()] if diff else [],
+                execution_evidence=evidence,
+                produced_artifact_ids=artifact_ids,
                 actual_prompt_tokens=tokens_consumed // 2,
                 actual_completion_tokens=tokens_consumed // 2,
                 actual_cost_usd=cost_usd,

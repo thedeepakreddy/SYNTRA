@@ -29,6 +29,9 @@ class MissionWorkflowState(TypedDict, total=False):
     architecture_artifact_id: str | None
     task_dag: list[dict[str, Any]]
     plan_digest: str | None
+    prd_handoff: dict[str, Any]
+    architecture_handoff: dict[str, Any]
+    plan_handoff: dict[str, Any]
 
     # 5. Approval Governance & Interruption Context
     active_approval_id: str | None
@@ -45,6 +48,7 @@ class MissionWorkflowState(TypedDict, total=False):
 
     # 7. Delivery & Verification Outcomes
     delivery_digest: str | None
+    integration_artifact_id: str | None
     verification_passed: bool | None
     error_message: str | None
     replan_count: int

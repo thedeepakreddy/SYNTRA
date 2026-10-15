@@ -58,6 +58,7 @@ async def _sync_domain_state(
     target_state: MissionState,
     decision_context: ApprovalDecision | None = None,
     uow: UnitOfWork | None = None,
+    next_plan_version: int | None = None,
 ) -> str:
     """Validate transition and synchronize authoritative domain state in PostgreSQL."""
     current_val = state.get("domain_state", MissionState.DRAFT.value)
@@ -66,14 +67,23 @@ async def _sync_domain_state(
     if current_state != target_state:
         transition_mission_state(current_state, target_state, decision_context)
 
-        if uow and state.get("mission_id"):
-            try:
-                m_id = UUID(state["mission_id"])
-                mission = await uow.missions.get_by_id_for_org(m_id, UUID(state.get("org_id", str(uuid4()))))
-                mission.state = target_state
-                await uow.commit()
-            except Exception as exc:
-                logger.debug("Failed syncing mission state to DB: %s", exc)
+    # Check the database even when a replayed checkpoint already names the target.
+    # A checkpoint can never override cancellation or a newer plan revision.
+    if uow and state.get("mission_id"):
+        try:
+            m_id = UUID(state["mission_id"])
+            mission = await uow.missions.get_by_id_for_org(m_id, UUID(state.get("org_id", str(uuid4()))))
+            await uow.session.refresh(mission, with_for_update=True)
+            if mission.state != target_state:
+                transition_mission_state(mission.state, target_state, decision_context)
+            if next_plan_version is not None:
+                if mission.active_plan_version not in {state.get("mission_version", 1), next_plan_version}:
+                    raise ValueError("Replanning uses a stale authoritative plan version")
+                mission.active_plan_version = next_plan_version
+            mission.state = target_state
+            await uow.commit()
+        except Exception as exc:
+            raise RuntimeError("Authoritative mission state rejected the workflow transition") from exc
 
     return target_state.value
 
@@ -109,6 +119,8 @@ async def intake_node(state: MissionWorkflowState, config: RunnableConfig) -> di
 
 async def requirements_analysis_node(state: MissionWorkflowState, config: RunnableConfig) -> dict[str, Any]:
     """Phase 2: Product Manager generates structured PRD with acceptance criteria."""
+    if service := config.get("configurable", {}).get("engineering_service"):
+        return await service.node("requirements_analysis", state)
     runtime = _extract_runtime(config)
     objective = state.get("objective", "Build requested software system")
 
@@ -145,6 +157,8 @@ async def requirements_analysis_node(state: MissionWorkflowState, config: Runnab
 
 async def architecture_planning_node(state: MissionWorkflowState, config: RunnableConfig) -> dict[str, Any]:
     """Phase 3: Software Architect defines component boundaries and ADRs."""
+    if service := config.get("configurable", {}).get("engineering_service"):
+        return await service.node("architecture_planning", state)
     runtime = _extract_runtime(config)
     prd_summary = state.get("prd_summary", "")
 
@@ -193,6 +207,8 @@ async def architecture_planning_node(state: MissionWorkflowState, config: Runnab
 
 async def task_plan_generation_node(state: MissionWorkflowState, config: RunnableConfig) -> dict[str, Any]:
     """Phase 4: Engineering Manager decomposes architecture into cycle-free task DAG."""
+    if service := config.get("configurable", {}).get("engineering_service"):
+        return await service.node("task_plan_generation", state)
     runtime = _extract_runtime(config)
     arch_summary = state.get("architecture_summary", "")
 
@@ -233,7 +249,7 @@ async def task_plan_generation_node(state: MissionWorkflowState, config: Runnabl
 
     try:
         parsed, resp = await runtime.provider.generate_structured(req, TaskPlanProposal)
-        raw_tasks = [t.model_dump() for t in parsed.tasks]
+        raw_tasks = [t.model_dump(mode="json") for t in parsed.tasks]
     except Exception as exc:
         logger.error("Task plan generation failed: %s", exc)
         return {"error_message": f"Task plan generation failed: {exc}", "current_phase": "FAILED"}
@@ -306,7 +322,11 @@ async def awaiting_approval_node(state: MissionWorkflowState, config: RunnableCo
     resolution = await execute_approval_checkpoint(
         state=state,
         action_type="TASK_PLAN_APPROVAL",
-        target_resource=f"mission:{state['mission_id']}",
+        target_resource=(
+            f"mission:{state['mission_id']}:plan:{state['plan_digest']}"
+            if config.get("configurable", {}).get("engineering_service")
+            else f"mission:{state['mission_id']}"
+        ),
         prompt_message="Please review and authorize the proposed engineering plan DAG.",
         uow=uow,
     )
@@ -321,6 +341,8 @@ async def awaiting_approval_node(state: MissionWorkflowState, config: RunnableCo
 
 async def ready_node(state: MissionWorkflowState, config: RunnableConfig) -> dict[str, Any]:
     """Phase 7: Transition plan to READY following human authorization."""
+    if service := config.get("configurable", {}).get("engineering_service"):
+        return await service.node("ready", state)
     uow = _extract_uow(config)
     domain_state = await _sync_domain_state(
         state, MissionState.READY, decision_context=ApprovalDecision.APPROVED, uow=uow
@@ -409,6 +431,8 @@ async def ready_node(state: MissionWorkflowState, config: RunnableConfig) -> dic
 
 async def task_scheduling_node(state: MissionWorkflowState, config: RunnableConfig) -> dict[str, Any]:
     """Phase 8: Transition mission to RUNNING and schedule ready tasks."""
+    if service := config.get("configurable", {}).get("engineering_service"):
+        return await service.node("task_scheduling", state)
     uow = _extract_uow(config)
     domain_state = await _sync_domain_state(state, MissionState.RUNNING, uow=uow)
 
@@ -461,6 +485,8 @@ async def task_scheduling_node(state: MissionWorkflowState, config: RunnableConf
 
 async def execution_coordination_node(state: MissionWorkflowState, config: RunnableConfig) -> dict[str, Any]:
     """Phase 9: Coordinate worker execution dispatch and outcome resolution."""
+    if service := config.get("configurable", {}).get("engineering_service"):
+        return await service.node("execution_coordination", state)
     uow = _extract_uow(config)
     running = list(state.get("running_task_ids", []))
     completed = list(state.get("completed_task_ids", []))
@@ -540,6 +566,8 @@ async def execution_coordination_node(state: MissionWorkflowState, config: Runna
 
 async def integration_node(state: MissionWorkflowState, config: RunnableConfig) -> dict[str, Any]:
     """Phase 10: Aggregate produced diff patches and verify branch consistency."""
+    if service := config.get("configurable", {}).get("engineering_service"):
+        return await service.node("integration", state)
     return {
         "current_phase": "INTEGRATION",
         "delivery_digest": hashlib.sha256(b"integration_patch").hexdigest(),
@@ -549,6 +577,8 @@ async def integration_node(state: MissionWorkflowState, config: RunnableConfig) 
 
 async def independent_verification_node(state: MissionWorkflowState, config: RunnableConfig) -> dict[str, Any]:
     """Phase 11: Independent QA acceptance testing and regression detection."""
+    if service := config.get("configurable", {}).get("engineering_service"):
+        return await service.node("independent_verification", state)
     uow = _extract_uow(config)
     domain_state = await _sync_domain_state(state, MissionState.VERIFYING, uow=uow)
 
@@ -571,7 +601,11 @@ async def awaiting_delivery_approval_node(state: MissionWorkflowState, config: R
     resolution = await execute_approval_checkpoint(
         state=state,
         action_type="DELIVERY_APPROVAL",
-        target_resource=f"mission:{state['mission_id']}:release",
+        target_resource=(
+            f"mission:{state['mission_id']}:release:{state['delivery_digest']}"
+            if config.get("configurable", {}).get("engineering_service")
+            else f"mission:{state['mission_id']}:release"
+        ),
         prompt_message="Please authorize final project release and delivery.",
         uow=uow,
     )
@@ -621,7 +655,8 @@ async def replanning_node(state: MissionWorkflowState, config: RunnableConfig) -
     target_state = (
         MissionState.PLANNING if curr_state_val == MissionState.AWAITING_APPROVAL.value else MissionState.REPLANNING
     )
-    domain_state = await _sync_domain_state(state, target_state, uow=uow)
+    next_version = state.get("mission_version", 1) + 1
+    domain_state = await _sync_domain_state(state, target_state, uow=uow, next_plan_version=next_version)
 
     replan_count = state.get("replan_count", 0) + 1
     max_replan = state.get("max_replan_limit", 3)
@@ -631,7 +666,7 @@ async def replanning_node(state: MissionWorkflowState, config: RunnableConfig) -
         "current_phase": "REPLANNING",
         "domain_state": domain_state,
         "replan_count": replan_count,
-        "mission_version": state.get("mission_version", 1) + 1,
+        "mission_version": next_version,
         "control_signal": "FAIL" if is_exceeded else None,
         "error_message": f"Mission exceeded maximum replan limit of {max_replan}." if is_exceeded else None,
         "executed_nodes": state.get("executed_nodes", []) + ["replanning"],
@@ -763,6 +798,8 @@ def route_from_scheduling(state: MissionWorkflowState) -> str:
 
 
 def route_from_coordination(state: MissionWorkflowState) -> str:
+    if state.get("control_signal") == "FAIL":
+        return "failed"
     if state.get("control_signal") == "CANCEL":
         return "cancelled"
     if state.get("control_signal") == "PAUSE":
@@ -807,6 +844,14 @@ def route_from_replanning(state: MissionWorkflowState) -> str:
     if state.get("control_signal") == "CANCEL":
         return "cancelled"
     return "task_plan_generation"
+
+
+def route_replanning_with_config(state: MissionWorkflowState, config: RunnableConfig) -> str:
+    target = route_from_replanning(state)
+    if target == "task_plan_generation" and config.get("configurable", {}).get("engineering_service"):
+        # Rebuild the complete immutable handoff chain for the new plan version.
+        return "requirements_analysis"
+    return target
 
 
 # ==============================================================================
@@ -930,6 +975,7 @@ def build_mission_graph() -> StateGraph:
         route_from_coordination,
         {
             "integration": "integration",
+            "failed": "failed",
             "paused": "paused",
             "replanning": "replanning",
             "cancelled": "cancelled",
@@ -970,8 +1016,9 @@ def build_mission_graph() -> StateGraph:
 
     workflow.add_conditional_edges(
         "replanning",
-        route_from_replanning,
+        route_replanning_with_config,
         {
+            "requirements_analysis": "requirements_analysis",
             "task_plan_generation": "task_plan_generation",
             "cancelled": "cancelled",
             "failed": "failed",

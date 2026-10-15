@@ -53,6 +53,7 @@ class LLMMessage(BaseModel):
 
 
 class LLMResponse(BaseModel):
+    usage_known: bool = True
     """Unified response from LLM generation."""
 
     text: str = ""

@@ -54,9 +54,20 @@ class CommandSafetyValidator:
         """Produce sanitized environment dictionary free of sensitive tokens."""
         import os
 
-        base_env = dict(env or os.environ)
+        base_env = dict(env if env is not None else os.environ)
         sanitized = {}
         for k, v in base_env.items():
+            if k.upper() not in {
+                "PATH",
+                "LANG",
+                "LC_ALL",
+                "TZ",
+                "TERM",
+                "APP_ENV",
+                "PYTHONPATH",
+                "PYTHONDONTWRITEBYTECODE",
+            }:
+                continue
             if k.upper() in SENSITIVE_ENV_VARS:
                 continue
             sanitized[k] = v

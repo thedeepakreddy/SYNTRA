@@ -42,6 +42,7 @@ class ContainerConfig:
     timeout_seconds: int = 120
     max_output_bytes: int = 1_048_576  # 1MB
     workspace_mount_path: str = "/workspace"
+    workspace_read_only: bool = False
     seccomp_profile: str | None = None
 
     def get_effective_user(self) -> str:

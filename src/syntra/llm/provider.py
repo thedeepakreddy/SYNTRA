@@ -19,6 +19,7 @@ class ModelRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     messages: list[LLMMessage] = Field(..., description="Ordered conversation history")
+    max_provider_retries: int | None = Field(default=None, ge=0, le=10)
     model: str | None = Field(default=None, description="Target model name")
     tools: list[ToolDefinition] | None = Field(default=None, description="Available tool definitions")
     temperature: float | None = Field(default=None, description="Sampling temperature")

@@ -77,6 +77,11 @@ class DockerSandboxProvider(SandboxProvider):
             base_commit=base_commit,
         )
 
+        code, pinned_commit, _ = await worktree_manager._run_git("rev-parse", "HEAD", cwd=worktree_path)
+        if code != 0:
+            await worktree_manager.remove_worktree(worktree_path, branch_name)
+            raise RuntimeError("Unable to pin sandbox base commit")
+        base_commit = pinned_commit.strip()
         lease = SandboxLease(
             task_id=task_id,
             attempt_number=attempt_number,

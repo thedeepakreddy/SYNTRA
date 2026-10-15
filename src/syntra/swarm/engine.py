@@ -68,6 +68,10 @@ class SwarmEngine:
         autonomy_mode: Any = None,
     ) -> SwarmState:
         """Run the full autonomous multi-agent feature workflow."""
+        if isinstance(self.llm_client, GeminiClient):
+            raise RuntimeError(
+                "Legacy host-workspace agents are disabled for live models. Use syntra engineering with leased Docker workers."
+            )
         await get_event_bus().publish(
             Event(
                 type=EventType.SESSION_STARTED,

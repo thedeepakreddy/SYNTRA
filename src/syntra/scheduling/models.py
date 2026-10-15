@@ -4,11 +4,28 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from syntra.domain.entities import AttemptState
+
+
+class EngineeringTaskSpecification(BaseModel):
+    """Exact engineering scope serialized into the existing authoritative task description."""
+
+    model_config = ConfigDict(extra="forbid")
+    phase10_task: bool = True
+    objective: str = Field(min_length=5)
+    acceptance_criteria: list[str] = Field(min_length=1)
+    required_skills: list[str] = Field(min_length=1)
+    required_capabilities: list[str] = Field(min_length=1)
+    verification_commands: list[str] = Field(min_length=1, max_length=10)
+    estimated_tokens: int = Field(default=100000, ge=8192, le=1000000)
+    estimated_cost_usd: Decimal = Field(default=Decimal("0.25"), gt=0, le=10)
+    security_sensitive: bool = True
+    max_rework: int = Field(default=1, ge=0, le=3)
 
 
 class TaskReadinessReport(BaseModel):
@@ -61,6 +78,8 @@ class TaskDispatchPayload(BaseModel):
     fencing_token: int
     lease_expires_at: datetime
     specification: str
+    plan_version: int = 1
+    task_attempt_id: UUID | None = None
     required_capabilities: list[str] = Field(default_factory=list)
     requested_skills: list[str] = Field(default_factory=list)
     budget_reserved_tokens: int = 0
@@ -81,10 +100,14 @@ class TaskExecutionResult(BaseModel):
     exit_code: int = 0
     output_summary: str = ""
     unified_diff: str | None = None
+    base_commit: str | None = None
+    changed_files: list[str] = Field(default_factory=list)
     produced_artifact_ids: list[UUID] = Field(default_factory=list)
+    execution_evidence: list[dict[str, object]] = Field(default_factory=list)
     actual_prompt_tokens: int = 0
     actual_completion_tokens: int = 0
     actual_cost_usd: Decimal = Field(default_factory=lambda: Decimal("0.000000"))
+    cost_classification: Literal["ESTIMATED_FROM_USAGE", "CONSERVATIVE_UNVERIFIED"] = "ESTIMATED_FROM_USAGE"
     error_message: str | None = None
     submitted_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 

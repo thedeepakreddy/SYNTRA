@@ -10,7 +10,10 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
+from sqlalchemy import select
+
 from syntra.domain.entities import OutboxStatus
+from syntra.persistence.models import TransactionalOutboxModel
 from syntra.scheduling.models import TaskDispatchPayload
 from syntra.scheduling.redis_dispatcher import RedisTaskDispatcher
 
@@ -36,7 +39,22 @@ class OutboxRelay:
         relayed_count = 0
 
         async with self.uow_factory() as uow:
-            pending_events = await uow.outbox.get_pending_events(limit=effective_limit)
+            pending_events = list(
+                (
+                    await uow.session.execute(
+                        select(TransactionalOutboxModel)
+                        .where(
+                            TransactionalOutboxModel.status == OutboxStatus.PENDING,
+                            TransactionalOutboxModel.event_type == "TASK_DISPATCHED",
+                        )
+                        .order_by(TransactionalOutboxModel.created_at)
+                        .limit(effective_limit)
+                        .with_for_update(skip_locked=True)
+                    )
+                )
+                .scalars()
+                .all()
+            )
             if not pending_events:
                 return 0
 

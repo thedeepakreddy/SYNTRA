@@ -240,7 +240,7 @@ class GeminiModelProvider(ModelProvider):
         raw_response = await self._execute_with_retry(
             _call,
             timeout_seconds=timeout_sec,
-            retries=settings.max_retries,
+            retries=request.max_provider_retries if request.max_provider_retries is not None else settings.max_retries,
             initial_delay=settings.retry_delay_seconds,
         )
 
@@ -270,7 +270,12 @@ class GeminiModelProvider(ModelProvider):
         # Token counting and cost calculation
         usage_meta = getattr(raw_response, "usage_metadata", None)
         prompt_tokens = getattr(usage_meta, "prompt_token_count", 0) if usage_meta else len(str(request.messages)) // 4
-        comp_tokens = getattr(usage_meta, "candidates_token_count", 0) if usage_meta else len(response_text) // 4
+        comp_tokens = (
+            (getattr(usage_meta, "candidates_token_count", 0) or 0)
+            + (getattr(usage_meta, "thoughts_token_count", 0) or 0)
+            if usage_meta
+            else len(response_text) // 4
+        )
         cached_tokens = getattr(usage_meta, "cached_content_token_count", 0) if usage_meta else 0
         total_tokens = prompt_tokens + comp_tokens
 
@@ -303,6 +308,7 @@ class GeminiModelProvider(ModelProvider):
 
         return LLMResponse(
             text=response_text,
+            usage_known=usage_meta is not None,
             tool_calls=tool_calls,
             usage=usage,
             model=target_model,
@@ -327,6 +333,7 @@ class GeminiModelProvider(ModelProvider):
 
         config = types.GenerateContentConfig(
             temperature=request.temperature if request.temperature is not None else 0.1,
+            max_output_tokens=request.max_tokens or spec.max_output_tokens,
             response_mime_type="application/json",
             response_schema=response_model,
         )
@@ -347,26 +354,37 @@ class GeminiModelProvider(ModelProvider):
         raw_response = await self._execute_with_retry(
             _call,
             timeout_seconds=timeout_sec,
-            retries=settings.max_retries,
+            retries=request.max_provider_retries if request.max_provider_retries is not None else settings.max_retries,
             initial_delay=settings.retry_delay_seconds,
         )
 
         latency = time.perf_counter() - start_time
         raw_text = raw_response.text or "{}"
 
+        usage_meta = getattr(raw_response, "usage_metadata", None)
+        prompt_count = (
+            (getattr(usage_meta, "prompt_token_count", 0) or 0) if usage_meta else len(str(request.messages)) // 4
+        )
+        completion_count = (
+            (
+                (getattr(usage_meta, "candidates_token_count", 0) or 0)
+                + (getattr(usage_meta, "thoughts_token_count", 0) or 0)
+            )
+            if usage_meta
+            else len(raw_text) // 4
+        )
         # Validate structured JSON output against Pydantic schema
         try:
             parsed = response_model.model_validate_json(raw_text)
         except Exception as exc:
-            raise ModelOutputValidationError(
-                f"Model output failed schema validation for {response_model.__name__}: {exc}. "
-                f"Raw output: {raw_text[:500]}"
-            ) from exc
+            error = ModelOutputValidationError(f"Model output failed schema validation for {response_model.__name__}")
+            setattr(error, "response_usage", (prompt_count, completion_count) if usage_meta is not None else None)
+            raise error from exc
 
         # Token counting
         usage_meta = getattr(raw_response, "usage_metadata", None)
         prompt_tokens = getattr(usage_meta, "prompt_token_count", 0) if usage_meta else len(str(request.messages)) // 4
-        comp_tokens = getattr(usage_meta, "candidates_token_count", 0) if usage_meta else len(raw_text) // 4
+        comp_tokens = completion_count
         total_tokens = prompt_tokens + comp_tokens
         cost_usd = compute_token_cost(target_model, prompt_tokens, comp_tokens)
 
@@ -390,6 +408,7 @@ class GeminiModelProvider(ModelProvider):
 
         response = LLMResponse(
             text=raw_text,
+            usage_known=usage_meta is not None,
             usage=usage,
             model=target_model,
             raw=raw_response,

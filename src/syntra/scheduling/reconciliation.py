@@ -12,7 +12,9 @@ from typing import Any
 from uuid import UUID
 
 from syntra.domain.entities import AttemptState, MissionState, TaskState
+from syntra.persistence.models import WorkerLeaseModel
 from syntra.scheduling.models import ReconciliationSummary
+from syntra.scheduling.scheduler import TaskScheduler
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +37,7 @@ class SchedulerReconciler:
 
         async with self.uow_factory() as uow:
             mission = await uow.missions.get_by_id_for_org(mission_id=mission_id, org_id=org_id)
+            await uow.session.refresh(mission, with_for_update=True)
             all_tasks, _, _ = await uow.tasks.list_for_mission(mission_id=mission_id, org_id=org_id, limit=500)
             task_map = {t.id: t for t in all_tasks}
 
@@ -44,11 +47,31 @@ class SchedulerReconciler:
                     if t.state not in {TaskState.COMPLETED, TaskState.FAILED, TaskState.CANCELLED}:
                         t.state = TaskState.CANCELLED
                         t.updated_at = now
-                        await uow.tasks.release_lease(task_id=t.id, worker_id="system")
                         details.append(f"Cancelled task {t.identifier} due to mission cancellation.")
+                    # Revisit already-cancelled tasks: the first sweep may have
+                    # occurred while their worker still held a live lease.
+                    lease = await uow.session.get(WorkerLeaseModel, t.id)
+                    if lease:
+                        expires = (
+                            lease.lease_expires_at
+                            if lease.lease_expires_at.tzinfo
+                            else lease.lease_expires_at.replace(tzinfo=UTC)
+                        )
+                        if expires <= now:
+                            attempt = await uow.tasks.get_latest_attempt(t.id)
+                            await self.settle_abandoned(uow, t, attempt)
+                            if attempt and attempt.state in {AttemptState.INITIALIZING, AttemptState.RUNNING}:
+                                await uow.tasks.update_attempt_state(
+                                    attempt.id,
+                                    AttemptState.TIMED_OUT,
+                                    error_message="Cancelled worker disappeared before settlement.",
+                                )
+                            await uow.tasks.release_lease(task_id=t.id, worker_id=lease.worker_id)
+                            expired_count += 1
                 await uow.commit()
                 return ReconciliationSummary(
                     swept_at=now,
+                    expired_leases_count=expired_count,
                     details=details,
                 )
 
@@ -62,6 +85,7 @@ class SchedulerReconciler:
 
                 # Update latest attempt to TIMED_OUT
                 latest_attempt = await uow.tasks.get_latest_attempt(task_id=task.id)
+                await self.settle_abandoned(uow, task, latest_attempt)
                 if latest_attempt and latest_attempt.state in {AttemptState.INITIALIZING, AttemptState.RUNNING}:
                     await uow.tasks.update_attempt_state(
                         attempt_id=latest_attempt.id,
@@ -104,4 +128,31 @@ class SchedulerReconciler:
             abandoned_tasks_failed=failed_count,
             blocked_dependents_count=blocked_count,
             details=details,
+        )
+
+    async def settle_abandoned(self, uow: Any, task: Any, attempt: Any) -> None:
+        if attempt is None:
+            return
+        key = f"phase10:usage:{attempt.id}"
+        if await uow.idempotency.get(key, task.org_id):
+            return
+        tokens, cost = TaskScheduler(self.uow_factory).reservation_for(task)
+        started = await uow.idempotency.get(f"phase10:started:{attempt.id}", task.org_id)
+        if not started:
+            await uow.budgets.release_reservation(task.mission_id, tokens, cost)
+            charged_tokens, charged_cost = 0, "0"
+        else:
+            await uow.budgets.commit_usage(
+                task.mission_id, tokens, cost, reserved_tokens=tokens, reserved_cost_usd=cost
+            )
+            charged_tokens, charged_cost = tokens, str(cost)
+        await uow.idempotency.record(
+            key,
+            task.org_id,
+            200,
+            {
+                "tokens": charged_tokens,
+                "cost_usd": charged_cost,
+                "classification": "CONSERVATIVE_UNVERIFIED" if started else "NOT_STARTED",
+            },
         )

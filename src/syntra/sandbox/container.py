@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import time
 from typing import Mapping
 
@@ -28,11 +27,13 @@ class ContainerSandboxInstance:
         worktree_manager: GitWorktreeManager,
         config: ContainerConfig | None = None,
         base_commit: str = "HEAD",
+        owns_worktree: bool = True,
     ) -> None:
         self.lease = lease
         self.worktree_manager = worktree_manager
         self.config = config or ContainerConfig()
         self.base_commit = base_commit
+        self.owns_worktree = owns_worktree
         self.container_name = f"syntra_sandbox_{lease.task_id}_{lease.attempt_number}"
         self._is_running = False
 
@@ -96,9 +97,13 @@ class ContainerSandboxInstance:
             "--cpus",
             str(self.config.cpu_limit),
             "-v",
-            f"{self.lease.worktree_path}:{self.config.workspace_mount_path}:rw",
+            f"{self.lease.worktree_path}:{self.config.workspace_mount_path}:{'ro' if self.config.workspace_read_only else 'rw'}",
+            "-v",
+            f"{self.lease.worktree_path / '.git'}:{self.config.workspace_mount_path}/.git:ro",
             "--workdir",
             self.config.workspace_mount_path,
+            "--env",
+            "PYTHONDONTWRITEBYTECODE=1",
         ]
 
         if self.config.seccomp_profile:
@@ -134,9 +139,7 @@ class ContainerSandboxInstance:
         CommandSafetyValidator.validate_command(command)
 
         # Sanitize environment (scrub API keys, secrets, cloud tokens)
-        merged_env = os.environ.copy()
-        if env:
-            merged_env.update(env)
+        merged_env = dict(env or {})
         safe_env = CommandSafetyValidator.sanitize_env(merged_env)
 
         exec_timeout = timeout_seconds or self.config.timeout_seconds
@@ -148,7 +151,15 @@ class ContainerSandboxInstance:
             # Pass safe environment variables
             exec_args.extend(["-e", f"{k}={v}"])
 
-        exec_args.extend([self.container_name, "sh", "-c", command])
+        # The watchdog runs INSIDE the container, so killing the Docker client
+        # cannot leave an unbounded child running in the execution plane.
+        watchdog = (
+            "import os,signal,subprocess,sys; "
+            "p=subprocess.Popen(['sh','-c',sys.argv[1]],start_new_session=True); "
+            "\ntry: sys.exit(p.wait(timeout=float(sys.argv[2])))"
+            "\nexcept subprocess.TimeoutExpired: os.killpg(p.pid,signal.SIGKILL); p.wait(); sys.exit(124)"
+        )
+        exec_args.extend([self.container_name, "python", "-I", "-c", watchdog, command, str(exec_timeout)])
 
         start_time = time.perf_counter()
         proc = await asyncio.create_subprocess_exec(
@@ -164,10 +175,31 @@ class ContainerSandboxInstance:
         stderr_str = ""
 
         try:
-            stdout_b, stderr_b = await asyncio.wait_for(proc.communicate(), timeout=exec_timeout)
-            exit_code = proc.returncode or 0
 
-            if len(stdout_b) > max_bytes:
+            async def bounded_read(stream: asyncio.StreamReader) -> bytes:
+                nonlocal output_truncated
+                captured = bytearray()
+                while chunk := await stream.read(8192):
+                    room = max_bytes - len(captured)
+                    captured.extend(chunk[: max(0, room)])
+                    if len(chunk) > room:
+                        output_truncated = True
+                return bytes(captured)
+
+            async def collect() -> tuple[bytes, bytes]:
+                assert proc.stdout is not None and proc.stderr is not None
+                stdout_b, stderr_b = await asyncio.gather(bounded_read(proc.stdout), bounded_read(proc.stderr))
+                await proc.wait()
+                return stdout_b, stderr_b
+
+            stdout_b, stderr_b = await asyncio.wait_for(collect(), timeout=exec_timeout + 3)
+            exit_code = proc.returncode or 0
+            if exit_code == 124:
+                timed_out = True
+                exit_code = -1
+                stderr_b += f"\nExecution timed out after {exec_timeout} seconds.".encode()
+
+            if output_truncated or len(stdout_b) > max_bytes:
                 stdout_b = stdout_b[:max_bytes]
                 output_truncated = True
                 stdout_str = stdout_b.decode("utf-8", errors="replace") + f"\n... [TRUNCATED at {max_bytes} bytes]"
@@ -189,6 +221,9 @@ class ContainerSandboxInstance:
                 proc.kill()
             except ProcessLookupError:
                 pass
+            await proc.wait()
+            await self._run_docker("kill", self.container_name)
+            self._is_running = False
 
         duration_ms = int((time.perf_counter() - start_time) * 1000)
 
@@ -227,6 +262,7 @@ class ContainerSandboxInstance:
 
         # Prune and remove ephemeral worktree
         try:
-            await self.worktree_manager.remove_worktree(self.lease.worktree_path, self.lease.branch_name)
+            if self.owns_worktree:
+                await self.worktree_manager.remove_worktree(self.lease.worktree_path, self.lease.branch_name)
         except Exception as e:
             logger.warning("Error removing worktree %s: %s", self.lease.worktree_path, e)
