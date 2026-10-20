@@ -229,17 +229,39 @@ class SyntraApiClient {
     const params = new URLSearchParams();
     if (status) params.append('status', status);
     params.append('limit', limit.toString());
-    return this.request<Approval[]>(`/approvals?${params.toString()}`);
+    const data = await this.request<any[]>(`/approvals?${params.toString()}`);
+    return data.map((a) => ({
+      ...a,
+      signature_digest: a.signature_digest || a.action_digest,
+      comment: a.comment || a.reason,
+      responder: a.responder || (a.resolved_by ? String(a.resolved_by) : null),
+      decided_at: a.decided_at || a.resolved_at,
+    }));
   }
 
   public async getApproval(approvalId: string): Promise<Approval> {
-    return this.request<Approval>(`/approvals/${approvalId}`);
+    const a = await this.request<any>(`/approvals/${approvalId}`);
+    return {
+      ...a,
+      signature_digest: a.signature_digest || a.action_digest,
+      comment: a.comment || a.reason,
+      responder: a.responder || (a.resolved_by ? String(a.resolved_by) : null),
+      decided_at: a.decided_at || a.resolved_at,
+    };
   }
 
   public async respondApproval(approvalId: string, payload: ApprovalRespondPayload): Promise<Approval> {
+    const bodyPayload = {
+      decision: payload.decision,
+      action_digest: payload.digest,
+      digest: payload.digest,
+      reason: payload.comment || 'Approved by operator',
+      comment: payload.comment || 'Approved by operator',
+      responder: payload.responder,
+    };
     return this.request<Approval>(`/approvals/${approvalId}/respond`, {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: JSON.stringify(bodyPayload),
     });
   }
 

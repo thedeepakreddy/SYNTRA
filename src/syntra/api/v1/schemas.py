@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import Any, Generic, TypeVar
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from syntra.core.config import AutonomyMode
 from syntra.domain.entities import (
@@ -174,19 +174,48 @@ class ApprovalResponse(BaseModel):
     mission_version: int
     decision: ApprovalDecision
     action_digest: str
+    signature_digest: str | None = None
     expires_at: datetime
     resolved_at: datetime | None = None
+    decided_at: datetime | None = None
     resolved_by: UUID | None = None
+    responder: str | None = None
     reason: str | None = None
+    comment: str | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
+    @model_validator(mode="after")
+    def sync_aliases(self) -> "ApprovalResponse":
+        if not self.signature_digest:
+            self.signature_digest = self.action_digest
+        if not self.decided_at:
+            self.decided_at = self.resolved_at
+        if not self.responder and self.resolved_by:
+            self.responder = str(self.resolved_by)
+        if not self.comment:
+            self.comment = self.reason
+        return self
+
 
 class ApprovalDecisionRequest(BaseModel):
     decision: ApprovalDecision
-    action_digest: str = Field(..., description="Canonical HMAC-SHA256 digest proving approval of unmodified state")
+    action_digest: str | None = Field(None, description="Canonical HMAC-SHA256 digest proving approval of unmodified state")
+    digest: str | None = Field(None, description="Client alias for action_digest")
     reason: str | None = Field(None, max_length=1000)
+    comment: str | None = Field(None, max_length=1000, description="Client alias for reason")
+    responder: str | None = Field(None, description="Authorizing officer / responder identifier")
+
+    @model_validator(mode="after")
+    def resolve_aliases(self) -> "ApprovalDecisionRequest":
+        if not self.action_digest and self.digest:
+            self.action_digest = self.digest
+        if not self.reason and self.comment:
+            self.reason = self.comment
+        if not self.action_digest:
+            raise ValueError("action_digest or digest is required.")
+        return self
 
 
 # =====================================================================
@@ -209,6 +238,7 @@ class ArtifactResponse(BaseModel):
     mission_id: UUID
     artifact_type: ArtifactType
     path: str
+    content: str | None = Field(None, description="Decoded textual/markdown content of inline artifacts")
     content_hash: str
     size_bytes: int
     created_at: datetime

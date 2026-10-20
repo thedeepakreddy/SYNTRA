@@ -28,7 +28,9 @@ import {
   FileText,
   Loader2,
   CheckCircle2,
+  Eye,
 } from 'lucide-react';
+import { ArtifactViewerModal } from '../components/ArtifactViewerModal';
 
 export const MissionsPage: React.FC = () => {
   const [missions, setMissions] = useState<Mission[]>([]);
@@ -48,6 +50,7 @@ export const MissionsPage: React.FC = () => {
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [usage, setUsage] = useState<MissionUsageSummary | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [viewingArtifact, setViewingArtifact] = useState<Artifact | null>(null);
 
   // Create Mission Modal
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -483,17 +486,28 @@ export const MissionsPage: React.FC = () => {
                   <p className="p-4 text-center text-xs text-slate-500">No artifacts produced yet for this mission.</p>
                 ) : (
                   artifacts.map((a) => (
-                    <div key={a.id} className="rounded border border-slate-800 bg-slate-950 p-2.5">
+                    <div key={a.id} className="rounded border border-slate-800 bg-slate-950 p-2.5 space-y-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                           <FileText className="h-4 w-4 text-indigo-400" />
                           <span className="font-semibold text-slate-200 truncate max-w-[280px]">{a.path}</span>
                         </div>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-950/60 text-indigo-300 border border-indigo-800/40">
-                          {a.artifact_type}
-                        </span>
+                        <div className="flex items-center space-x-2">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-950/60 text-indigo-300 border border-indigo-800/40">
+                            {a.artifact_type}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setViewingArtifact(a)}
+                            className="inline-flex items-center space-x-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-0.5 text-[11px] font-medium shadow transition-colors"
+                            title="Inspect artifact contents"
+                          >
+                            <Eye className="h-3 w-3" />
+                            <span>View</span>
+                          </button>
+                        </div>
                       </div>
-                      <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+                      <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono">
                         <span className="truncate max-w-[280px]" title={a.content_hash}>
                           SHA: {a.content_hash ? a.content_hash.slice(0, 16) + '...' : 'pending'}
                         </span>
@@ -661,6 +675,12 @@ export const MissionsPage: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Artifact Document Inspector Modal */}
+      <ArtifactViewerModal
+        artifact={viewingArtifact}
+        onClose={() => setViewingArtifact(null)}
+      />
     </div>
   );
 };

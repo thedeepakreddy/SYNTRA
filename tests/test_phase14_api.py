@@ -332,3 +332,105 @@ async def test_audit_list_endpoint(p14_client):
     events = resp.json()
     assert len(events) >= 1
     assert any(e["event_type"] == "DIFF_GENERATED" for e in events)
+
+
+@pytest.mark.asyncio
+async def test_human_approval_resolution_and_completion(p14_client):
+    """Verify POST /v1/approvals/{id}/respond resolves delivery gate and transitions mission to COMPLETED."""
+    from datetime import datetime, timedelta, UTC
+    from syntra.api.app import app
+    from syntra.core.config import get_settings
+    from syntra.domain.entities import MissionState
+
+    client = p14_client["client"]
+    admin_token = p14_client["admin_token"]
+    session_factory = p14_client["session_factory"]
+    org_id = p14_client["org_id"]
+    settings = app.dependency_overrides.get(get_settings, get_settings)()
+
+    mission_id = uuid.uuid4()
+    approval_id = uuid.uuid4()
+    expires_at = datetime.now(UTC) + timedelta(hours=24)
+
+    async with SqlAlchemyUnitOfWork(session_factory) as uow:
+        p = await uow.projects.create(uuid.uuid4(), org_id, "Approval Project", "approval-proj")
+        m = await uow.missions.create(mission_id, org_id, p.id, "Objective for Delivery Approval")
+        m.state = MissionState.AWAITING_APPROVAL
+        appr = await uow.approvals.create_request(
+            approval_id=approval_id,
+            org_id=org_id,
+            mission_id=mission_id,
+            action_type="DELIVERY_APPROVAL",
+            target_resource=f"mission:{mission_id}:delivery",
+            mission_version=m.version,
+            expires_at=expires_at,
+            secret_key=settings.approval_secret_key,
+            feedback="Ready for delivery",
+        )
+        digest = appr.action_digest
+        await uow.commit()
+
+    # Submit decision via /respond alias with digest and comment
+    resp = await client.post(
+        f"/v1/approvals/{approval_id}/respond",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "decision": "APPROVED",
+            "digest": digest,
+            "responder": "lead-architect@syntra.local",
+            "comment": "Deliverables and QA assertions independently verified.",
+        },
+    )
+    assert resp.status_code == 200
+    res_data = resp.json()
+    assert res_data["decision"] == "APPROVED"
+    assert res_data["action_digest"] == digest
+    assert res_data["signature_digest"] == digest
+
+    # Verify mission transitioned to COMPLETED
+    async with SqlAlchemyUnitOfWork(session_factory) as uow:
+        m_after = await uow.missions.get_by_id_for_org(mission_id, org_id)
+        assert m_after.state == MissionState.COMPLETED
+
+
+@pytest.mark.asyncio
+async def test_mission_artifacts_content_retrieval(p14_client):
+    """Verify GET /v1/missions/{id}/artifacts decodes inline base64 content and provides clean filenames."""
+    import base64
+    from syntra.domain.entities import ArtifactType
+
+    client = p14_client["client"]
+    token = p14_client["dev_token"]
+    session_factory = p14_client["session_factory"]
+    org_id = p14_client["org_id"]
+
+    mission_id = uuid.uuid4()
+    raw_markdown = "# Generated PRD\n\nGiven an industrial calculator when rendered then show holographic HUD."
+    b64_content = base64.b64encode(raw_markdown.encode("utf-8")).decode("utf-8")
+
+    async with SqlAlchemyUnitOfWork(session_factory) as uow:
+        p = await uow.projects.create(uuid.uuid4(), org_id, "Artifacts Project", "art-proj")
+        await uow.missions.create(mission_id, org_id, p.id, "Objective for Artifacts")
+        art = await uow.artifacts.create(
+            mission_id=mission_id,
+            title="Calculator PRD Spec",
+            type=ArtifactType.PRD,
+        )
+        await uow.artifacts.add_version(
+            artifact_id=art.id,
+            version=1,
+            storage_path=f"inline:{b64_content}",
+            sha256_checksum="abc",
+            size_bytes=len(raw_markdown),
+        )
+        await uow.commit()
+
+    resp = await client.get(f"/v1/missions/{mission_id}/artifacts", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["items"]) == 1
+    item = data["items"][0]
+    assert item["artifact_type"] == "PRD"
+    assert item["content"] == raw_markdown
+    assert item["path"] == "Calculator_PRD_Spec.md"
+

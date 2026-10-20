@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { apiClient } from '../api/client';
 import { Artifact, Mission } from '../types';
-import { FileCode2, Copy, Check, Hash } from 'lucide-react';
+import { FileCode2, Copy, Check, Hash, Eye } from 'lucide-react';
+import { ArtifactViewerModal } from '../components/ArtifactViewerModal';
 
 export const ArtifactsPage: React.FC = () => {
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
@@ -10,6 +11,7 @@ export const ArtifactsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
+  const [viewingArtifact, setViewingArtifact] = useState<Artifact | null>(null);
 
   const loadData = async () => {
     try {
@@ -149,12 +151,28 @@ export const ArtifactsPage: React.FC = () => {
 
               <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-500">
                 <span>Mission: {art.mission_id.slice(0, 8)}...</span>
-                <span>{new Date(art.created_at).toLocaleTimeString()}</span>
+                <div className="flex items-center space-x-2">
+                  <span>{new Date(art.created_at).toLocaleTimeString()}</span>
+                  <button
+                    type="button"
+                    onClick={() => setViewingArtifact(art)}
+                    className="inline-flex items-center space-x-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 text-[11px] font-medium shadow"
+                  >
+                    <Eye className="h-3 w-3" />
+                    <span>View</span>
+                  </button>
+                </div>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      {/* Artifact Document Inspector Modal */}
+      <ArtifactViewerModal
+        artifact={viewingArtifact}
+        onClose={() => setViewingArtifact(null)}
+      />
     </div>
   );
 };

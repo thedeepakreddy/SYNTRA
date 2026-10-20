@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { apiClient } from '../api/client';
-import { Approval, ApprovalRespondPayload } from '../types';
+import { Approval, ApprovalRespondPayload, Artifact } from '../types';
 import { StatusBadge } from '../components/StatusBadge';
 import { Modal } from '../components/ConfirmModal';
+import { ArtifactViewerModal } from '../components/ArtifactViewerModal';
 import {
   CheckSquare,
   ShieldCheck,
@@ -10,6 +11,7 @@ import {
   Key,
   AlertCircle,
   FileCheck2,
+  Eye,
 } from 'lucide-react';
 
 export const ApprovalsPage: React.FC = () => {
@@ -20,6 +22,8 @@ export const ApprovalsPage: React.FC = () => {
 
   // Respond Modal State
   const [selectedApproval, setSelectedApproval] = useState<Approval | null>(null);
+  const [gateArtifacts, setGateArtifacts] = useState<Artifact[]>([]);
+  const [viewingGateArtifact, setViewingGateArtifact] = useState<Artifact | null>(null);
   const [respondData, setRespondData] = useState<ApprovalRespondPayload>({
     decision: 'APPROVED',
     digest: '',
@@ -49,14 +53,24 @@ export const ApprovalsPage: React.FC = () => {
 
   const openReviewModal = (approval: Approval) => {
     setSelectedApproval(approval);
+    setGateArtifacts([]);
+    const digest = approval.signature_digest || approval.action_digest || '';
     const userCtx = apiClient.getUserContext();
     setRespondData({
       decision: 'APPROVED',
-      digest: approval.signature_digest, // pre-fill cryptographic digest
+      digest,
       responder: userCtx.email || userCtx.userId,
       comment: '',
     });
     setRespondError(null);
+
+    // Fetch deliverables for the mission
+    if (approval.mission_id) {
+      apiClient
+        .getMissionArtifacts(approval.mission_id)
+        .then((res) => setGateArtifacts(res.items || []))
+        .catch(() => setGateArtifacts([]));
+    }
   };
 
   const handleRespondSubmit = async (e: React.FormEvent) => {
@@ -226,6 +240,43 @@ export const ApprovalsPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Deliverables Staged for Verification */}
+            {gateArtifacts.length > 0 && (
+              <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-3 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-300">
+                    Deliverables Awaiting Verification ({gateArtifacts.length})
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-mono">Click to inspect</span>
+                </div>
+                <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1 text-xs">
+                  {gateArtifacts.map((art) => (
+                    <div
+                      key={art.id}
+                      className="flex items-center justify-between rounded bg-slate-950 p-2 border border-slate-800/80"
+                    >
+                      <div className="truncate max-w-[260px]">
+                        <span className="font-mono text-slate-200 text-[11px] block truncate">
+                          {art.path}
+                        </span>
+                        <span className="text-[10px] text-indigo-400 font-mono">
+                          {art.artifact_type}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setViewingGateArtifact(art)}
+                        className="inline-flex items-center space-x-1 rounded bg-indigo-600/90 hover:bg-indigo-600 px-2 py-0.5 text-[11px] text-white font-medium shadow"
+                      >
+                        <Eye className="h-3 w-3" />
+                        <span>Inspect</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-medium text-slate-300">Decision *</label>
               <div className="mt-1 flex space-x-3">
@@ -315,6 +366,12 @@ export const ApprovalsPage: React.FC = () => {
           </form>
         </Modal>
       )}
+
+      {/* Artifact Deliverable Inspector Modal */}
+      <ArtifactViewerModal
+        artifact={viewingGateArtifact}
+        onClose={() => setViewingGateArtifact(null)}
+      />
     </div>
   );
 };

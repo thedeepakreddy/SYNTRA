@@ -1,5 +1,6 @@
 """Mission management, planning stubs, tasks, events, artifacts, and usage ledger endpoints."""
 
+import base64
 import hashlib
 import json
 from decimal import Decimal
@@ -942,12 +943,25 @@ async def list_mission_artifacts(
 
     items: list[ArtifactResponse] = []
     for art, ver in rows:
+        content_str = None
+        display_path = ver.storage_path if ver else f"/artifacts/{art.id}"
+        if ver and ver.storage_path and ver.storage_path.startswith("inline:"):
+            try:
+                b64 = ver.storage_path.split("inline:", 1)[1]
+                content_str = base64.b64decode(b64).decode("utf-8")
+                # Clean human-readable filename
+                base_name = art.title.replace(":", "-").replace(" ", "_") if art.title else str(art.type)
+                display_path = f"{base_name[:64]}.md"
+            except Exception:
+                pass
+
         items.append(
             ArtifactResponse(
                 id=art.id,
                 mission_id=art.mission_id,
                 artifact_type=art.type,
-                path=ver.storage_path if ver else f"/artifacts/{art.id}",
+                path=display_path,
+                content=content_str,
                 content_hash=ver.sha256_checksum if ver else "",
                 size_bytes=ver.size_bytes if ver else 0,
                 created_at=art.created_at,

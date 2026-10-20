@@ -25,6 +25,7 @@ MISSION_TRANSITIONS: dict[MissionState, set[MissionState]] = {
     MissionState.AWAITING_APPROVAL: {
         MissionState.READY,
         MissionState.PLANNING,
+        MissionState.COMPLETED,
         MissionState.CANCELLED,
     },
     MissionState.READY: {
@@ -81,7 +82,7 @@ def transition_mission_state(
         )
 
     # Authorization context checks
-    if current_state == MissionState.AWAITING_APPROVAL and target_state == MissionState.READY:
+    if current_state == MissionState.AWAITING_APPROVAL and target_state in (MissionState.READY, MissionState.COMPLETED):
         if decision_context != ApprovalDecision.APPROVED:
             raise InvalidStateTransitionError(
                 f"Transition from {current_state.value} to {target_state.value} requires APPROVED decision context, got {decision_context}."

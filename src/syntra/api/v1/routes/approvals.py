@@ -151,6 +151,41 @@ async def submit_approval_decision(
         },
     )
 
+    # 5. Synchronize bound Mission lifecycle state
+    from datetime import datetime, UTC
+    from syntra.domain.entities import MissionState
+
+    if resolved.decision == ApprovalDecision.APPROVED:
+        if resolved.action_type in ["DELIVERY_APPROVAL", "deployment"] or mission.state == MissionState.AWAITING_APPROVAL:
+            mission.state = MissionState.COMPLETED
+        else:
+            mission.state = MissionState.READY
+        mission.updated_at = datetime.now(UTC)
+        await uow.outbox.record_event(
+            org_id=user.org_id,
+            event_type="mission.completed",
+            payload={
+                "mission_id": str(mission.id),
+                "approval_id": str(resolved.id),
+                "action_type": resolved.action_type,
+                "message": "Human delivery gate authorized. Mission state transitioned to COMPLETED.",
+            },
+            mission_id=mission.id,
+        )
+    elif resolved.decision == ApprovalDecision.REJECTED:
+        mission.state = MissionState.REPLANNING
+        mission.updated_at = datetime.now(UTC)
+        await uow.outbox.record_event(
+            org_id=user.org_id,
+            event_type="mission.rejected",
+            payload={
+                "mission_id": str(mission.id),
+                "approval_id": str(resolved.id),
+                "reason": req.reason,
+            },
+            mission_id=mission.id,
+        )
+
     resp_data = ApprovalResponse(
         id=resolved.id,
         mission_id=resolved.mission_id,
@@ -178,3 +213,23 @@ async def submit_approval_decision(
 
     await uow.commit()
     return JSONResponse(status_code=status.HTTP_200_OK, content=resp_data)
+
+
+@router.post("/{approval_id}/respond", response_model=ApprovalResponse)
+async def respond_approval_alias(
+    approval_id: UUID,
+    req: ApprovalDecisionRequest,
+    user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+    uow: Annotated[SqlAlchemyUnitOfWork, Depends(get_uow)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+) -> Response:
+    """Convenience alias route matching frontend client SDK."""
+    return await submit_approval_decision(
+        approval_id=approval_id,
+        req=req,
+        user=user,
+        uow=uow,
+        settings=settings,
+        idempotency_key=idempotency_key,
+    )

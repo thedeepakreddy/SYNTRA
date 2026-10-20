@@ -129,10 +129,14 @@ export interface Approval {
   target_resource: string;
   mission_version: number;
   decision: ApprovalDecision;
+  action_digest?: string;
   signature_digest: string;
+  reason?: string | null;
   comment: string | null;
+  resolved_by?: string | null;
   responder: string | null;
   expires_at: string;
+  resolved_at?: string | null;
   decided_at: string | null;
   created_at: string;
 }
@@ -225,6 +229,7 @@ export interface Artifact {
   mission_id: string;
   artifact_type: string;
   path: string;
+  content?: string | null;
   content_hash: string;
   size_bytes: number;
   created_at: string;
