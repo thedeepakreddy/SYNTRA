@@ -29,12 +29,13 @@ T = TypeVar("T", bound=BaseModel)
 
 
 def _resolve_api_model(target_model: str) -> str:
-    """Map legacy/retired models to live Google GenAI active models while preserving spec."""
+    """Map legacy/retired models to live Google GenAI active models with available quota."""
     aliases = {
-        "gemini-2.5-pro": "gemini-3.8-flash",
-        "gemini-2.5-flash": "gemini-3.8-flash",
-        "gemini-2.5-flash-lite": "gemini-3.5-flash",
-        "gemini-2.0-flash-lite": "gemini-3.5-flash",
+        "gemini-2.5-pro": "gemini-3.5-flash-lite",
+        "gemini-2.5-flash": "gemini-3.5-flash-lite",
+        "gemini-2.5-flash-lite": "gemini-3.5-flash-lite",
+        "gemini-2.0-flash-lite": "gemini-3.5-flash-lite",
+        "gemini-3.8-flash": "gemini-3.5-flash-lite",
     }
     return aliases.get(target_model, target_model)
 
@@ -242,20 +243,39 @@ class GeminiModelProvider(ModelProvider):
         start_time = time.perf_counter()
 
         api_model = _resolve_api_model(target_model)
+        candidate_models = [api_model, "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-flash-lite-latest", "gemma-4-26b-a4b-it"]
+        seen = set()
+        unique_candidates = [m for m in candidate_models if not (m in seen or seen.add(m))]
 
-        async def _call():
-            return await client.aio.models.generate_content(
-                model=api_model,
-                contents=contents,
-                config=config,
-            )
+        raw_response = None
+        last_exc = None
+        for candidate in unique_candidates:
+            async def _call():
+                return await client.aio.models.generate_content(
+                    model=candidate,
+                    contents=contents,
+                    config=config,
+                )
+            try:
+                raw_response = await self._execute_with_retry(
+                    _call,
+                    timeout_seconds=timeout_sec,
+                    retries=request.max_provider_retries if request.max_provider_retries is not None else settings.max_retries,
+                    initial_delay=settings.retry_delay_seconds,
+                )
+                break
+            except Exception as exc:
+                last_exc = exc
+                err_msg = str(exc).lower()
+                if "quota" in err_msg or "429" in err_msg or "503" in err_msg or "unavailable" in err_msg:
+                    logger.warning("Model %s failed with %s; failing over to next candidate in pool", candidate, err_msg[:80])
+                    continue
+                raise
 
-        raw_response = await self._execute_with_retry(
-            _call,
-            timeout_seconds=timeout_sec,
-            retries=request.max_provider_retries if request.max_provider_retries is not None else settings.max_retries,
-            initial_delay=settings.retry_delay_seconds,
-        )
+        if raw_response is None:
+            if last_exc:
+                raise last_exc
+            raise ModelProviderUnavailableError("All available Gemini models exhausted.")
 
         latency = time.perf_counter() - start_time
 
@@ -282,14 +302,20 @@ class GeminiModelProvider(ModelProvider):
 
         # Token counting and cost calculation
         usage_meta = getattr(raw_response, "usage_metadata", None)
-        prompt_tokens = getattr(usage_meta, "prompt_token_count", 0) if usage_meta else len(str(request.messages)) // 4
+        prompt_tokens = (
+            (getattr(usage_meta, "prompt_token_count", 0) or 0)
+            if usage_meta
+            else len(str(request.messages)) // 4
+        )
         comp_tokens = (
-            (getattr(usage_meta, "candidates_token_count", 0) or 0)
-            + (getattr(usage_meta, "thoughts_token_count", 0) or 0)
+            (
+                (getattr(usage_meta, "candidates_token_count", 0) or 0)
+                + (getattr(usage_meta, "thoughts_token_count", 0) or 0)
+            )
             if usage_meta
             else len(response_text) // 4
         )
-        cached_tokens = getattr(usage_meta, "cached_content_token_count", 0) if usage_meta else 0
+        cached_tokens = (getattr(usage_meta, "cached_content_token_count", 0) or 0) if usage_meta else 0
         total_tokens = prompt_tokens + comp_tokens
 
         cost_usd = compute_token_cost(target_model, prompt_tokens, comp_tokens)
@@ -363,20 +389,39 @@ class GeminiModelProvider(ModelProvider):
         start_time = time.perf_counter()
 
         api_model = _resolve_api_model(target_model)
+        candidate_models = [api_model, "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-flash-lite-latest", "gemma-4-26b-a4b-it"]
+        seen = set()
+        unique_candidates = [m for m in candidate_models if not (m in seen or seen.add(m))]
 
-        async def _call():
-            return await client.aio.models.generate_content(
-                model=api_model,
-                contents=contents,
-                config=config,
-            )
+        raw_response = None
+        last_exc = None
+        for candidate in unique_candidates:
+            async def _call():
+                return await client.aio.models.generate_content(
+                    model=candidate,
+                    contents=contents,
+                    config=config,
+                )
+            try:
+                raw_response = await self._execute_with_retry(
+                    _call,
+                    timeout_seconds=timeout_sec,
+                    retries=request.max_provider_retries if request.max_provider_retries is not None else settings.max_retries,
+                    initial_delay=settings.retry_delay_seconds,
+                )
+                break
+            except Exception as exc:
+                last_exc = exc
+                err_msg = str(exc).lower()
+                if "quota" in err_msg or "429" in err_msg or "503" in err_msg or "unavailable" in err_msg:
+                    logger.warning("Model %s failed with %s; failing over to next candidate in pool", candidate, err_msg[:80])
+                    continue
+                raise
 
-        raw_response = await self._execute_with_retry(
-            _call,
-            timeout_seconds=timeout_sec,
-            retries=request.max_provider_retries if request.max_provider_retries is not None else settings.max_retries,
-            initial_delay=settings.retry_delay_seconds,
-        )
+        if raw_response is None:
+            if last_exc:
+                raise last_exc
+            raise ModelProviderUnavailableError("All available Gemini models exhausted.")
 
         latency = time.perf_counter() - start_time
         raw_text = raw_response.text or "{}"

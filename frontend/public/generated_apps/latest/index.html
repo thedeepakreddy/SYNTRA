@@ -1,323 +1,888 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SYNTRA Hardware Calculator — 8K Holographic Edition</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
-  <style>
-    body {
-      background: radial-gradient(circle at 50% 30%, #0d121c 0%, #05070a 100%);
-      font-family: 'JetBrains Mono', monospace;
-      user-select: none;
-    }
-    .orbitron { font-family: 'Orbitron', sans-serif; }
-    .holo-glow {
-      text-shadow: 0 0 8px rgba(0, 217, 255, 0.9), 0 0 20px rgba(0, 217, 255, 0.6), 0 0 40px rgba(0, 217, 255, 0.3);
-      filter: drop-shadow(0 0 12px rgba(0, 217, 255, 0.8));
-    }
-    .holo-screen {
-      background: linear-gradient(180deg, rgba(0, 217, 255, 0.08) 0%, rgba(0, 162, 255, 0.02) 100%);
-      backdrop-filter: blur(4px);
-      box-shadow: 0 0 30px rgba(0, 217, 255, 0.25), inset 0 0 25px rgba(0, 217, 255, 0.15);
-      border: 1px solid rgba(0, 217, 255, 0.4);
-    }
-    .mech-switch {
-      background: rgba(255, 255, 255, 0.07);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(57, 255, 20, 0.35);
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.6), 0 0 15px rgba(57, 255, 20, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.3);
-      transition: all 0.08s ease-in-out;
-    }
-    .mech-switch:active {
-      transform: translateY(2px) scale(0.97);
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.8), 0 0 25px rgba(57, 255, 20, 0.5), inset 0 2px 4px rgba(0, 0, 0, 0.5);
-      border-color: rgba(57, 255, 20, 0.8);
-    }
-    .green-glow { text-shadow: 0 0 6px rgba(57, 255, 20, 0.9), 0 0 15px rgba(57, 255, 20, 0.5); }
-    .brass-accent {
-      background: linear-gradient(135deg, #d4af37 0%, #aa820a 50%, #e6ca65 100%);
-      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 2px 4px rgba(0,0,0,0.6);
-    }
-    .carbon-fiber {
-      background: 
-        radial-gradient(black 15%, transparent 16%) 0 0,
-        radial-gradient(black 15%, transparent 16%) 4px 4px,
-        radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 0 1px,
-        radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 4px 5px;
-      background-color: #12151a;
-      background-size: 8px 8px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYNTRA // Nexus-09 Productivity HUD</title>
+    <style>
+        :root {
+            --bg-color: #03070c;
+            --panel-glass: rgba(8, 20, 32, 0.45);
+            --panel-border: rgba(0, 240, 255, 0.25);
+            --neon-teal: #00f0ff;
+            --neon-cyan: #00ffd5;
+            --neon-blue: #0088ff;
+            --neon-glow: rgba(0, 240, 255, 0.4);
+            --text-main: #e0f4ff;
+            --text-dim: #5a829e;
+            --danger: #ff0055;
+            --font-hud: 'Courier New', Courier, monospace, system-ui;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-hud);
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* 3D Canvas Workspace */
+        #workspace-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Ambient Cinematic Vignette & Scanlines */
+        .cinematic-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+            background: 
+                radial-gradient(circle at 50% 50%, transparent 30%, rgba(1, 4, 8, 0.85) 90%),
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+        }
+
+        /* Holographic Application Interface Container */
+        .app-container {
+            position: relative;
+            z-index: 10;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 1200px;
+        }
+
+        /* The Transparent Curved Glass Slate */
+        .glass-slate {
+            width: 90vw;
+            max-width: 1350px;
+            height: 82vh;
+            max-height: 850px;
+            background: var(--panel-glass);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border);
+            border-radius: 24px;
+            box-shadow: 
+                0 0 50px rgba(0, 0, 0, 0.8),
+                inset 0 0 30px rgba(0, 240, 255, 0.05),
+                0 0 25px rgba(0, 240, 255, 0.15);
+            display: grid;
+            grid-template-columns: 340px 1fr 340px;
+            grid-template-rows: 70px 1fr;
+            grid-template-areas: 
+                "header header header"
+                "sidebar main analytics";
+            overflow: hidden;
+            transform: rotateX(2deg) rotateY(-1deg);
+            transition: transform 0.1s ease-out;
+        }
+
+        /* Glass Slate Header */
+        .slate-header {
+            grid-area: header;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            border-bottom: 1px solid rgba(0, 240, 255, 0.15);
+            background: rgba(0, 15, 30, 0.3);
+        }
+
+        .brand-box {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .brand-logo {
+            width: 36px;
+            height: 36px;
+            border: 2px solid var(--neon-teal);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 10px var(--neon-glow);
+            animation: pulse-glow 3s infinite alternate;
+        }
+
+        .brand-logo::after {
+            content: '';
+            width: 14px;
+            height: 14px;
+            background: var(--neon-cyan);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--neon-cyan);
+        }
+
+        .brand-title h1 {
+            font-size: 18px;
+            letter-spacing: 4px;
+            color: var(--neon-teal);
+            text-shadow: 0 0 8px var(--neon-glow);
+        }
+
+        .brand-title p {
+            font-size: 9px;
+            letter-spacing: 2px;
+            color: var(--text-dim);
+        }
+
+        .system-hud-metrics {
+            display: flex;
+            gap: 30px;
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+
+        .metric-item span {
+            color: var(--neon-cyan);
+            font-weight: bold;
+        }
+
+        /* Sidebar: Quick Navigation & Add Task Panel */
+        .sidebar {
+            grid-area: sidebar;
+            border-right: 1px solid rgba(0, 240, 255, 0.1);
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            background: rgba(0, 10, 20, 0.2);
+        }
+
+        .section-title {
+            font-size: 11px;
+            letter-spacing: 2px;
+            color: var(--text-dim);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::before {
+            content: '//';
+            color: var(--neon-teal);
+        }
+
+        .nav-links {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            color: var(--text-main);
+            padding: 12px 18px;
+            text-align: left;
+            font-family: var(--font-hud);
+            font-size: 12px;
+            letter-spacing: 1px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            background: rgba(0, 240, 255, 0.08);
+            border-color: var(--neon-teal);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.15);
+            color: var(--neon-teal);
+            padding-left: 22px;
+        }
+
+        .nav-badge {
+            background: rgba(0, 240, 255, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            color: var(--neon-cyan);
+        }
+
+        /* Add Task Form inside Sidebar */
+        .task-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: auto;
+        }
+
+        .cyber-input {
+            background: rgba(0, 10, 20, 0.6);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            border-radius: 6px;
+            padding: 12px;
+            color: var(--text-main);
+            font-family: var(--font-hud);
+            font-size: 12px;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .cyber-input:focus {
+            border-color: var(--neon-teal);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.25);
+        }
+
+        .cyber-select {
+            background: rgba(0, 10, 20, 0.8);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            border-radius: 6px;
+            padding: 12px;
+            color: var(--text-main);
+            font-family: var(--font-hud);
+            font-size: 12px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .cyber-select option {
+            background: #03070c;
+            color: var(--text-main);
+        }
+
+        .cyber-btn {
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.15), rgba(0, 136, 255, 0.2));
+            border: 1px solid var(--neon-teal);
+            color: var(--neon-teal);
+            padding: 12px;
+            font-family: var(--font-hud);
+            font-size: 12px;
+            letter-spacing: 2px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.1);
+        }
+
+        .cyber-btn:hover {
+            background: var(--neon-teal);
+            color: #000;
+            box-shadow: 0 0 20px var(--neon-teal);
+            transform: translateY(-2px);
+        }
+
+        /* Main Workspace: Active Tasks & Holographic Nodes */
+        .main-workspace {
+            grid-area: main;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .main-workspace::-webkit-scrollbar {
+            width: 4px;
+        }
+        .main-workspace::-webkit-scrollbar-thumb {
+            background: rgba(0, 240, 255, 0.3);
+            border-radius: 2px;
+        }
+
+        .workspace-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .workspace-title h2 {
+            font-size: 16px;
+            letter-spacing: 2px;
+            color: var(--text-main);
+        }
+
+        .workspace-title p {
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Holographic Task Card Node */
+        .task-card {
+            position: relative;
+            background: rgba(0, 20, 35, 0.35);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            border-radius: 8px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            backdrop-filter: blur(4px);
+            animation: fadeInNode 0.4s ease-out forwards;
+        }
+
+        .task-card:hover {
+            border-color: var(--neon-teal);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+            transform: translateX(4px);
+            background: rgba(0, 30, 50, 0.5);
+        }
+
+        .task-card.priority-high {
+            border-left: 4px solid var(--danger);
+        }
+
+        .task-card.priority-medium {
+            border-left: 4px solid var(--neon-teal);
+        }
+
+        .task-card.priority-low {
+            border-left: 4px solid var(--text-dim);
+        }
+
+        .task-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+
+        /* Custom Neon Holographic Checkbox */
+        .cyber-checkbox {
+            position: relative;
+            width: 22px;
+            height: 22px;
+            border: 1px solid var(--neon-teal);
+            border-radius: 4px;
+            background: rgba(0, 240, 255, 0.05);
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.2s;
+            box-shadow: 0 0 8px rgba(0, 240, 255, 0.2);
+        }
+
+        .cyber-checkbox:hover {
+            background: rgba(0, 240, 255, 0.2);
+            box-shadow: 0 0 12px var(--neon-teal);
+        }
+
+        .cyber-checkbox input {
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            position: absolute;
+        }
+
+        .cyber-checkbox .checkmark {
+            width: 12px;
+            height: 12px;
+            background: var(--neon-cyan);
+            border-radius: 2px;
+            box-shadow: 0 0 8px var(--neon-cyan);
+            transform: scale(0);
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .cyber-checkbox input:checked ~ .checkmark {
+            transform: scale(1);
+        }
+
+        .task-details {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .task-title {
+            font-size: 13px;
+            color: var(--text-main);
+            letter-spacing: 1px;
+            transition: color 0.3s;
+        }
+
+        .task-card.completed .task-title {
+            text-decoration: line-through;
+            color: var(--text-dim);
+        }
+
+        .task-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 10px;
+            color: var(--text-dim);
+        }
+
+        .task-category {
+            color: var(--neon-cyan);
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .icon-btn {
+            background: transparent;
+            border: 1px solid rgba(0, 240, 255, 0.15);
+            color: var(--text-dim);
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .icon-btn:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+            background: rgba(255, 0, 85, 0.1);
+            box-shadow: 0 0 10px rgba(255, 0, 85, 0.2);
+        }
+
+        /* Right Panel: Analytics & HUD Metrics */
+        .analytics-panel {
+            grid-area: analytics;
+            border-left: 1px solid rgba(0, 240, 255, 0.1);
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            background: rgba(0, 10, 20, 0.2);
+        }
+
+        .hud-ring-container {
+            position: relative;
+            width: 180px;
+            height: 180px;
+            margin: 10px auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .hud-ring-container svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .hud-ring-bg {
+            fill: none;
+            stroke: rgba(0, 240, 255, 0.08);
+            stroke-width: 10;
+        }
+
+        .hud-ring-progress {
+            fill: none;
+            stroke: url(#neonGradient);
+            stroke-width: 10;
+            stroke-dasharray: 502;
+            stroke-dashoffset: 502;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s cubic-bezier(0.16, 1, 0.3, 1);
+            filter: drop-shadow(0 0 8px var(--neon-glow));
+        }
+
+        .hud-ring-center {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .hud-percentage {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--neon-teal);
+            text-shadow: 0 0 10px var(--neon-glow);
+        }
+
+        .hud-label {
+            font-size: 9px;
+            letter-spacing: 2px;
+            color: var(--text-dim);
+            margin-top: 2px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .stat-box {
+            background: rgba(0, 20, 35, 0.3);
+            border: 1px solid rgba(0, 240, 255, 0.15);
+            border-radius: 8px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .stat-box-value {
+            font-size: 18px;
+            color: var(--neon-cyan);
+            font-weight: bold;
+            text-shadow: 0 0 8px rgba(0, 255, 213, 0.3);
+        }
+
+        .stat-box-label {
+            font-size: 9px;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .system-audio-toggle {
+            margin-top: auto;
+            background: rgba(0, 240, 255, 0.05);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            border-radius: 6px;
+            padding: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .system-audio-toggle:hover {
+            border-color: var(--neon-teal);
+            background: rgba(0, 240, 255, 0.1);
+        }
+
+        .system-audio-toggle span {
+            font-size: 11px;
+            letter-spacing: 1px;
+            color: var(--text-main);
+        }
+
+        .audio-status {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(255, 0, 85, 0.2);
+            color: var(--danger);
+            border: 1px solid rgba(255, 0, 85, 0.4);
+        }
+
+        .audio-status.active {
+            background: rgba(0, 240, 255, 0.2);
+            color: var(--neon-teal);
+            border-color: rgba(0, 240, 255, 0.4);
+            box-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+        }
+
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 15px;
+            color: var(--text-dim);
+            text-align: center;
+            padding: 40px;
+        }
+
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            stroke: var(--text-dim);
+            opacity: 0.5;
+            animation: floatIcon 3s ease-in-out infinite;
+        }
+
+        /* Animations */
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 5px var(--neon-glow); }
+            100% { box-shadow: 0 0 20px var(--neon-teal); }
+        }
+
+        @keyframes fadeInNode {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes floatIcon {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        /* Responsive Layout Adjustments */
+        @media(max-width: 1024px) {
+            .glass-slate {
+                grid-template-columns: 280px 1fr;
+                grid-template-areas: 
+                    "header header"
+                    "sidebar main";
+                height: 90vh;
+            }
+            .analytics-panel {
+                display: none;
+            }
+        }
+    </style>
 </head>
-<body class="min-h-screen text-slate-100 flex flex-col items-center justify-center p-4 antialiased overflow-x-hidden">
+<body>
 
-  <!-- Header Banner -->
-  <div class="text-center mb-5 max-w-lg">
-    <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-[11px] text-cyan-400 mb-2">
-      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-      <span>SYNTRA Autonomous Engineering Deliverable</span>
+    <!-- Cinematic Overlays & Canvas -->
+    <div class="cinematic-overlay"></div>
+    <canvas id="workspace-canvas"></canvas>
+
+    <!-- Holographic Application Container -->
+    <div class="app-container">
+        <div class="glass-slate" id="glassSlate">
+            
+            <!-- Header -->
+            <header class="slate-header">
+                <div class="brand-box">
+                    <div class="brand-logo"></div>
+                    <div class="brand-title">
+                        <h1>SYNTRA // NEXUS-09</h1>
+                        <p>PROMETHEUS PROTOCOL v4.82</p>
+                    </div>
+                </div>
+                <div class="system-hud-metrics">
+                    <div class="metric-item">CORE TEMP: <span id="sysTemp">34.8°C</span></div>
+                    <div class="metric-item">SYNC RATE: <span id="sysSync">99.98%</span></div>
+                    <div class="metric-item">LATENCY: <span id="sysPing">0.4ms</span></div>
+                </div>
+            </header>
+
+            <!-- Sidebar: Navigation & Creation Hub -->
+            <aside class="sidebar">
+                <div>
+                    <div class="section-title">Navigation</div>
+                    <div class="nav-links">
+                        <button class="nav-btn active" data-filter="all">
+                            <span>All Protocols</span>
+                            <span class="nav-badge" id="badgeAll">0</span>
+                        </button>
+                        <button class="nav-btn" data-filter="active">
+                            <span>Active Nodes</span>
+                            <span class="nav-badge" id="badgeActive">0</span>
+                        </button>
+                        <button class="nav-btn" data-filter="completed">
+                            <span>Purged / Done</span>
+                            <span class="nav-badge" id="badgeCompleted">0</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="section-title">Categories</div>
+                    <div class="nav-links">
+                        <button class="nav-btn" data-category="Neural-Net">
+                            <span>Neural-Net</span>
+                        </button>
+                        <button class="nav-btn" data-category="Quantum">
+                            <span>Quantum Engine</span>
+                        </button>
+                        <button class="nav-btn" data-category="Cybernetics">
+                            <span>Cybernetics</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Add Task Form -->
+                <form class="task-form" id="taskForm">
+                    <div class="section-title">Inject New Task</div>
+                    <input type="text" class="cyber-input" id="taskInput" placeholder="Enter task designation..." required autocomplete="off">
+                    <select class="cyber-select" id="taskCategory">
+                        <option value="Neural-Net">Neural-Net</option>
+                        <option value="Quantum">Quantum Engine</option>
+                        <option value="Cybernetics">Cybernetics</option>
+                    </select>
+                    <select class="cyber-select" id="taskPriority">
+                        <option value="medium">Priority: Medium</option>
+                        <option value="high">Priority: High (Danger)</option>
+                        <option value="low">Priority: Low</option>
+                    </select>
+                    <button type="submit" class="cyber-btn">+ Initialize Node</button>
+                </form>
+            </aside>
+
+            <!-- Main Workspace: Task Feed -->
+            <main class="main-workspace">
+                <div class="workspace-header">
+                    <div class="workspace-title">
+                        <h2 id="workspaceTitleHeading">ACTIVE PROTOCOLS</h2>
+                        <p id="workspaceSubHeading">Real-time neural wireframe task synchronization active.</p>
+                    </div>
+                </div>
+                <div class="task-list" id="taskList">
+                    <!-- Dynamic Task Nodes injected here -->
+                </div>
+            </main>
+
+            <!-- Right Panel: HUD Analytics & Metrics -->
+            <aside class="analytics-panel">
+                <div class="section-title">Daily HUD Progress</div>
+                
+                <div class="hud-ring-container">
+                    <svg viewBox="0 0 180 180">
+                        <defs>
+                            <linearGradient id="neonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#00f0ff" />
+                                <stop offset="100%" stop-color="#00ffd5" />
+                            </linearGradient>
+                        </defs>
+                        <circle class="hud-ring-bg" cx="90" cy="90" r="80"></circle>
+                        <circle class="hud-ring-progress" id="hudProgressRing" cx="90" cy="90" r="80"></circle>
+                    </svg>
+                    <div class="hud-ring-center">
+                        <div class="hud-percentage" id="hudPercentage">0%</div>
+                        <div class="hud-label">OPTIMIZED</div>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-box-value" id="statTotal">0</div>
+                        <div class="stat-box-label">Total Nodes</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value" id="statCompleted">0</div>
+                        <div class="stat-box-label">Dissolved</div>
+                    </div>
+                </div>
+
+                <div class="system-audio-toggle" id="audioToggleBtn">
+                    <span>SYNTH AUDIO ENGINE</span>
+                    <div class="audio-status" id="audioStatusText">OFF</div>
+                </div>
+            </aside>
+
+        </div>
     </div>
-    <h1 class="orbitron text-xl sm:text-2xl font-bold tracking-wider text-slate-100 uppercase">
-      Tactile Holographic Hardware Calculator
-    </h1>
-    <p class="text-xs text-slate-400 mt-1">
-      Mid-Air HUD Projection • Clear Mechanical Switches • Cyber-Green Backlighting
-    </p>
-  </div>
 
-  <!-- Hardware Device Unit -->
-  <div class="relative w-full max-w-md sm:max-w-lg flex flex-col items-center">
+    <!-- Application Logic & Three.js Style Custom Canvas Engine -->
+    <script>
+        /* ==========================================
+           1. WEB AUDIO API SYNTHESIZER
+           ========================================== */
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = false;
+            }
 
-    <!-- FLOATING HOLOGRAPHIC HUD -->
-    <div class="relative w-11/12 holo-screen rounded-2xl p-5 mb-3 flex flex-col justify-between h-48 sm:h-52 z-20">
-      <div class="flex items-center justify-between text-[11px] text-cyan-400/80 tracking-widest orbitron">
-        <div class="flex items-center space-x-2">
-          <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-          <span>OPTICAL_HUD // 8K-RES</span>
-        </div>
-        <div id="hud-status" class="text-cyan-300 font-mono text-[10px]">RAD: RADIAN | MEM: 0</div>
-      </div>
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+                this.enabled = !this.enabled;
+                return this.enabled;
+            }
 
-      <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-40 overflow-hidden">
-        <canvas id="waveCanvas" width="400" height="100" class="w-full h-24"></canvas>
-      </div>
+            playBeep(freq = 440, type = 'sine', duration = 0.1, gainVal = 0.05) {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    
+                    gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
 
-      <div class="relative z-10 flex flex-col items-end justify-end w-full">
-        <div id="formula-history" class="text-xs text-cyan-400/60 font-mono tracking-wider h-5 truncate max-w-full">
-          // Ready. Enter expression
-        </div>
-        <div id="main-display" class="orbitron text-3xl sm:text-4xl font-black text-cyan-300 holo-glow tracking-wider truncate max-w-full mt-1">
-          0
-        </div>
-      </div>
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
 
-      <div class="flex items-center justify-between text-[10px] text-cyan-400/70 border-t border-cyan-500/20 pt-2">
-        <span>F_LOC: 34.218 NHz</span>
-        <span class="font-mono text-cyan-300/80">MAT_PBR: POLYCARBONATE / IOR 1.586</span>
-      </div>
-    </div>
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e) {
+                    console.error("Audio trigger failed", e);
+                }
+            }
 
-    <!-- Projector Emitter Base Beams -->
-    <div class="w-3/4 h-2 bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-80 blur-xs mb-1"></div>
+            playClick() {
+                this.playBeep(800, 'triangle', 0.05, 0.03);
+            }
 
-    <!-- PHYSICAL CHASSIS & KEYPAD DECK -->
-    <div class="relative w-full rounded-3xl carbon-fiber border-2 border-slate-800 p-6 shadow-2xl shadow-cyan-950/40">
-      <div class="absolute top-3 left-3 w-3 h-3 rounded-full brass-accent border border-black/40"></div>
-      <div class="absolute top-3 right-3 w-3 h-3 rounded-full brass-accent border border-black/40"></div>
-      <div class="absolute bottom-3 left-3 w-3 h-3 rounded-full brass-accent border border-black/40"></div>
-      <div class="absolute bottom-3 right-3 w-3 h-3 rounded-full brass-accent border border-black/40"></div>
+            playComplete() {
+                if (!this.enabled || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.exponentialRampToValueAtTime(1046.50, now + 0.15); // C6
 
-      <div class="absolute -right-4 top-24 w-6 h-20 bg-gradient-to-r from-amber-600 via-amber-400 to-amber-700 rounded-r-lg border border-slate-900 shadow-lg cursor-pointer flex flex-col justify-around py-1.5 px-0.5" id="rotary-dial" title="Tactile Rotary Dial">
-        <div class="w-full h-1 bg-black/60 rounded"></div>
-        <div class="w-full h-1 bg-black/60 rounded"></div>
-        <div class="w-full h-1 bg-black/60 rounded"></div>
-        <div class="w-full h-1 bg-black/60 rounded"></div>
-      </div>
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
 
-      <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-800/80 text-xs text-slate-400 font-mono">
-        <div class="flex items-center space-x-2">
-          <div class="w-2.5 h-2.5 rounded-sm brass-accent"></div>
-          <span class="text-slate-300 font-semibold tracking-wider">SYNTRA MARK-XIV</span>
-        </div>
-        <div class="flex items-center space-x-3 text-[11px]">
-          <span class="text-emerald-400 green-glow font-bold">CLEAR MX-SWITCHES</span>
-          <span class="text-slate-500">•</span>
-          <span class="text-slate-400">PBR CALC</span>
-        </div>
-      </div>
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            }
 
-      <!-- KEYPAD MATRIX -->
-      <div class="grid grid-cols-5 gap-2.5 sm:gap-3 text-sm">
-        <button class="mech-switch rounded-xl p-3 text-emerald-300 font-semibold text-xs" onclick="inputFunc('sin')">sin</button>
-        <button class="mech-switch rounded-xl p-3 text-emerald-300 font-semibold text-xs" onclick="inputFunc('cos')">cos</button>
-        <button class="mech-switch rounded-xl p-3 text-emerald-300 font-semibold text-xs" onclick="inputFunc('tan')">tan</button>
-        <button class="mech-switch rounded-xl p-3 text-amber-400 font-semibold text-xs" onclick="clearAll()">AC</button>
-        <button class="mech-switch rounded-xl p-3 text-amber-400 font-semibold text-xs" onclick="deleteChar()">DEL</button>
+            playAdd() {
+                if (!this.enabled || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.linearRampToValueAtTime(600, now + 0.1);
 
-        <button class="mech-switch rounded-xl p-3 text-emerald-300 font-semibold text-xs" onclick="inputFunc('sqrt')">√</button>
-        <button class="mech-switch rounded-xl p-3 text-emerald-300 font-semibold text-xs" onclick="inputFunc('log')">log</button>
-        <button class="mech-switch rounded-xl p-3 text-emerald-300 font-semibold text-xs" onclick="inputChar('(')">(</button>
-        <button class="mech-switch rounded-xl p-3 text-emerald-300 font-semibold text-xs" onclick="inputChar(')')">)</button>
-        <button class="mech-switch rounded-xl p-3 text-cyan-300 font-bold" onclick="inputChar('/')">÷</button>
+                gain.gain.setValueAtTime(0.04, now);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
 
-        <button class="mech-switch rounded-xl p-3 text-emerald-300 font-semibold text-xs" onclick="inputFunc('pow')">xʸ</button>
-        <button class="mech-switch rounded-xl p-3.5 text-white font-bold" onclick="inputChar('7')">7</button>
-        <button class="mech-switch rounded-xl p-3.5 text-white font-bold" onclick="inputChar('8')">8</button>
-        <button class="mech-switch rounded-xl p-3.5 text-white font-bold" onclick="inputChar('9')">9</button>
-        <button class="mech-switch rounded-xl p-3 text-cyan-300 font-bold" onclick="inputChar('*')">×</button>
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            }
+        }
 
-        <button class="mech-switch rounded-xl p-3 text-emerald-300 font-semibold text-xs" onclick="inputConst('pi')">π</button>
-        <button class="mech-switch rounded-xl p-3.5 text-white font-bold" onclick="inputChar('4')">4</button>
-        <button class="mech-switch rounded-xl p-3.5 text-white font-bold" onclick="inputChar('5')">5</button>
-        <button class="mech-switch rounded-xl p-3.5 text-white font-bold" onclick="inputChar('6')">6</button>
-        <button class="mech-switch rounded-xl p-3 text-cyan-300 font-bold" onclick="inputChar('-')">-</button>
+        const soundSystem = new SoundEngine();
 
-        <button class="mech-switch rounded-xl p-3 text-emerald-300 font-semibold text-xs" onclick="inputConst('e')">e</button>
-        <button class="mech-switch rounded-xl p-3.5 text-white font-bold" onclick="inputChar('1')">1</button>
-        <button class="mech-switch rounded-xl p-3.5 text-white font-bold" onclick="inputChar('2')">2</button>
-        <button class="mech-switch rounded-xl p-3.5 text-white font-bold" onclick="inputChar('3')">3</button>
-        <button class="mech-switch rounded-xl p-3 text-cyan-300 font-bold" onclick="inputChar('+')">+</button>
-
-        <button class="mech-switch rounded-xl p-3 text-emerald-300 font-semibold text-xs" onclick="toggleRad()">RAD</button>
-        <button class="mech-switch rounded-xl p-3.5 text-white font-bold" onclick="inputChar('0')">0</button>
-        <button class="mech-switch rounded-xl p-3.5 text-white font-bold" onclick="inputChar('.')">.</button>
-        <button class="mech-switch rounded-xl p-3 text-cyan-300 font-bold" onclick="inputChar('%')">%</button>
-        <button class="mech-switch rounded-xl p-3.5 bg-cyan-950/80 border-cyan-400 text-cyan-200 font-black orbitron text-base" onclick="evaluateExpr()">=</button>
-      </div>
-
-      <div class="mt-5 pt-3 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-500 font-mono">
-        <span>CHASSIS: ANODIZED MATTE CARBON</span>
-        <span class="text-emerald-400 font-semibold">SYNTHETIC SOUND: ACTIVE</span>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    let audioCtx = null;
-    function playClickSound(freq = 600, duration = 0.035) {
-      try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + duration);
-        gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + duration);
-      } catch (e) {}
-    }
-
-    let expression = '';
-    let isRadian = true;
-    const mainDisplay = document.getElementById('main-display');
-    const formulaHistory = document.getElementById('formula-history');
-    const hudStatus = document.getElementById('hud-status');
-
-    function updateDisplay() {
-      if (!expression) {
-        mainDisplay.innerText = '0';
-        formulaHistory.innerText = '// Ready. Enter expression';
-      } else {
-        mainDisplay.innerText = expression;
-        formulaHistory.innerText = expression;
-      }
-    }
-
-    function inputChar(char) {
-      playClickSound(750, 0.04);
-      expression += char;
-      updateDisplay();
-    }
-
-    function inputFunc(fn) {
-      playClickSound(850, 0.045);
-      if (fn === 'sin') expression += 'sin(';
-      else if (fn === 'cos') expression += 'cos(';
-      else if (fn === 'tan') expression += 'tan(';
-      else if (fn === 'sqrt') expression += 'sqrt(';
-      else if (fn === 'log') expression += 'log(';
-      else if (fn === 'pow') expression += '^';
-      updateDisplay();
-    }
-
-    function inputConst(c) {
-      playClickSound(700, 0.04);
-      if (c === 'pi') expression += '3.14159265';
-      else if (c === 'e') expression += '2.71828182';
-      updateDisplay();
-    }
-
-    function clearAll() {
-      playClickSound(400, 0.06);
-      expression = '';
-      updateDisplay();
-    }
-
-    function deleteChar() {
-      playClickSound(500, 0.035);
-      expression = expression.slice(0, -1);
-      updateDisplay();
-    }
-
-    function toggleRad() {
-      playClickSound(900, 0.05);
-      isRadian = !isRadian;
-      hudStatus.innerText = (isRadian ? 'RAD: RADIAN' : 'DEG: DEGREE') + ' | MEM: 0';
-    }
-
-    function evaluateExpr() {
-      playClickSound(1000, 0.08);
-      if (!expression) return;
-      try {
-        let sanitized = expression
-          .replace(/\^/g, '**')
-          .replace(/sin\(/g, isRadian ? 'Math.sin(' : 'Math.sin((Math.PI/180)*')
-          .replace(/cos\(/g, isRadian ? 'Math.cos(' : 'Math.cos((Math.PI/180)*')
-          .replace(/tan\(/g, isRadian ? 'Math.tan(' : 'Math.tan((Math.PI/180)*')
-          .replace(/sqrt\(/g, 'Math.sqrt(')
-          .replace(/log\(/g, 'Math.log10(');
-
-        const result = Function('"use strict"; return (' + sanitized + ')')();
-        formulaHistory.innerText = expression + ' =';
-        expression = String(Number(result.toFixed(8)));
-        mainDisplay.innerText = expression;
-      } catch (err) {
-        mainDisplay.innerText = 'SYNTAX_ERR';
-        formulaHistory.innerText = '// Computation Failed';
-        setTimeout(() => { expression = ''; updateDisplay(); }, 1500);
-      }
-    }
-
-    const canvas = document.getElementById('waveCanvas');
-    const ctx = canvas.getContext('2d');
-    let step = 0;
-    function drawWave() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.strokeStyle = 'rgba(0, 217, 255, 0.7)';
-      for (let x = 0; x < canvas.width; x++) {
-        const y = Math.sin((x + step) * 0.04) * 18 + Math.cos((x + step * 0.8) * 0.02) * 12 + canvas.height / 2;
-        if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.strokeStyle = 'rgba(57, 255, 20, 0.4)';
-      for (let x = 0; x < canvas.width; x += 3) {
-        const y = Math.cos((x - step * 0.7) * 0.05) * 14 + canvas.height / 2;
-        if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-      step += 1.5;
-      requestAnimationFrame(drawWave);
-    }
-    drawWave();
-
-    const dial = document.getElementById('rotary-dial');
-    let dialAngle = 0;
-    dial.addEventListener('click', () => {
-      dialAngle += 30;
-      dial.style.transform = `rotate(${dialAngle}deg)`;
-      playClickSound(1200, 0.02);
-    });
-
-    window.addEventListener('keydown', (e) => {
-      if (e.key >= '0' && e.key <= '9') inputChar(e.key);
-      else if (['+', '-', '*', '/', '(', ')', '.'].includes(e.key)) inputChar(e.key);
-      else if (e.key === 'Enter') evaluateExpr();
-      else if (e.key === 'Backspace') deleteChar();
-      else if (e.key === 'Escape') clearAll();
-    });
-  </script>
-</body>
-</html>
+        /* ==========================================
+           2. 3D

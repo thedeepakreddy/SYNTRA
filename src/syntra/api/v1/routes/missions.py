@@ -377,25 +377,26 @@ async def _execute_mission_stages(mission_id: UUID, org_id: UUID) -> None:
                     artifact_type = ArtifactType.ARCHITECTURE_SPEC
 
                 elif role in ["backend_engineer", "frontend_engineer"]:
-                    model_name = "gemini-2.5-flash"
+                    model_name = "gemini-3.5-flash-lite"
                     app_html = None
                     if has_gemini:
                         prompt = (
                             f"You are the Lead Full-Stack & Frontend Engineer in SYNTRA.\n"
-                            f"Build the COMPLETE, working, interactive application for this mission:\n"
+                            f"Build the COMPLETE, working, interactive web application tailored EXACTLY to this mission:\n"
                             f"Objective: {mission.objective}\n"
                             f"PRD Acceptance Criteria:\n"
                             + "\n".join(f"- {c}" for c in prd_criteria) + "\n\n"
                             f"Requirements:\n"
                             f"1. Produce complete, working, production-grade, self-contained HTML5/CSS/JavaScript single-page application code.\n"
                             f"2. Ensure all UI components, buttons, inputs, business logic, calculations, animations, and interactivity are 100% implemented.\n"
-                            f"3. Return ONLY the complete HTML5 document starting with <!DOCTYPE html>."
+                            f"3. Do NOT default to a calculator or generic stub. Build the EXACT interface and functionality requested in the objective.\n"
+                            f"4. Return ONLY the complete HTML5 document starting with <!DOCTYPE html>."
                         )
                         try:
                             req = ModelRequest(
                                 model=model_name,
                                 messages=[LLMMessage(role=MessageRole.USER, content=prompt)],
-                                max_tokens=4096,
+                                max_tokens=8192,
                             )
                             resp = await gemini.generate_with_tools(req)
                             raw_code = resp.text.strip()
@@ -405,6 +406,7 @@ async def _execute_mission_stages(mission_id: UUID, org_id: UUID) -> None:
                                 raw_code = raw_code.split("```", 1)[1].split("```", 1)[0].strip()
                             if "<!DOCTYPE html>" in raw_code or "<html" in raw_code:
                                 app_html = raw_code
+                                logger.info("Live model generated genuine application (%d bytes) for mission %s", len(app_html), mission_id)
                             prompt_tokens = (
                                 getattr(resp.usage, "prompt_tokens", 450) if getattr(resp, "usage", None) else 450
                             )
@@ -418,6 +420,7 @@ async def _execute_mission_stages(mission_id: UUID, org_id: UUID) -> None:
                     if not app_html:
                         from syntra.agents.app_synthesizer import synthesize_application
                         app_html = synthesize_application(mission.objective, prd_criteria)
+                        logger.info("Synthesizer generated application (%d bytes) for mission %s", len(app_html), mission_id)
                         prompt_tokens = 400
                         comp_tokens = 600
 
