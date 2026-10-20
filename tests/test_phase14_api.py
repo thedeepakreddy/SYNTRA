@@ -252,6 +252,36 @@ async def test_missions_list_endpoint(p14_client):
 
 
 @pytest.mark.asyncio
+async def test_mission_run_endpoint(p14_client):
+    """Verify POST /v1/missions/{id}/run transitions state to EXECUTING and creates DAG tasks."""
+    client = p14_client["client"]
+    token = p14_client["dev_token"]
+    session_factory = p14_client["session_factory"]
+    org_id = p14_client["org_id"]
+
+    mission_id = uuid.uuid4()
+    async with SqlAlchemyUnitOfWork(session_factory) as uow:
+        p = await uow.projects.create(uuid.uuid4(), org_id, "Run Test Project", "run-test-project")
+        await uow.missions.create(mission_id, org_id, p.id, "Test Objective for Run")
+        await uow.commit()
+
+    resp = await client.post(f"/v1/missions/{mission_id}/run", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["state"] == "RUNNING"
+
+    # Verify task plan and DAG were generated
+    tasks_resp = await client.get(f"/v1/missions/{mission_id}/tasks", headers={"Authorization": f"Bearer {token}"})
+    assert tasks_resp.status_code == 200
+    tasks_data = tasks_resp.json()
+    assert len(tasks_data["items"]) == 7
+    roles = [t["assigned_role"] for t in tasks_data["items"]]
+    assert "product_manager" in roles
+    assert "software_architect" in roles
+    assert "backend_engineer" in roles
+
+
+@pytest.mark.asyncio
 async def test_benchmarks_endpoints(p14_client, tmp_path, monkeypatch):
     """Verify GET /v1/benchmarks and GET /v1/benchmarks/{run_id}."""
     import syntra.api.v1.routes.benchmarks as bm_module

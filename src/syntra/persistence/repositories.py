@@ -203,6 +203,27 @@ class MissionRepository:
 
         return await self.get_by_id_for_org(mission_id=mission_id, org_id=org_id)
 
+    async def update_state(
+        self,
+        mission_id: UUID,
+        org_id: UUID,
+        new_state: MissionState,
+    ) -> MissionModel:
+        stmt = (
+            update(MissionModel)
+            .where(
+                MissionModel.id == mission_id,
+                MissionModel.org_id == org_id,
+            )
+            .values(
+                state=new_state,
+                version=MissionModel.version + 1,
+                updated_at=datetime.now(UTC),
+            )
+        )
+        await self.session.execute(stmt)
+        return await self.get_by_id_for_org(mission_id=mission_id, org_id=org_id)
+
     async def list_for_org(
         self,
         org_id: UUID,

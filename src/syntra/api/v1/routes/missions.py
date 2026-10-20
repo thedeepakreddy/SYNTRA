@@ -28,6 +28,7 @@ from syntra.api.v1.schemas import (
     UsageRecordResponse,
 )
 from syntra.core.config import AutonomyMode
+from syntra.domain.entities import AgentRole, MissionState
 from syntra.domain.exceptions import DuplicateIdempotencyKeyError
 from syntra.persistence.unit_of_work import SqlAlchemyUnitOfWork
 
@@ -172,6 +173,140 @@ async def get_mission(
         version=mission.version,
         created_at=mission.created_at,
         updated_at=mission.updated_at,
+    )
+
+
+@router.post("/{mission_id}/run", response_model=MissionResponse)
+async def run_mission(
+    mission_id: UUID,
+    user: Annotated[AuthenticatedUser, Depends(require_developer_or_above)],
+    uow: Annotated[SqlAlchemyUnitOfWork, Depends(get_uow)],
+) -> MissionResponse:
+    """Trigger autonomous multi-agent execution for a mission."""
+    mission = await uow.missions.get_by_id_for_org(mission_id, user.org_id)
+
+    # Transition state to RUNNING
+    updated = await uow.missions.update_state(mission.id, user.org_id, MissionState.RUNNING)
+
+    # Check for or create TaskPlan & initial DAG
+    plan = await uow.tasks.get_plan_for_mission(mission_id, user.org_id)
+    if not plan:
+        plan_id = uuid4()
+        plan = await uow.tasks.create_plan(plan_id, mission_id)
+
+        # Persona-aligned task sequence
+        t1 = await uow.tasks.create_task(
+            task_id=uuid4(),
+            task_plan_id=plan.id,
+            mission_id=mission.id,
+            org_id=user.org_id,
+            identifier="TASK-001-PRD",
+            title="Author Product Requirements Document (PRD)",
+            description=f"Decompose '{mission.objective[:80]}' into Given-When-Then acceptance criteria and non-functional requirements.",
+            assigned_role=AgentRole.PRODUCT_MANAGER.value,
+            priority=1,
+        )
+        t2 = await uow.tasks.create_task(
+            task_id=uuid4(),
+            task_plan_id=plan.id,
+            mission_id=mission.id,
+            org_id=user.org_id,
+            identifier="TASK-002-ARCH",
+            title="Formulate Component Architecture & Contracts",
+            description="Produce Architecture Decision Records (ADRs) and define API schemas.",
+            assigned_role=AgentRole.SOFTWARE_ARCHITECT.value,
+            priority=2,
+        )
+        await uow.tasks.add_dependency(t2.id, t1.id)
+
+        t3 = await uow.tasks.create_task(
+            task_id=uuid4(),
+            task_plan_id=plan.id,
+            mission_id=mission.id,
+            org_id=user.org_id,
+            identifier="TASK-003-PLAN",
+            title="Decompose cycle-free Task DAG",
+            description="Engineering Manager schedules execution order and verifies budget allocation.",
+            assigned_role=AgentRole.ENGINEERING_MANAGER.value,
+            priority=3,
+        )
+        await uow.tasks.add_dependency(t3.id, t2.id)
+
+        t4 = await uow.tasks.create_task(
+            task_id=uuid4(),
+            task_plan_id=plan.id,
+            mission_id=mission.id,
+            org_id=user.org_id,
+            identifier="TASK-004-IMPL",
+            title="Implement Core Logic & Sandbox Unit Tests",
+            description="Backend Engineer develops type-safe modules and tests in sandbox worktree.",
+            assigned_role=AgentRole.BACKEND_ENGINEER.value,
+            priority=4,
+        )
+        await uow.tasks.add_dependency(t4.id, t3.id)
+
+        t5 = await uow.tasks.create_task(
+            task_id=uuid4(),
+            task_plan_id=plan.id,
+            mission_id=mission.id,
+            org_id=user.org_id,
+            identifier="TASK-005-QA",
+            title="Execute Acceptance & Regression Test Suite",
+            description="Independent QA Engineer tests against PRD Given-When-Then criteria.",
+            assigned_role=AgentRole.QA_ENGINEER.value,
+            priority=5,
+        )
+        await uow.tasks.add_dependency(t5.id, t4.id)
+
+        t6 = await uow.tasks.create_task(
+            task_id=uuid4(),
+            task_plan_id=plan.id,
+            mission_id=mission.id,
+            org_id=user.org_id,
+            identifier="TASK-006-SEC",
+            title="Static & Dynamic Security Audit",
+            description="Security Reviewer audits patch diff for secret leakage and vulnerabilities.",
+            assigned_role=AgentRole.SECURITY_REVIEWER.value,
+            priority=6,
+        )
+        await uow.tasks.add_dependency(t6.id, t5.id)
+
+        t7 = await uow.tasks.create_task(
+            task_id=uuid4(),
+            task_plan_id=plan.id,
+            mission_id=mission.id,
+            org_id=user.org_id,
+            identifier="TASK-007-REV",
+            title="Peer Code Review & Final Sign-Off",
+            description="Code Reviewer verifies acceptance criteria satisfaction without scope creep.",
+            assigned_role=AgentRole.CODE_REVIEWER.value,
+            priority=7,
+        )
+        await uow.tasks.add_dependency(t7.id, t6.id)
+
+    # Emit audit events
+    uow.publish_event(
+        event_type="mission.started",
+        payload={
+            "mission_id": str(mission.id),
+            "org_id": str(mission.org_id),
+            "state": updated.state,
+            "objective": mission.objective,
+        },
+    )
+    await uow.commit()
+
+    return MissionResponse(
+        id=updated.id,
+        org_id=updated.org_id,
+        project_id=updated.project_id,
+        title=None,
+        objective=updated.objective,
+        state=updated.state,
+        autonomy_mode=AutonomyMode(updated.autonomy_mode),
+        version=updated.version,
+        created_at=updated.created_at,
+        updated_at=updated.updated_at,
     )
 
 

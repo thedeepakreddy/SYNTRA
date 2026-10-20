@@ -22,6 +22,8 @@ import {
   History,
   AlertCircle,
   Clock,
+  Play,
+  RotateCw,
 } from 'lucide-react';
 
 export const MissionsPage: React.FC = () => {
@@ -55,6 +57,25 @@ export const MissionsPage: React.FC = () => {
   });
   const [createSubmitting, setCreateSubmitting] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+
+  // Run Mission state
+  const [runningId, setRunningId] = useState<string | null>(null);
+
+  const handleRunMission = async (missionId: string) => {
+    try {
+      setRunningId(missionId);
+      const updated = await apiClient.runMission(missionId);
+      setMissions((prev) => prev.map((m) => (m.id === missionId ? updated : m)));
+      if (selectedMission && selectedMission.id === missionId) {
+        setSelectedMission(updated);
+        await openMissionDetails(updated);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to start mission execution.');
+    } finally {
+      setRunningId(null);
+    }
+  };
 
   const loadInitialData = async () => {
     try {
@@ -244,15 +265,40 @@ export const MissionsPage: React.FC = () => {
                     <p className="text-xs text-slate-400 line-clamp-1">{m.objective}</p>
                   </div>
 
-                  <div className="flex items-center space-x-4 text-[11px] text-slate-500 font-mono">
-                    <span className="inline-flex items-center space-x-1">
-                      <Clock className="h-3 w-3 text-slate-400" />
-                      <span>v{m.version}</span>
-                    </span>
-                    <span className="inline-flex items-center space-x-1">
-                      <Calendar className="h-3 w-3 text-slate-400" />
-                      <span>{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    </span>
+                  <div className="flex items-center space-x-3">
+                    {(m.state === 'DRAFT' || m.state === 'PENDING') && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRunMission(m.id);
+                        }}
+                        disabled={runningId === m.id}
+                        className="inline-flex items-center space-x-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-emerald-500 disabled:opacity-50 transition-colors"
+                      >
+                        <Play className="h-3 w-3 fill-current" />
+                        <span>{runningId === m.id ? 'Starting...' : 'Run Mission'}</span>
+                      </button>
+                    )}
+                    {(m.state === 'RUNNING' || m.state === 'EXECUTING' || m.state === 'PLANNING') && (
+                      <span className="inline-flex items-center space-x-1.5 rounded-full bg-indigo-950/80 px-2.5 py-1 text-[11px] font-medium text-indigo-300 border border-indigo-700/60">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                        </span>
+                        <span>Running</span>
+                      </span>
+                    )}
+
+                    <div className="flex items-center space-x-3 text-[11px] text-slate-500 font-mono">
+                      <span className="inline-flex items-center space-x-1">
+                        <Clock className="h-3 w-3 text-slate-400" />
+                        <span>v{m.version}</span>
+                      </span>
+                      <span className="inline-flex items-center space-x-1">
+                        <Calendar className="h-3 w-3 text-slate-400" />
+                        <span>{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -270,12 +316,37 @@ export const MissionsPage: React.FC = () => {
         >
           <div className="space-y-4">
             {/* Header info */}
-            <div className="rounded-lg bg-slate-950 p-3 border border-slate-800">
+            <div className="rounded-lg bg-slate-950 p-4 border border-slate-800">
               <div className="flex items-center justify-between">
-                <StatusBadge status={selectedMission.state} />
-                <span className="text-xs font-mono text-slate-400">{selectedMission.autonomy_mode}</span>
+                <div className="flex items-center space-x-2">
+                  <StatusBadge status={selectedMission.state} />
+                  <span className="text-xs font-mono text-slate-400 px-2 py-0.5 rounded bg-slate-900 border border-slate-800">
+                    {selectedMission.autonomy_mode}
+                  </span>
+                </div>
+
+                {/* Header Action Controls */}
+                <div className="flex items-center space-x-2">
+                  {(selectedMission.state === 'DRAFT' || selectedMission.state === 'PENDING') && (
+                    <button
+                      onClick={() => handleRunMission(selectedMission.id)}
+                      disabled={runningId === selectedMission.id}
+                      className="inline-flex items-center space-x-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow hover:bg-emerald-500 disabled:opacity-50 transition-colors"
+                    >
+                      <Play className="h-3.5 w-3.5 fill-current" />
+                      <span>{runningId === selectedMission.id ? 'Starting Pipeline...' : 'Run Mission'}</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => openMissionDetails(selectedMission)}
+                    className="p-1.5 text-slate-400 hover:text-slate-200 rounded hover:bg-slate-800 transition-colors"
+                    title="Refresh mission state & tasks"
+                  >
+                    <RotateCw className={`h-4 w-4 ${detailLoading ? 'animate-spin text-indigo-400' : ''}`} />
+                  </button>
+                </div>
               </div>
-              <p className="mt-2 text-xs font-medium text-slate-200">{selectedMission.objective}</p>
+              <p className="mt-2.5 text-xs font-medium text-slate-200">{selectedMission.objective}</p>
             </div>
 
             {/* Sub-tabs */}

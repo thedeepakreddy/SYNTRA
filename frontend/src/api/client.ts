@@ -198,6 +198,12 @@ class SyntraApiClient {
     });
   }
 
+  public async runMission(missionId: string): Promise<Mission> {
+    return this.request<Mission>(`/missions/${missionId}/run`, {
+      method: 'POST',
+    });
+  }
+
   public async getMissionPlan(missionId: string): Promise<PlanResponse> {
     return this.request<PlanResponse>(`/missions/${missionId}/plan`);
   }

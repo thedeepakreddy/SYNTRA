@@ -43,11 +43,18 @@ export interface CreateProjectPayload {
 }
 
 export type MissionState =
+  | 'DRAFT'
   | 'PENDING'
   | 'PLANNING'
   | 'PLANNED'
+  | 'READY'
+  | 'RUNNING'
   | 'EXECUTING'
+  | 'PAUSED'
+  | 'REPLANNING'
+  | 'VERIFYING'
   | 'AWAITING_APPROVAL'
+  | 'AWAITING_DELIVERY_APPROVAL'
   | 'COMPLETED'
   | 'FAILED'
   | 'CANCELLED';
