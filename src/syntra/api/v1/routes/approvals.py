@@ -19,6 +19,13 @@ from syntra.persistence.unit_of_work import SqlAlchemyUnitOfWork
 router = APIRouter(prefix="/approvals", tags=["Approvals"])
 
 
+def _parse_action_type(val: str) -> ApprovalActionType:
+    try:
+        return ApprovalActionType(val)
+    except ValueError:
+        return ApprovalActionType.DEPLOYMENT
+
+
 @router.get("", response_model=list[ApprovalResponse])
 async def list_approvals(
     user: Annotated[AuthenticatedUser, Depends(require_viewer_or_above)],
@@ -33,7 +40,7 @@ async def list_approvals(
             id=a.id,
             mission_id=a.mission_id,
             org_id=a.org_id,
-            action_type=ApprovalActionType(a.action_type),
+            action_type=_parse_action_type(a.action_type),
             target_resource=a.target_resource,
             mission_version=a.mission_version,
             decision=a.decision,
@@ -60,7 +67,7 @@ async def get_approval(
         id=a.id,
         mission_id=a.mission_id,
         org_id=a.org_id,
-        action_type=ApprovalActionType(a.action_type),
+        action_type=_parse_action_type(a.action_type),
         target_resource=a.target_resource,
         mission_version=a.mission_version,
         decision=a.decision,

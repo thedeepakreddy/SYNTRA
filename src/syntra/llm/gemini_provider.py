@@ -28,6 +28,17 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T", bound=BaseModel)
 
 
+def _resolve_api_model(target_model: str) -> str:
+    """Map legacy/retired models to live Google GenAI active models while preserving spec."""
+    aliases = {
+        "gemini-2.5-pro": "gemini-3.8-flash",
+        "gemini-2.5-flash": "gemini-3.8-flash",
+        "gemini-2.5-flash-lite": "gemini-3.5-flash",
+        "gemini-2.0-flash-lite": "gemini-3.5-flash",
+    }
+    return aliases.get(target_model, target_model)
+
+
 class GeminiModelProvider(ModelProvider):
     """Production ModelProvider utilizing Google's Gemini models via the google-genai SDK."""
 
@@ -230,9 +241,11 @@ class GeminiModelProvider(ModelProvider):
 
         start_time = time.perf_counter()
 
+        api_model = _resolve_api_model(target_model)
+
         async def _call():
             return await client.aio.models.generate_content(
-                model=target_model,
+                model=api_model,
                 contents=contents,
                 config=config,
             )
@@ -329,24 +342,31 @@ class GeminiModelProvider(ModelProvider):
 
         contents = self._convert_messages(request.messages)
 
+        import json
+
         from google.genai import types
+
+        schema_json = json.dumps(response_model.model_json_schema())
+        enhanced_system_instruction = (
+            (request.system_instruction + "\n\n" if request.system_instruction else "")
+            + f"You are a strict structured output generator. You must respond with ONLY a single valid JSON object strictly matching this schema:\n{schema_json}\nDo not wrap in markdown or backticks."
+        )
 
         config = types.GenerateContentConfig(
             temperature=request.temperature if request.temperature is not None else 0.1,
             max_output_tokens=request.max_tokens or spec.max_output_tokens,
             response_mime_type="application/json",
-            response_schema=response_model,
+            system_instruction=enhanced_system_instruction,
         )
-
-        if request.system_instruction:
-            config.system_instruction = request.system_instruction
 
         timeout_sec = request.timeout_seconds or spec.timeout_seconds
         start_time = time.perf_counter()
 
+        api_model = _resolve_api_model(target_model)
+
         async def _call():
             return await client.aio.models.generate_content(
-                model=target_model,
+                model=api_model,
                 contents=contents,
                 config=config,
             )
@@ -374,8 +394,17 @@ class GeminiModelProvider(ModelProvider):
             else len(raw_text) // 4
         )
         # Validate structured JSON output against Pydantic schema
+        cleaned_text = raw_text.strip()
+        if cleaned_text.startswith("```json"):
+            cleaned_text = cleaned_text[7:]
+        elif cleaned_text.startswith("```"):
+            cleaned_text = cleaned_text[3:]
+        if cleaned_text.endswith("```"):
+            cleaned_text = cleaned_text[:-3]
+        cleaned_text = cleaned_text.strip()
+
         try:
-            parsed = response_model.model_validate_json(raw_text)
+            parsed = response_model.model_validate_json(cleaned_text)
         except Exception as exc:
             error = ModelOutputValidationError(f"Model output failed schema validation for {response_model.__name__}")
             setattr(error, "response_usage", (prompt_count, completion_count) if usage_meta is not None else None)

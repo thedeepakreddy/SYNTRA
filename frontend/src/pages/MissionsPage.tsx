@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiClient } from '../api/client';
 import {
+  Artifact,
   AutonomyMode,
   CreateMissionPayload,
   Mission,
@@ -24,6 +25,9 @@ import {
   Clock,
   Play,
   RotateCw,
+  FileText,
+  Loader2,
+  CheckCircle2,
 } from 'lucide-react';
 
 export const MissionsPage: React.FC = () => {
@@ -38,9 +42,10 @@ export const MissionsPage: React.FC = () => {
 
   // Mission Detail modal/drawer state
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
-  const [detailTab, setDetailTab] = useState<'tasks' | 'events' | 'usage'>('tasks');
+  const [detailTab, setDetailTab] = useState<'tasks' | 'events' | 'artifacts' | 'usage'>('tasks');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<MissionEvent[]>([]);
+  const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [usage, setUsage] = useState<MissionUsageSummary | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
@@ -101,25 +106,57 @@ export const MissionsPage: React.FC = () => {
     loadInitialData();
   }, []);
 
-  const openMissionDetails = async (mission: Mission) => {
+  const openMissionDetails = async (mission: Mission, silent = false) => {
     setSelectedMission(mission);
-    setDetailTab('tasks');
     try {
-      setDetailLoading(true);
-      const [tasksRes, eventsRes, usageRes] = await Promise.allSettled([
+      if (!silent) setDetailLoading(true);
+      const [tasksRes, eventsRes, artifactsRes, usageRes] = await Promise.allSettled([
         apiClient.getMissionTasks(mission.id),
         apiClient.getMissionEvents(mission.id),
+        apiClient.getMissionArtifacts(mission.id),
         apiClient.getMissionUsage(mission.id),
       ]);
       if (tasksRes.status === 'fulfilled') setTasks(tasksRes.value.items || []);
       if (eventsRes.status === 'fulfilled') setEvents(eventsRes.value.items || []);
+      if (artifactsRes.status === 'fulfilled') setArtifacts(artifactsRes.value.items || []);
       if (usageRes.status === 'fulfilled') setUsage(usageRes.value);
     } catch {
       // handled gracefully
     } finally {
-      setDetailLoading(false);
+      if (!silent) setDetailLoading(false);
     }
   };
+
+  // Live polling: automatically refresh mission details every 2.5s while drawer is open
+  useEffect(() => {
+    if (!selectedMission) return;
+    const interval = setInterval(async () => {
+      try {
+        const fresh = await apiClient.getMission(selectedMission.id);
+        setSelectedMission(fresh);
+        setMissions((prev) => prev.map((m) => (m.id === fresh.id ? fresh : m)));
+        await openMissionDetails(fresh, true);
+      } catch {
+        // silent poll
+      }
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [selectedMission?.id]);
+
+  // Live polling: refresh missions list if any mission is running
+  useEffect(() => {
+    const hasRunning = missions.some((m) => m.state === 'RUNNING' || m.state === 'PENDING');
+    if (!hasRunning) return;
+    const interval = setInterval(async () => {
+      try {
+        const freshList = await apiClient.getMissions();
+        setMissions(freshList);
+      } catch {
+        // silent
+      }
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [missions]);
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -327,6 +364,12 @@ export const MissionsPage: React.FC = () => {
 
                 {/* Header Action Controls */}
                 <div className="flex items-center space-x-2">
+                  {selectedMission.state === 'RUNNING' && (
+                    <span className="inline-flex items-center space-x-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 text-xs font-semibold text-amber-400">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Pipeline Running...</span>
+                    </span>
+                  )}
                   {(selectedMission.state === 'DRAFT' || selectedMission.state === 'PENDING') && (
                     <button
                       onClick={() => handleRunMission(selectedMission.id)}
@@ -374,6 +417,17 @@ export const MissionsPage: React.FC = () => {
                 <span>Events ({events.length})</span>
               </button>
               <button
+                onClick={() => setDetailTab('artifacts')}
+                className={`flex items-center space-x-1.5 py-2 px-3 border-b-2 font-medium ${
+                  detailTab === 'artifacts'
+                    ? 'border-indigo-500 text-indigo-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <FileText className="h-3.5 w-3.5" />
+                <span>Artifacts ({artifacts.length})</span>
+              </button>
+              <button
                 onClick={() => setDetailTab('usage')}
                 className={`flex items-center space-x-1.5 py-2 px-3 border-b-2 font-medium ${
                   detailTab === 'usage'
@@ -397,7 +451,15 @@ export const MissionsPage: React.FC = () => {
                   tasks.map((t) => (
                     <div key={t.id} className="rounded border border-slate-800 bg-slate-950 p-2.5 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className="font-semibold text-slate-200">{t.title}</span>
+                        <div className="flex items-center space-x-2">
+                          {t.state === 'IN_PROGRESS' && (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-400" />
+                          )}
+                          {t.state === 'COMPLETED' && (
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                          )}
+                          <span className="font-semibold text-slate-200">{t.title}</span>
+                        </div>
                         <StatusBadge status={t.state} />
                       </div>
                       <div className="mt-1 flex items-center space-x-2 text-[11px] text-slate-400">
@@ -410,6 +472,32 @@ export const MissionsPage: React.FC = () => {
                             <span>Deps: {t.dependencies.length}</span>
                           </>
                         )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            ) : detailTab === 'artifacts' ? (
+              <div className="max-h-80 overflow-y-auto space-y-2 pr-1 text-xs">
+                {artifacts.length === 0 ? (
+                  <p className="p-4 text-center text-xs text-slate-500">No artifacts produced yet for this mission.</p>
+                ) : (
+                  artifacts.map((a) => (
+                    <div key={a.id} className="rounded border border-slate-800 bg-slate-950 p-2.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <FileText className="h-4 w-4 text-indigo-400" />
+                          <span className="font-semibold text-slate-200 truncate max-w-[280px]">{a.path}</span>
+                        </div>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-950/60 text-indigo-300 border border-indigo-800/40">
+                          {a.artifact_type}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+                        <span className="truncate max-w-[280px]" title={a.content_hash}>
+                          SHA: {a.content_hash ? a.content_hash.slice(0, 16) + '...' : 'pending'}
+                        </span>
+                        <span>{new Date(a.created_at).toLocaleTimeString()}</span>
                       </div>
                     </div>
                   ))
