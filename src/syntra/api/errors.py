@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from syntra.core.logging import correlation_id_ctx
+from syntra.core.redactor import SecretRedactor
 from syntra.domain.exceptions import (
     ApprovalExpiredError,
     ApprovalReplayError,
@@ -34,17 +35,21 @@ def create_problem_response(
     problem_type: str = "about:blank",
     extra: dict[str, Any] | None = None,
 ) -> JSONResponse:
-    """Construct an RFC 7807 compliant JSONResponse."""
+    """Construct an RFC 7807 compliant JSONResponse with fail-closed secret redaction."""
+    clean_title = SecretRedactor.redact(title) if isinstance(title, str) else str(title)
+    clean_detail = SecretRedactor.redact_deep_json_or_text(detail) if isinstance(detail, str) else str(detail)
     payload: dict[str, Any] = {
         "type": problem_type,
-        "title": title,
+        "title": clean_title,
         "status": status_code,
-        "detail": detail,
+        "detail": clean_detail,
         "instance": instance,
         "correlation_id": correlation_id_ctx.get(),
     }
     if extra:
-        payload.update(extra)
+        redacted_extra = SecretRedactor.redact_sensitive_data(extra)
+        if isinstance(redacted_extra, dict):
+            payload.update(redacted_extra)
 
     return JSONResponse(
         status_code=status_code,

@@ -56,6 +56,11 @@ class SandboxRunner:
         if env:
             merged_env.update(env)
         safe_env = CommandSafetyValidator.sanitize_env(merged_env)
+        logger.debug(
+            "Executing subprocess in '%s' with sanitized env: %s",
+            self.cwd,
+            CommandSafetyValidator.mask_env_for_logs(safe_env),
+        )
 
         # Notify start
         await get_event_bus().publish(

@@ -48,10 +48,12 @@ from syntra.domain.entities import (
 )
 from syntra.domain.exceptions import (
     ArtifactOwnershipError,
+    AuditLoggingError,
     BudgetExceededError,
     CrossMissionDependencyError,
     CrossTenantAccessError,
     CyclicDependencyError,
+    DeliveryBlockedError,
     DomainError,
     DuplicateIdempotencyKeyError,
     InvalidStateTransitionError,
@@ -130,4 +132,6 @@ __all__ = [
     "OptimisticLockError",
     "BudgetExceededError",
     "DuplicateIdempotencyKeyError",
+    "AuditLoggingError",
+    "DeliveryBlockedError",
 ]

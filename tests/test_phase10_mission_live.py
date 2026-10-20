@@ -3,17 +3,20 @@
 This is explicitly MOCK_VERIFIED model evidence, not Gemini autonomy evidence.
 """
 
+import hashlib
 import json
 import os
 import shutil
 import subprocess
 from decimal import Decimal
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
+from test_phase10_evidence import assert_mission_evidence
 
 from syntra.agents.engineering_worker import EngineeringSandboxWorker
+from syntra.agents.handoffs import ReviewAttestation
 from syntra.agents.operational import AgentRegistry, QAProposal, SecurityReport
 from syntra.domain.entities import AgentRole, MembershipRole, MissionState, TaskState
 from syntra.llm.mock_provider import MockModelProvider
@@ -251,6 +254,23 @@ async def test_complete_engineering_mission_real_infrastructure(
         provider = GeminiModelProvider()
     else:
         provider = queued_provider(rework)
+        planning_outputs = provider._responses_queue[:3]
+        provider._responses_queue[:3] = [
+            item
+            for index, output in enumerate(planning_outputs)
+            for item in (
+                {
+                    "tool_calls": [
+                        {
+                            "id": f"planning-inspection-{index}",
+                            "name": "syntra.read_file",
+                            "arguments": {"relative_path": "app.py"},
+                        }
+                    ]
+                },
+                output.model_dump_json(),
+            )
+        ]
     runtime = ModelRuntime(provider, skills)
     service = EngineeringMissionService(
         uow_factory,
@@ -259,6 +279,7 @@ async def test_complete_engineering_mission_real_infrastructure(
         [ACCEPTANCE],
         repository_context="FastAPI app.py and tests/, no persistence changes; use one backend task estimated at 100000 tokens with backend-api-development skill",
         integration_repository_path=phase10_fixture_repo,
+        planning_repository_path=phase10_fixture_repo,
         integration_config=ContainerConfig(image="syntra-phase10-acceptance:local"),
     )
     pool, saver = await CheckpointerFactory.create_postgres_checkpointer(checkpoint_url)
@@ -275,6 +296,13 @@ async def test_complete_engineering_mission_real_infrastructure(
                 uow=uow,
             )
         approval = started["__interrupt__"][0].value
+        if not live:
+            first = provider.call_history[0]
+            assert first.agent_role == "product_manager"
+            assert "syntra.read_file" in {tool.name for tool in first.tools}
+            assert not {"syntra.write_file", "syntra.run_command"} & {tool.name for tool in first.tools}
+            second = provider.call_history[1]
+            assert any("if quantity < 0" in msg.content for msg in second.messages if msg.role.value == "tool")
         assert approval["action_type"] == "TASK_PLAN_APPROVAL" and started["plan_digest"] in approval["target_resource"]
         # Simulate a restart with the same durable PostgreSQL checkpoints.
         await pool.close()
@@ -327,11 +355,55 @@ async def test_complete_engineering_mission_real_infrastructure(
         assert final["domain_state"] == MissionState.COMPLETED.value
         if not live:
             assert ("debugging_specialist" in [r.agent_role for r in provider.call_history]) == rework
+            for role in ("product_manager", "software_architect", "engineering_manager"):
+                requests = [r for r in provider.call_history if r.agent_role == role]
+                assert len(requests) == 2
+                assert any("if quantity < 0:" in m.content for m in requests[-1].messages if m.role.value == "tool")
+                assert all(
+                    {t.name for t in r.tools}
+                    <= {"syntra.read_file", "syntra.list_directory", "syntra.workspace_search"}
+                    for r in requests
+                )
         async with uow_factory() as uow:
             artifacts, _, _ = await uow.artifacts.list_for_mission(mission, org, limit=100)
             bodies = [await read_artifact(uow, artifact_id=a.id, org_id=org, mission_id=mission) for a, _ in artifacts]
             assert any("+    if quantity <= 0:" in body for body in bodies)
             assert any('"stage": "BASELINE"' in body and '"stage": "QA"' in body for body in bodies)
+            if not live:
+                patch = assert_mission_evidence(
+                    bodies, rework=rework, baseline_command=ACCEPTANCE, expected_attempt_id=attempt.id
+                )
+                integration_body = await read_artifact(
+                    uow, artifact_id=UUID(final["integration_artifact_id"]), org_id=org, mission_id=mission
+                )
+                assert hashlib.sha256(integration_body.encode()).hexdigest() == final["delivery_digest"]
+                integration = json.loads(integration_body)
+                assert integration["mode"] == "CLEAN_SANDBOX"
+                assert len(integration["selected_results"]) == 1
+                selected = integration["selected_results"][0]
+                assert selected["attempt_id"] == str(attempt.id)
+                assert selected["patch_hash"] == hashlib.sha256(patch.encode()).hexdigest()
+                assert len(selected["review_artifact_ids"]) == 3
+                final_reviews = [
+                    ReviewAttestation.model_validate_json(
+                        await read_artifact(uow, artifact_id=UUID(review_id), org_id=org, mission_id=mission)
+                    )
+                    for review_id in selected["review_artifact_ids"]
+                ]
+                assert {r.reviewer_role for r in final_reviews} == {
+                    AgentRole.QA_ENGINEER,
+                    AgentRole.CODE_REVIEWER,
+                    AgentRole.SECURITY_REVIEWER,
+                }
+                assert len({r.implementation_invocation_id for r in final_reviews}) == 1
+                assert all(
+                    r.task_attempt_id == attempt.id and r.input_patch_hash == selected["patch_hash"] and r.accepted()
+                    for r in final_reviews
+                )
+                assert integration["integration_commands"] and all(
+                    c["exit_code"] == 0 and not c["timed_out"] and not c["output_truncated"]
+                    for c in integration["integration_commands"]
+                )
             budget = await uow.budgets.get_for_mission(mission)
             assert budget.reserved_tokens == 0 and budget.consumed_tokens > 0
             if export := os.environ.get("SYNTRA_PHASE10_EVIDENCE_DIR"):

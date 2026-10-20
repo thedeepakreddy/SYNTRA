@@ -71,3 +71,12 @@ def render_diff(diff_content: str, filename: str = "diff") -> None:
     """Render syntax highlighted diff in terminal."""
     syntax = Syntax(diff_content, "diff", theme="monokai", line_numbers=True)
     console.print(Panel(syntax, title=f"Proposed Changes: {filename}", border_style="yellow"))
+
+
+def render_error(message: str, title: str = "Error") -> None:
+    """Render error panel with fail-closed secret redaction."""
+    from syntra.core.redactor import SecretRedactor
+
+    clean_title = SecretRedactor.redact(title)
+    clean_message = SecretRedactor.redact_deep_json_or_text(message)
+    console.print(Panel(f"[bold red]{clean_message}[/bold red]", title=clean_title, border_style="red"))

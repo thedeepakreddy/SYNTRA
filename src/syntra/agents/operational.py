@@ -6,7 +6,7 @@ import asyncio
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Literal, cast
+from typing import Any, Literal, cast
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from pydantic import BaseModel, ConfigDict, Field, SerializeAsAny
@@ -258,6 +258,8 @@ class SpecialistAgent:
         tools: list[ToolDefinition] | None = None,
         usage_meter: RuntimeUsage | None = None,
         cancellation: asyncio.Event | None = None,
+        retrieved_memories: list[Any] | str | None = None,
+        uow: Any | None = None,
     ) -> AgentResult:
         definition = self.registry.get(invocation.role)
         if invocation.deadline.tzinfo is None:
@@ -310,6 +312,8 @@ class SpecialistAgent:
             model_name=definition.model_id,
             prompt_version=definition.prompt_version,
             usage_meter=meter,
+            uow=uow,
+            retrieved_memories=retrieved_memories,
         )
         if cancellation:
             from contextlib import suppress

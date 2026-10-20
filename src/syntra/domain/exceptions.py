@@ -107,3 +107,57 @@ class UnauthorizedApprovalError(ApprovalError):
     """Raised when a user lacks required organizational permissions to resolve an approval."""
 
     pass
+
+
+class SecretRedactionError(DomainError):
+    """Raised when secret redaction fails or encounters unredactable sensitive data."""
+
+    pass
+
+
+class MemoryValidationError(DomainError):
+    """Raised when memory record attributes violate domain constraints or scopes."""
+
+    pass
+
+
+class VerificationError(DomainError):
+    """Base exception for independent verification and security assurance failures."""
+
+    pass
+
+
+class ProtectedTestViolationError(VerificationError):
+    """Raised when an untrusted patch attempts to mutate, delete, or bypass protected test suites."""
+
+    pass
+
+
+class VerificationFailedError(VerificationError):
+    """Raised when independent verification execution produces non-zero exit codes or defects."""
+
+    pass
+
+
+class VerificationTamperedError(VerificationError):
+    """Raised when a verification record digest or signature fails cryptographic integrity verification."""
+
+    pass
+
+
+class HermeticExecutionError(VerificationError):
+    """Raised when hermetic sandbox preparation, patching, or test runner fails to execute safely."""
+
+    pass
+
+
+class DeliveryBlockedError(VerificationError):
+    """Raised when release/delivery gate is blocked due to missing, failed, or mismatched verification evidence."""
+
+    pass
+
+
+class AuditLoggingError(DomainError):
+    """Raised when structured security audit event emission fails (fail-closed requirement)."""
+
+    pass

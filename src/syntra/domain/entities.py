@@ -3,6 +3,7 @@
 Zero framework or database dependencies.
 """
 
+import math
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -140,7 +141,12 @@ class AuthPolicyType(str, Enum):
 class VerificationStatus(str, Enum):
     UNVERIFIED = "UNVERIFIED"
     VERIFIED = "VERIFIED"
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    PASSED = "PASSED"
     FAILED = "FAILED"
+    ERROR = "ERROR"
+    QUARANTINED = "QUARANTINED"
 
 
 class ActionClassification(str, Enum):
@@ -632,6 +638,215 @@ class MemoryRecord:
     provenance_task_id: UUID | None = None
     confidence_score: Decimal = field(default_factory=lambda: Decimal("1.00"))
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    embedding: list[float] | None = None
+
+    def validate(self) -> None:
+        """Validate required fields, supported scopes, provenance, confidence score, and optional embedding."""
+        from syntra.domain.exceptions import MemoryValidationError
+
+        if not isinstance(self.id, UUID):
+            raise MemoryValidationError(f"Invalid memory id: expected UUID, got {type(self.id).__name__}.")
+
+        if not isinstance(self.org_id, UUID):
+            raise MemoryValidationError("Organization ID (org_id) is mandatory and must be a UUID.")
+
+        if not isinstance(self.scope, MemoryScope):
+            try:
+                self.scope = MemoryScope(self.scope)
+            except ValueError:
+                raise MemoryValidationError(
+                    f"Unsupported memory scope: {self.scope}. Must be one of {[s.value for s in MemoryScope]}."
+                )
+
+        if self.scope == MemoryScope.PROJECT and self.project_id is None:
+            raise MemoryValidationError("project_id is mandatory when memory scope is PROJECT.")
+
+        if self.scope == MemoryScope.EXECUTION and self.provenance_task_id is None:
+            raise MemoryValidationError("provenance_task_id is mandatory when memory scope is EXECUTION.")
+
+        if not self.category or not self.category.strip():
+            raise MemoryValidationError("category must be a non-empty string.")
+
+        if len(self.category) > 100:
+            raise MemoryValidationError("category cannot exceed 100 characters.")
+
+        if not self.lesson_key or not self.lesson_key.strip():
+            raise MemoryValidationError("lesson_key must be a non-empty string.")
+
+        if len(self.lesson_key) > 255:
+            raise MemoryValidationError("lesson_key cannot exceed 255 characters.")
+
+        if not self.content or not self.content.strip():
+            raise MemoryValidationError("content must be a non-empty string.")
+
+        if not isinstance(self.confidence_score, Decimal):
+            try:
+                self.confidence_score = Decimal(str(self.confidence_score))
+            except Exception:
+                raise MemoryValidationError("confidence_score must be a valid Decimal value.")
+
+        if self.confidence_score < Decimal("0.00") or self.confidence_score > Decimal("1.00"):
+            raise MemoryValidationError(f"confidence_score must be between 0.00 and 1.00, got {self.confidence_score}.")
+
+        if self.embedding is not None:
+            if not isinstance(self.embedding, list):
+                raise MemoryValidationError(f"embedding must be a list of floats, got {type(self.embedding).__name__}.")
+            if len(self.embedding) == 0:
+                raise MemoryValidationError("embedding list cannot be empty when provided.")
+            for idx, val in enumerate(self.embedding):
+                if not isinstance(val, (int, float)) or not math.isfinite(val):
+                    raise MemoryValidationError(
+                        f"embedding element at index {idx} must be a finite float, got {val!r}."
+                    )
+
+    @property
+    def is_deprecated(self) -> bool:
+        """Return True if this memory record has been deprecated."""
+        return self.confidence_score <= Decimal("0.00")
+
+    def deprecate(self) -> None:
+        """Deprecate this memory record by setting its confidence score to 0.00."""
+        self.confidence_score = Decimal("0.00")
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize memory record to a dictionary."""
+        return {
+            "id": self.id,
+            "org_id": self.org_id,
+            "project_id": self.project_id,
+            "scope": self.scope.value if isinstance(self.scope, MemoryScope) else str(self.scope),
+            "category": self.category,
+            "lesson_key": self.lesson_key,
+            "content": self.content,
+            "provenance_task_id": self.provenance_task_id,
+            "confidence_score": str(self.confidence_score),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "embedding": self.embedding,
+        }
+
+    @classmethod
+    def from_model(cls, model: Any) -> "MemoryRecord":
+        """Construct a domain MemoryRecord from a persistence model."""
+        return cls(
+            id=model.id,
+            org_id=model.org_id,
+            project_id=model.project_id,
+            scope=model.scope if isinstance(model.scope, MemoryScope) else MemoryScope(model.scope),
+            category=model.category,
+            lesson_key=model.lesson_key,
+            content=model.content,
+            provenance_task_id=model.provenance_task_id,
+            confidence_score=Decimal(str(model.confidence_score)),
+            created_at=model.created_at,
+            embedding=getattr(model, "embedding", None),
+        )
+
+
+@dataclass
+class MemoryFeedbackEvent:
+    id: UUID = field(default_factory=uuid4)
+    org_id: UUID = field(default_factory=uuid4)
+    memory_id: UUID = field(default_factory=uuid4)
+    outcome: str = ""
+    confidence_delta: Decimal = field(default_factory=lambda: Decimal("0.00"))
+    resulting_confidence_score: Decimal = field(default_factory=lambda: Decimal("1.00"))
+    idempotency_key: str = ""
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    project_id: UUID | None = None
+    task_id: UUID | None = None
+    attempt_id: UUID | None = None
+    source_artifact_id: UUID | None = None
+    source_artifact_version: str | None = None
+    source_artifact_checksum: str | None = None
+    patch_hash: str | None = None
+
+    def validate(self) -> None:
+        from syntra.domain.exceptions import MemoryValidationError
+
+        if not isinstance(self.id, UUID):
+            raise MemoryValidationError(f"Invalid feedback id: expected UUID, got {type(self.id).__name__}.")
+        if not isinstance(self.org_id, UUID):
+            raise MemoryValidationError("Organization ID (org_id) is mandatory and must be a UUID.")
+        if not isinstance(self.memory_id, UUID):
+            raise MemoryValidationError("Memory ID (memory_id) is mandatory and must be a UUID.")
+        if not self.outcome or not self.outcome.strip():
+            raise MemoryValidationError("outcome must be a non-empty string.")
+        if not self.idempotency_key or not self.idempotency_key.strip():
+            raise MemoryValidationError("idempotency_key must be a non-empty string.")
+        if not isinstance(self.confidence_delta, Decimal):
+            try:
+                self.confidence_delta = Decimal(str(self.confidence_delta))
+            except Exception:
+                raise MemoryValidationError("confidence_delta must be a valid Decimal value.")
+        if not isinstance(self.resulting_confidence_score, Decimal):
+            try:
+                self.resulting_confidence_score = Decimal(str(self.resulting_confidence_score))
+            except Exception:
+                raise MemoryValidationError("resulting_confidence_score must be a valid Decimal value.")
+        if self.resulting_confidence_score < Decimal("0.00") or self.resulting_confidence_score > Decimal("1.00"):
+            raise MemoryValidationError(
+                f"resulting_confidence_score must be between 0.00 and 1.00, got {self.resulting_confidence_score}."
+            )
+
+
+@dataclass
+class VerificationEvidence:
+    exit_code: int
+    execution_duration_ms: int
+    stdout_digest: str
+    stderr_digest: str
+    tests_passed: int = 0
+    tests_failed: int = 0
+    tests_skipped: int = 0
+    tests_errored: int = 0
+    raw_stdout: str = ""
+    raw_stderr: str = ""
+    error_message: str | None = None
+
+
+@dataclass
+class VerificationRecord:
+    id: UUID
+    org_id: UUID
+    mission_id: UUID
+    task_id: UUID
+    task_attempt_id: UUID
+    plan_version: int
+    status: VerificationStatus
+    clean_base_commit: str
+    patch_hash: str
+    protected_test_suite_hash: str
+    evidence: VerificationEvidence
+    verifier_signature: str
+    trace_id: str | None = None
+    span_id: str | None = None
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+    def validate(self) -> None:
+        from syntra.domain.exceptions import VerificationError
+
+        if not isinstance(self.id, UUID):
+            raise VerificationError("id must be a UUID")
+        if not isinstance(self.org_id, UUID):
+            raise VerificationError("org_id must be a UUID")
+        if not isinstance(self.mission_id, UUID):
+            raise VerificationError("mission_id must be a UUID")
+        if not isinstance(self.task_id, UUID):
+            raise VerificationError("task_id must be a UUID")
+        if not isinstance(self.task_attempt_id, UUID):
+            raise VerificationError("task_attempt_id must be a UUID")
+        if not self.patch_hash or len(self.patch_hash) != 64:
+            raise VerificationError("patch_hash must be a 64-character SHA-256 hexadecimal string")
+        if not self.verifier_signature or len(self.verifier_signature) != 64:
+            raise VerificationError("verifier_signature must be a 64-character SHA-256 hexadecimal string")
+
+
+@dataclass
+class ProtectedTestSuiteManifest:
+    manifest_hash: str
+    protected_files: dict[str, str] = field(default_factory=dict)
+    registered_patterns: list[str] = field(default_factory=list)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 # ==============================================================================
@@ -680,3 +895,57 @@ def verify_action_digest(
         expires_at=expires_at,
     )
     return hmac.compare_digest(computed, expected_digest)
+
+
+def compute_verification_signature(
+    secret: str,
+    org_id: UUID,
+    mission_id: UUID,
+    task_id: UUID,
+    task_attempt_id: UUID,
+    patch_hash: str,
+    clean_base_commit: str,
+    protected_test_suite_hash: str,
+    status: str,
+    exit_code: int,
+) -> str:
+    """Compute HMAC-SHA256 signature over canonical independent verification outcome."""
+    import hashlib
+    import hmac
+
+    canonical_payload = (
+        f"{org_id}:{mission_id}:{task_id}:{task_attempt_id}:{patch_hash}:"
+        f"{clean_base_commit}:{protected_test_suite_hash}:{status}:{exit_code}"
+    )
+    return hmac.new(secret.encode("utf-8"), canonical_payload.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def verify_verification_signature(
+    secret: str,
+    expected_signature: str,
+    org_id: UUID,
+    mission_id: UUID,
+    task_id: UUID,
+    task_attempt_id: UUID,
+    patch_hash: str,
+    clean_base_commit: str,
+    protected_test_suite_hash: str,
+    status: str,
+    exit_code: int,
+) -> bool:
+    """Verify HMAC-SHA256 signature over canonical verification record."""
+    import hmac
+
+    computed = compute_verification_signature(
+        secret=secret,
+        org_id=org_id,
+        mission_id=mission_id,
+        task_id=task_id,
+        task_attempt_id=task_attempt_id,
+        patch_hash=patch_hash,
+        clean_base_commit=clean_base_commit,
+        protected_test_suite_hash=protected_test_suite_hash,
+        status=status,
+        exit_code=exit_code,
+    )
+    return hmac.compare_digest(computed, expected_signature)

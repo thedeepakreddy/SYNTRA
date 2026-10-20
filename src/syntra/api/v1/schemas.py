@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import Any, Generic, TypeVar
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from syntra.core.config import AutonomyMode
 from syntra.domain.entities import (
@@ -60,7 +60,7 @@ class ProjectResponse(BaseModel):
 
 class CreateMissionRequest(BaseModel):
     project_id: UUID
-    title: str = Field(..., min_length=1, max_length=200)
+    title: str | None = Field(default=None, max_length=200)
     objective: str = Field(..., min_length=1, max_length=5000)
     autonomy_mode: AutonomyMode = AutonomyMode.SEMI_AUTONOMOUS
     budget_max_cost_usd: Decimal = Field(default=Decimal("100.00"), ge=Decimal("0.00"))
@@ -68,6 +68,16 @@ class CreateMissionRequest(BaseModel):
     max_concurrency: int = Field(default=4, ge=1, le=16)
     max_task_attempts: int = Field(default=3, ge=1, le=10)
     max_duration_seconds: int = Field(default=86400, ge=60)
+
+    @field_validator("title", mode="before")
+    @classmethod
+    def clean_title(cls, v: Any) -> str | None:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            cleaned = v.strip()
+            return cleaned if cleaned else None
+        return str(v)
 
 
 class MissionResponse(BaseModel):

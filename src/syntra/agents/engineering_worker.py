@@ -11,7 +11,12 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
-from syntra.agents.handoffs import persist_review_attestation, persist_role_result, require_independent_review
+from syntra.agents.handoffs import (
+    ReviewAttestation,
+    persist_review_attestation,
+    persist_role_result,
+    require_independent_review,
+)
 from syntra.agents.operational import AgentInvocation, AgentRegistry, QAProposal, SpecialistAgent
 from syntra.agents.sandbox_gateway import build_sandbox_gateway, load_capabilities
 from syntra.domain.entities import AgentRole, ArtifactType, AttemptState
@@ -19,7 +24,7 @@ from syntra.llm.context import redact_secrets
 from syntra.llm.provider import ModelProvider
 from syntra.llm.runtime import ModelRuntime, RuntimeUsage
 from syntra.llm.schemas import AgentFinalResult
-from syntra.persistence.artifact_store import store_artifact
+from syntra.persistence.artifact_store import read_artifact, store_artifact
 from syntra.sandbox.container import ContainerSandboxInstance
 from syntra.sandbox.tool_bridge import SandboxToolBridge
 from syntra.sandbox.worker_bridge import SandboxWorkerAdapter
@@ -87,6 +92,22 @@ class EngineeringSandboxWorker(SandboxWorkerAdapter):
         previous_failure: str | None = None
         role = AgentRole(dispatch.assigned_role)
         status, error = AttemptState.FAILED, None
+        injected_memory_ids: list[UUID] = []
+
+        from syntra.observability.audit_logger import (
+            AUDIT_DIFF_GENERATED,
+            AUDIT_REVIEW_ATTESTATION_ISSUED,
+            AUDIT_TASK_ATTEMPT_STARTED,
+            get_audit_logger,
+        )
+
+        get_audit_logger().log_event(
+            AUDIT_TASK_ATTEMPT_STARTED,
+            mission_id=dispatch.mission_id,
+            task_id=dispatch.task_id,
+            agent_role=role.value,
+            payload={"attempt_number": dispatch.attempt_number},
+        )
 
         async def invoke(
             target: AgentRole,
@@ -110,6 +131,7 @@ class EngineeringSandboxWorker(SandboxWorkerAdapter):
                 max_cost_usd=meter.max_cost_usd,
             )
             # Database grants are intersected with the static role ceiling, never created by an LLM.
+            worker_retrieved_memories: str | None = None
             async with self.uow_factory() as uow:
                 grants = await load_capabilities(uow, inv)
                 from fnmatch import fnmatchcase
@@ -139,6 +161,89 @@ class EngineeringSandboxWorker(SandboxWorkerAdapter):
                 inv = inv.model_copy(
                     update={"approved_capabilities": caps, "skill_ids": spec.required_skills if target == role else []}
                 )
+
+                # Precompute tenant-safe memory context for implementing worker
+                if target == role and hasattr(uow, "memories"):
+                    try:
+                        from syntra.domain.entities import MemoryScope
+                        from syntra.domain.memory_service import MemoryRetrievalService
+
+                        auth_project_id: UUID | None = None
+                        if hasattr(uow, "missions"):
+                            try:
+                                mission_entity = await uow.missions.get_by_id_for_org(
+                                    dispatch.mission_id, dispatch.org_id
+                                )
+                                if mission_entity:
+                                    auth_project_id = mission_entity.project_id
+                            except Exception:
+                                auth_project_id = None
+
+                        query_context = f"{spec.objective} {dispatch.specification}".strip()
+                        mem_service = MemoryRetrievalService()
+                        candidate_records = []
+
+                        # 1. Authoritative EXECUTION scope for the current task
+                        if dispatch.task_id:
+                            exec_records = await mem_service.retrieve_memories(
+                                uow=uow,
+                                org_id=dispatch.org_id,
+                                query_text=query_context,
+                                scope=MemoryScope.EXECUTION,
+                                provenance_task_id=dispatch.task_id,
+                                limit=5,
+                            )
+                            candidate_records.extend(exec_records)
+
+                        # 2. Authoritative PROJECT scope
+                        if auth_project_id:
+                            proj_records = await mem_service.retrieve_memories(
+                                uow=uow,
+                                org_id=dispatch.org_id,
+                                query_text=query_context,
+                                scope=MemoryScope.PROJECT,
+                                project_id=auth_project_id,
+                                limit=5,
+                            )
+                            candidate_records.extend(proj_records)
+
+                        # 3. ORGANIZATION scope fallback/broadening
+                        org_records = await mem_service.retrieve_memories(
+                            uow=uow,
+                            org_id=dispatch.org_id,
+                            query_text=query_context,
+                            scope=MemoryScope.ORGANIZATION,
+                            limit=5,
+                        )
+                        candidate_records.extend(org_records)
+
+                        # Deduplicate by record ID preserving priority order
+                        seen_ids = set()
+                        retrieved_records = []
+                        for rec, score in candidate_records:
+                            if rec.id not in seen_ids:
+                                seen_ids.add(rec.id)
+                                retrieved_records.append((rec, score))
+
+                        if retrieved_records:
+                            worker_retrieved_memories = mem_service.format_for_context(retrieved_records[:5])
+                            for rec, _ in retrieved_records[:5]:
+                                if rec.id not in injected_memory_ids:
+                                    injected_memory_ids.append(rec.id)
+                    except Exception as exc:
+                        worker_retrieved_memories = None
+                        await uow.outbox.record_event(
+                            dispatch.org_id,
+                            "MEMORY_RETRIEVAL_DEGRADED",
+                            {
+                                "task_id": str(dispatch.task_id),
+                                "attempt_id": str(dispatch.task_attempt_id),
+                                "error_type": type(exc).__name__,
+                                "detail": redact_secrets(str(exc))[:200],
+                            },
+                            dispatch.mission_id,
+                        )
+
                 await uow.outbox.record_event(
                     dispatch.org_id,
                     "AGENT_STARTED",
@@ -158,9 +263,20 @@ class EngineeringSandboxWorker(SandboxWorkerAdapter):
             inv = inv.model_copy(
                 update={"objective": objective + "\nUntrusted execution evidence:\n" + redact_secrets(context)}
             )
-            result = await SpecialistAgent(self.registry, runtime).execute(
-                inv, tools=tools if use_tools else None, usage_meter=meter
-            )
+            from syntra.observability.tracer import SPAN_AGENT_REACT_LOOP, start_span
+
+            with start_span(
+                SPAN_AGENT_REACT_LOOP,
+                mission_id=str(dispatch.mission_id),
+                task_id=str(dispatch.task_id),
+                agent_role=target.value,
+            ):
+                result = await SpecialistAgent(self.registry, runtime).execute(
+                    inv,
+                    tools=tools if use_tools else None,
+                    usage_meter=meter,
+                    retrieved_memories=worker_retrieved_memories if target == role else None,
+                )
             evidence.extend(getattr(gateway, "command_evidence", []))
             if target == role and isinstance(result.output, AgentFinalResult):
                 captured_diff = await active_sandbox.get_unified_diff()
@@ -174,6 +290,14 @@ class EngineeringSandboxWorker(SandboxWorkerAdapter):
                         ],
                     }
                 )
+                if captured_diff:
+                    get_audit_logger().log_event(
+                        AUDIT_DIFF_GENERATED,
+                        mission_id=dispatch.mission_id,
+                        task_id=dispatch.task_id,
+                        agent_role=role.value,
+                        payload={"patch_hash": hashlib.sha256(captured_diff.encode()).hexdigest()},
+                    )
             evidence.append(
                 {
                     "stage": "ROLE_RESULT",
@@ -307,14 +431,132 @@ class EngineeringSandboxWorker(SandboxWorkerAdapter):
                         review_records.append((sec_inv, security, []))
                         review_context += "\nSecurity review: " + security.output.model_dump_json()
                     accepted = tests_ok and not qa.output.defects and review.status == "SUCCEEDED" and security_ok
+                    attestation_data: list[tuple[UUID, int, str, ReviewAttestation]] = []
+                    postprocessing_error: str | None = None
                     async with self.uow_factory() as uow:
                         for reviewer_inv, reviewer_result, commands in review_records:
-                            artifacts.append(
-                                await persist_review_attestation(
-                                    uow, implementing_inv, reviewer_inv, reviewer_result, actual_diff, commands
-                                )
+                            art_id = await persist_review_attestation(
+                                uow, implementing_inv, reviewer_inv, reviewer_result, actual_diff, commands
                             )
+                            artifacts.append(art_id)
+                            get_audit_logger().log_event(
+                                AUDIT_REVIEW_ATTESTATION_ISSUED,
+                                mission_id=dispatch.mission_id,
+                                task_id=dispatch.task_id,
+                                agent_role=reviewer_inv.role.value,
+                                payload={"review_artifact_id": str(art_id)},
+                            )
+                            pair = await uow.artifacts.get_by_id(art_id)
+                            version = pair[1].version if pair and pair[1] else 1
+                            checksum = pair[1].sha256_checksum if pair and pair[1] else ""
+                            body = await read_artifact(
+                                uow,
+                                artifact_id=art_id,
+                                mission_id=dispatch.mission_id,
+                                org_id=dispatch.org_id,
+                                version=version,
+                                checksum=checksum,
+                            )
+                            att_obj = ReviewAttestation.model_validate_json(body)
+                            attestation_data.append((art_id, version, checksum, att_obj))
+
+                        # Apply feedback on injected memories based on authoritative review outcome
+                        if injected_memory_ids and attestation_data:
+                            from syntra.domain.memory_service import MemoryFeedbackService
+
+                            feedback_service = MemoryFeedbackService()
+                            expected_patch = hashlib.sha256(actual_diff.encode()).hexdigest()
+                            for mem_id in injected_memory_ids:
+                                for art_id, version, checksum, att_obj in attestation_data:
+                                    try:
+                                        await feedback_service.apply_review_feedback(
+                                            uow,
+                                            org_id=dispatch.org_id,
+                                            memory_id=mem_id,
+                                            source_artifact_id=art_id,
+                                            source_artifact_version=version,
+                                            source_artifact_checksum=checksum,
+                                            expected_patch_hash=expected_patch,
+                                        )
+                                    except Exception as exc:
+                                        postprocessing_error = f"FEEDBACK_FAILED:{type(exc).__name__}"
+                                        await uow.outbox.record_event(
+                                            dispatch.org_id,
+                                            "MEMORY_POSTPROCESSING_FAILED",
+                                            {
+                                                "task_id": str(dispatch.task_id),
+                                                "attempt_id": str(dispatch.task_attempt_id),
+                                                "memory_id": str(mem_id),
+                                                "source_artifact_id": str(art_id),
+                                                "stage": "review_feedback",
+                                                "error_type": type(exc).__name__,
+                                                "detail": redact_secrets(str(exc))[:200],
+                                            },
+                                            dispatch.mission_id,
+                                        )
+                                        break
+                                if postprocessing_error:
+                                    break
+
+                        # If reviews rejected the patch, reflect failure lessons from authoritative artifacts
+                        if not accepted and attestation_data and not postprocessing_error:
+                            from syntra.domain.memory_service import FailureReflectionService
+
+                            reflection_service = FailureReflectionService()
+                            expected_patch = hashlib.sha256(actual_diff.encode()).hexdigest()
+                            for art_id, version, checksum, att_obj in attestation_data:
+                                try:
+                                    if att_obj.reviewer_role == AgentRole.QA_ENGINEER and not att_obj.accepted():
+                                        await reflection_service.reflect_from_qa_attestation(
+                                            uow,
+                                            org_id=dispatch.org_id,
+                                            source_artifact_id=art_id,
+                                            source_artifact_version=version,
+                                            source_artifact_checksum=checksum,
+                                            expected_patch_hash=expected_patch,
+                                        )
+                                    elif att_obj.reviewer_role == AgentRole.CODE_REVIEWER and not att_obj.accepted():
+                                        await reflection_service.reflect_from_review_attestation(
+                                            uow,
+                                            org_id=dispatch.org_id,
+                                            source_artifact_id=art_id,
+                                            source_artifact_version=version,
+                                            source_artifact_checksum=checksum,
+                                            expected_patch_hash=expected_patch,
+                                        )
+                                    elif (
+                                        att_obj.reviewer_role == AgentRole.SECURITY_REVIEWER and not att_obj.accepted()
+                                    ):
+                                        await reflection_service.reflect_from_security_attestation(
+                                            uow,
+                                            org_id=dispatch.org_id,
+                                            source_artifact_id=art_id,
+                                            source_artifact_version=version,
+                                            source_artifact_checksum=checksum,
+                                            expected_patch_hash=expected_patch,
+                                        )
+                                except Exception as exc:
+                                    postprocessing_error = f"REFLECTION_FAILED:{type(exc).__name__}"
+                                    await uow.outbox.record_event(
+                                        dispatch.org_id,
+                                        "MEMORY_POSTPROCESSING_FAILED",
+                                        {
+                                            "task_id": str(dispatch.task_id),
+                                            "attempt_id": str(dispatch.task_attempt_id),
+                                            "source_artifact_id": str(art_id),
+                                            "stage": "review_reflection",
+                                            "error_type": type(exc).__name__,
+                                            "detail": redact_secrets(str(exc))[:200],
+                                        },
+                                        dispatch.mission_id,
+                                    )
+                                    break
+
                         await uow.commit()
+
+                    if postprocessing_error:
+                        accepted = False
+                        raise ValueError(f"Memory postprocessing audit failed: {postprocessing_error}")
                 finally:
                     await qa_sandbox.cleanup()
                     await sandbox._run_docker("unpause", sandbox.container_name)
@@ -336,7 +578,7 @@ class EngineeringSandboxWorker(SandboxWorkerAdapter):
                 if revision >= spec.max_rework or fingerprint == previous_failure:
                     raise ValueError("Independent review failed; bounded correction attempts exhausted")
                 previous_failure = fingerprint
-                _, analysis = await invoke(
+                debug_inv, analysis = await invoke(
                     AgentRole.DEBUGGING_SPECIALIST,
                     "Analyze observed failed checks and review findings. Propose a surgical correction and regression test. Return FailureAnalysis JSON.",
                     sandbox,
@@ -346,6 +588,49 @@ class EngineeringSandboxWorker(SandboxWorkerAdapter):
                 if analysis.status != "SUCCEEDED":
                     raise ValueError("Debugging analysis failed")
                 context = review_context + "\nRoot cause analysis: " + analysis.output.model_dump_json()
+
+                # Reflect from authoritative debugging diagnostic artifact
+                async with self.uow_factory() as uow:
+                    try:
+                        diag_art_id, diag_checksum = await store_artifact(
+                            uow,
+                            org_id=dispatch.org_id,
+                            mission_id=dispatch.mission_id,
+                            task_id=dispatch.task_id,
+                            title=f"debugging_analysis:{dispatch.task_attempt_id}:{debug_inv.invocation_id}",
+                            content=analysis.output.model_dump_json(),
+                            type=ArtifactType.TEST_REPORT,
+                        )
+                        artifacts.append(diag_art_id)
+                        pair = await uow.artifacts.get_by_id(diag_art_id)
+                        diag_version = pair[1].version if pair and pair[1] else 1
+                        from syntra.domain.memory_service import FailureReflectionService
+
+                        ref_svc = FailureReflectionService()
+                        await ref_svc.reflect_from_debugging_analysis(
+                            uow,
+                            org_id=dispatch.org_id,
+                            source_artifact_id=diag_art_id,
+                            source_artifact_version=diag_version,
+                            source_artifact_checksum=diag_checksum,
+                        )
+                        await uow.commit()
+                    except Exception as exc:
+                        await uow.outbox.record_event(
+                            dispatch.org_id,
+                            "MEMORY_POSTPROCESSING_FAILED",
+                            {
+                                "task_id": str(dispatch.task_id),
+                                "attempt_id": str(dispatch.task_attempt_id),
+                                "source_artifact_id": str(diag_art_id) if "diag_art_id" in locals() else None,
+                                "stage": "debugging_reflection",
+                                "error_type": type(exc).__name__,
+                                "detail": redact_secrets(str(exc))[:200],
+                            },
+                            dispatch.mission_id,
+                        )
+                        await uow.commit()
+                        raise ValueError(f"Debugging reflection postprocessing failed: {type(exc).__name__}") from exc
         except asyncio.CancelledError:
             error = "CANCELLED: ownership or invocation was revoked; preserved usage requires settlement"
         except Exception as exc:

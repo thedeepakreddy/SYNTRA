@@ -29,6 +29,7 @@ from syntra.persistence.models import (
     TransactionalOutboxModel,
     UsageRecordModel,
     UserModel,
+    VerificationRecordModel,
     VerificationRunModel,
     WorkerLeaseModel,
 )
@@ -37,11 +38,13 @@ from syntra.persistence.repositories import (
     ArtifactRepository,
     BudgetRepository,
     IdempotencyRepository,
+    MemoryRepository,
     MissionRepository,
     OrganizationRepository,
     OutboxRepository,
     ProjectRepository,
     TaskRepository,
+    VerificationRepository,
 )
 from syntra.persistence.unit_of_work import SqlAlchemyUnitOfWork
 
@@ -64,6 +67,7 @@ __all__ = [
     "WorkerLeaseModel",
     "ArtifactModel",
     "ArtifactVersionModel",
+    "VerificationRecordModel",
     "VerificationRunModel",
     "MCPServerModel",
     "MCPToolVersionModel",
@@ -87,6 +91,8 @@ __all__ = [
     "ApprovalRepository",
     "OutboxRepository",
     "IdempotencyRepository",
+    "MemoryRepository",
+    "VerificationRepository",
     # Unit of Work
     "SqlAlchemyUnitOfWork",
 ]

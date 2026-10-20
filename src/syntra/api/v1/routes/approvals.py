@@ -8,15 +8,69 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, Response, status
 from fastapi.responses import JSONResponse
 
-from syntra.api.auth.dependencies import get_current_user, get_uow
+from syntra.api.auth.dependencies import get_current_user, get_uow, require_viewer_or_above
 from syntra.api.auth.models import AuthenticatedUser
 from syntra.api.v1.schemas import ApprovalDecisionRequest, ApprovalResponse
 from syntra.core.config import Settings, get_settings
-from syntra.domain.entities import ApprovalActionType, MembershipRole
+from syntra.domain.entities import ApprovalActionType, ApprovalDecision, MembershipRole
 from syntra.domain.exceptions import DuplicateIdempotencyKeyError, UnauthorizedApprovalError
 from syntra.persistence.unit_of_work import SqlAlchemyUnitOfWork
 
 router = APIRouter(prefix="/approvals", tags=["Approvals"])
+
+
+@router.get("", response_model=list[ApprovalResponse])
+async def list_approvals(
+    user: Annotated[AuthenticatedUser, Depends(require_viewer_or_above)],
+    uow: Annotated[SqlAlchemyUnitOfWork, Depends(get_uow)],
+    decision: ApprovalDecision | None = None,
+    limit: int = 100,
+) -> list[ApprovalResponse]:
+    """List human approval requests for the caller's organization."""
+    approvals = await uow.approvals.list_for_org(org_id=user.org_id, decision=decision, limit=limit)
+    return [
+        ApprovalResponse(
+            id=a.id,
+            mission_id=a.mission_id,
+            org_id=a.org_id,
+            action_type=ApprovalActionType(a.action_type),
+            target_resource=a.target_resource,
+            mission_version=a.mission_version,
+            decision=a.decision,
+            action_digest=a.action_digest,
+            expires_at=a.expires_at,
+            resolved_at=a.resolved_at,
+            resolved_by=a.resolved_by,
+            reason=a.feedback,
+            created_at=a.created_at,
+        )
+        for a in approvals
+    ]
+
+
+@router.get("/{approval_id}", response_model=ApprovalResponse)
+async def get_approval(
+    approval_id: UUID,
+    user: Annotated[AuthenticatedUser, Depends(require_viewer_or_above)],
+    uow: Annotated[SqlAlchemyUnitOfWork, Depends(get_uow)],
+) -> ApprovalResponse:
+    """Retrieve full details for an individual approval request."""
+    a = await uow.approvals.get_by_id_for_org(approval_id, user.org_id)
+    return ApprovalResponse(
+        id=a.id,
+        mission_id=a.mission_id,
+        org_id=a.org_id,
+        action_type=ApprovalActionType(a.action_type),
+        target_resource=a.target_resource,
+        mission_version=a.mission_version,
+        decision=a.decision,
+        action_digest=a.action_digest,
+        expires_at=a.expires_at,
+        resolved_at=a.resolved_at,
+        resolved_by=a.resolved_by,
+        reason=a.feedback,
+        created_at=a.created_at,
+    )
 
 
 def _hash_payload(data: dict[str, Any]) -> str:

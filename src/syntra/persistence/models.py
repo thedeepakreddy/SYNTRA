@@ -847,3 +847,159 @@ class MemoryRecordModel(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
+    embedding: Mapped[list[float] | None] = mapped_column(UniversalJSON, nullable=True, default=None)
+
+    def to_domain(self) -> Any:
+        """Convert persistence model to pure domain MemoryRecord."""
+        from syntra.domain.entities import MemoryRecord
+
+        return MemoryRecord(
+            id=self.id,
+            org_id=self.org_id,
+            project_id=self.project_id,
+            scope=self.scope,
+            category=self.category,
+            lesson_key=self.lesson_key,
+            content=self.content,
+            provenance_task_id=self.provenance_task_id,
+            confidence_score=self.confidence_score,
+            created_at=self.created_at,
+            embedding=self.embedding,
+        )
+
+
+class MemoryFeedbackModel(Base):
+    __tablename__ = "memory_feedback_events"
+    __table_args__ = (
+        Index("idx_memory_feedback_org_memory", "org_id", "memory_id"),
+        Index("idx_memory_feedback_task_attempt", "task_id", "attempt_id"),
+        Index("idx_memory_feedback_idempotency", "idempotency_key", unique=True),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    org_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    memory_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("memory_records.id", ondelete="CASCADE"), nullable=False
+    )
+    project_id: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=True
+    )
+    task_id: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=True
+    )
+    attempt_id: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("task_attempts.id", ondelete="CASCADE"), nullable=True
+    )
+    source_artifact_id: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("artifacts.id", ondelete="SET NULL"), nullable=True
+    )
+    source_artifact_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    source_artifact_checksum: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    patch_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    outcome: Mapped[str] = mapped_column(String(50), nullable=False)
+    confidence_delta: Mapped[Decimal] = mapped_column(Numeric(4, 2), nullable=False)
+    resulting_confidence_score: Mapped[Decimal] = mapped_column(Numeric(4, 2), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
+
+    def to_domain(self) -> Any:
+        from syntra.domain.entities import MemoryFeedbackEvent
+
+        return MemoryFeedbackEvent(
+            id=self.id,
+            org_id=self.org_id,
+            memory_id=self.memory_id,
+            outcome=self.outcome,
+            confidence_delta=self.confidence_delta,
+            resulting_confidence_score=self.resulting_confidence_score,
+            idempotency_key=self.idempotency_key,
+            created_at=self.created_at,
+            project_id=self.project_id,
+            task_id=self.task_id,
+            attempt_id=self.attempt_id,
+            source_artifact_id=self.source_artifact_id,
+            source_artifact_version=self.source_artifact_version,
+            source_artifact_checksum=self.source_artifact_checksum,
+            patch_hash=self.patch_hash,
+        )
+
+
+class VerificationRecordModel(Base):
+    __tablename__ = "verification_records"
+    __table_args__ = (
+        Index("idx_verification_records_org_mission", "org_id", "mission_id"),
+        Index("idx_verification_records_attempt", "task_attempt_id"),
+        Index("idx_verification_records_patch_hash", "patch_hash"),
+        Index("idx_verification_records_status", "status"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    org_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    mission_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("missions.id", ondelete="CASCADE"), nullable=False
+    )
+    task_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False
+    )
+    task_attempt_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("task_attempts.id", ondelete="CASCADE"), nullable=False
+    )
+    plan_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="PASSED", nullable=False)
+    clean_base_commit: Mapped[str] = mapped_column(String(64), nullable=False)
+    patch_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    protected_test_suite_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    exit_code: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    execution_duration_ms: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    stdout_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    stderr_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    evidence_json: Mapped[str] = mapped_column(Text, nullable=False)
+    verifier_signature: Mapped[str] = mapped_column(String(64), nullable=False)
+    trace_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    span_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
+
+    def to_domain(self) -> Any:
+        import json
+
+        from syntra.domain.entities import VerificationEvidence, VerificationRecord, VerificationStatus
+
+        data = json.loads(self.evidence_json) if self.evidence_json else {}
+        evidence = VerificationEvidence(
+            exit_code=self.exit_code,
+            execution_duration_ms=self.execution_duration_ms,
+            stdout_digest=self.stdout_digest,
+            stderr_digest=self.stderr_digest,
+            tests_passed=data.get("tests_passed", 0),
+            tests_failed=data.get("tests_failed", 0),
+            tests_skipped=data.get("tests_skipped", 0),
+            tests_errored=data.get("tests_errored", 0),
+            raw_stdout=data.get("raw_stdout", ""),
+            raw_stderr=data.get("raw_stderr", ""),
+            error_message=data.get("error_message"),
+        )
+        return VerificationRecord(
+            id=self.id,
+            org_id=self.org_id,
+            mission_id=self.mission_id,
+            task_id=self.task_id,
+            task_attempt_id=self.task_attempt_id,
+            plan_version=self.plan_version,
+            status=VerificationStatus(self.status),
+            clean_base_commit=self.clean_base_commit,
+            patch_hash=self.patch_hash,
+            protected_test_suite_hash=self.protected_test_suite_hash,
+            evidence=evidence,
+            verifier_signature=self.verifier_signature,
+            trace_id=self.trace_id,
+            span_id=self.span_id,
+            created_at=self.created_at,
+        )

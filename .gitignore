@@ -48,3 +48,10 @@ htmlcov/
 *.swp
 *.swo
 .DS_Store
+
+# Node / Frontend
+node_modules/
+**/node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo

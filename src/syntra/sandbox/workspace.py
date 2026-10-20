@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from syntra.core.events import Event, EventType, get_event_bus
-from syntra.core.exceptions import SandboxSecurityViolationError
+from syntra.sandbox.safety import validate_safe_path
 
 
 class WorkspaceManager:
@@ -15,15 +15,8 @@ class WorkspaceManager:
         self.root_path.mkdir(parents=True, exist_ok=True)
 
     def _resolve_safe(self, relative_path: str | Path) -> Path:
-        """Resolve a path and guarantee it does not escape root_path."""
-        target = (self.root_path / relative_path).resolve()
-        try:
-            target.relative_to(self.root_path)
-        except ValueError:
-            raise SandboxSecurityViolationError(
-                f"Path traversal attempt detected: '{relative_path}' resolves outside workspace root '{self.root_path}'"
-            )
-        return target
+        """Resolve a path and guarantee it does not escape root_path using realpath."""
+        return validate_safe_path(self.root_path, relative_path)
 
     def file_exists(self, relative_path: str | Path) -> bool:
         """Check if file exists within workspace."""

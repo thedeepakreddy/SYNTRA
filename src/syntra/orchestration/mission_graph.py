@@ -662,6 +662,50 @@ async def replanning_node(state: MissionWorkflowState, config: RunnableConfig) -
     max_replan = state.get("max_replan_limit", 3)
     is_exceeded = replan_count > max_replan
 
+    advisory_memory: str | None = None
+    if uow and not is_exceeded and state.get("org_id"):
+        try:
+            from syntra.domain.entities import MemoryScope
+            from syntra.domain.memory_service import MemoryRetrievalService
+
+            org_id = UUID(str(state["org_id"]))
+            mission_id = UUID(str(state["mission_id"])) if state.get("mission_id") else None
+            auth_project_id: UUID | None = None
+            if mission_id and hasattr(uow, "missions"):
+                try:
+                    mission_entity = await uow.missions.get_by_id_for_org(mission_id, org_id)
+                    if mission_entity:
+                        auth_project_id = mission_entity.project_id
+                except Exception:
+                    auth_project_id = None
+
+            query_text = f"{state.get('objective', '')} {state.get('error_message', '')}".strip()
+            if query_text and hasattr(uow, "memories"):
+                mem_service = MemoryRetrievalService()
+                retrieved = []
+                if auth_project_id:
+                    retrieved = await mem_service.retrieve_memories(
+                        uow=uow,
+                        org_id=org_id,
+                        query_text=query_text,
+                        scope=MemoryScope.PROJECT,
+                        project_id=auth_project_id,
+                        limit=5,
+                    )
+                if not retrieved:
+                    retrieved = await mem_service.retrieve_memories(
+                        uow=uow,
+                        org_id=org_id,
+                        query_text=query_text,
+                        scope=MemoryScope.ORGANIZATION,
+                        limit=5,
+                    )
+                if retrieved:
+                    advisory_memory = mem_service.format_for_context(retrieved)
+        except Exception as exc:
+            logger.debug("Advisory memory retrieval in replanning failed safely: %s", exc)
+            advisory_memory = None
+
     return {
         "current_phase": "REPLANNING",
         "domain_state": domain_state,
@@ -670,6 +714,7 @@ async def replanning_node(state: MissionWorkflowState, config: RunnableConfig) -
         "control_signal": "FAIL" if is_exceeded else None,
         "error_message": f"Mission exceeded maximum replan limit of {max_replan}." if is_exceeded else None,
         "executed_nodes": state.get("executed_nodes", []) + ["replanning"],
+        "advisory_memory_context": advisory_memory,
     }
 
 

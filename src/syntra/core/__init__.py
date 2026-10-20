@@ -14,6 +14,11 @@ from syntra.core.exceptions import (
     SyntraError,
 )
 from syntra.core.logging import setup_logging
+from syntra.core.redactor import (
+    SecretRedactor,
+    SecretScrubbingLogFilter,
+    SecretScrubbingSpanProcessor,
+)
 from syntra.core.telemetry import TelemetryCollector, TokenUsage, get_telemetry
 
 __all__ = [
@@ -35,6 +40,9 @@ __all__ = [
     "SwarmOrchestrationError",
     "StorageError",
     "setup_logging",
+    "SecretRedactor",
+    "SecretScrubbingLogFilter",
+    "SecretScrubbingSpanProcessor",
     "TelemetryCollector",
     "TokenUsage",
     "get_telemetry",

@@ -58,6 +58,7 @@ class MissionWorkflowState(TypedDict, total=False):
     control_signal: str | None  # PAUSE | CANCEL | REPLAN | None
     executed_nodes: list[str]
     idempotency_keys: dict[str, str]
+    advisory_memory_context: str | None
 
 
 class TaskExecutionState(TypedDict, total=False):

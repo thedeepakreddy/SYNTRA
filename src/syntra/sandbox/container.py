@@ -141,6 +141,11 @@ class ContainerSandboxInstance:
         # Sanitize environment (scrub API keys, secrets, cloud tokens)
         merged_env = dict(env or {})
         safe_env = CommandSafetyValidator.sanitize_env(merged_env)
+        logger.debug(
+            "Executing in container '%s' with sanitized env: %s",
+            self.container_name,
+            CommandSafetyValidator.mask_env_for_logs(safe_env),
+        )
 
         exec_timeout = timeout_seconds or self.config.timeout_seconds
         max_bytes = self.config.max_output_bytes

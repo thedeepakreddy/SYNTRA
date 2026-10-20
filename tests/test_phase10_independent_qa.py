@@ -9,7 +9,9 @@ Defects remain ordinary failing tests, never xfails or relaxed assertions.
 import asyncio
 import base64
 import hashlib
+import json
 import posixpath
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -22,6 +24,7 @@ from test_scheduling_phase8 import setup_test_org_and_mission
 
 from syntra.agents.engineering_worker import EngineeringSandboxWorker
 from syntra.agents.handoffs import (
+    ArtifactHandoff,
     RoleArtifact,
     consume_handoff,
     persist_role_result,
@@ -54,13 +57,21 @@ from syntra.llm.exceptions import (
 from syntra.llm.mock_provider import MockModelProvider
 from syntra.llm.models import LLMResponse, ToolDefinition
 from syntra.llm.runtime import ModelRuntime, RuntimeUsage
-from syntra.llm.schemas import AgentFinalResult, CodeReviewProposal, RequirementsAnalysis
+from syntra.llm.schemas import (
+    AgentFinalResult,
+    ArchitectureProposal,
+    CodeReviewProposal,
+    RequirementsAnalysis,
+    TaskPlanItem,
+    TaskPlanProposal,
+)
 from syntra.mcp.types import MCPInvocationRequest, MCPInvocationResult
 from syntra.orchestration.engineering_service import EngineeringMissionService
 from syntra.persistence.artifact_store import read_artifact, store_artifact
 from syntra.persistence.models import (
     CapabilityGrantModel,
     MembershipModel,
+    TransactionalOutboxModel,
     UsageRecordModel,
     UserModel,
     WorkerLeaseModel,
@@ -68,6 +79,8 @@ from syntra.persistence.models import (
 from syntra.sandbox.models import ContainerConfig, ExecutionResult, SandboxLease
 from syntra.scheduling.consumer import SandboxWorkerConsumer
 from syntra.scheduling.models import EngineeringTaskSpecification, TaskDispatchPayload, TaskExecutionResult
+from syntra.scheduling.reconciliation import SchedulerReconciler
+from syntra.scheduling.redis_dispatcher import RedisTaskDispatcher
 from syntra.scheduling.scheduler import TaskScheduler
 from syntra.skills.profiles import get_agent_profile
 from syntra.skills.registry import SkillRegistry
@@ -1443,3 +1456,505 @@ def test_audit_p1_worker_result_rejects_negative_usage(field, value):
     with pytest.raises(ValidationError) as failure:
         TaskExecutionResult(**(values | {field: value}))
     assert any(error["loc"] == (field,) for error in failure.value.errors())
+
+
+@pytest.fixture
+async def qa_plan_context(uow_factory, qa_scope, qa_registry):
+    from langgraph.checkpoint.memory import MemorySaver
+
+    from syntra.orchestration.engine import WorkflowOrchestrationEngine
+
+    human = uuid4()
+    async with uow_factory() as uow:
+        mission = await uow.missions.get_by_id_for_org(qa_scope.mission, qa_scope.org)
+        mission.state = MissionState.AWAITING_APPROVAL
+        uow.session.add(
+            UserModel(
+                id=human,
+                email=f"{human}@qa.invalid",
+                full_name="Independent Plan Approver",
+                is_active=True,
+                is_service_account=False,
+            )
+        )
+        await uow.session.flush()
+        uow.session.add(MembershipModel(org_id=qa_scope.org, user_id=human, role=MembershipRole.ADMIN))
+        for role in (AgentRole.PRODUCT_MANAGER, AgentRole.SOFTWARE_ARCHITECT, AgentRole.ENGINEERING_MANAGER):
+            for capability in get_agent_profile(role).allowed_tool_capabilities:
+                uow.session.add(
+                    CapabilityGrantModel(
+                        org_id=qa_scope.org,
+                        agent_role=role.value,
+                        tool_name_pattern=capability,
+                        is_allowed=True,
+                    )
+                )
+        await uow.commit()
+    provider = MockModelProvider()
+    runtime = ModelRuntime(provider, qa_registry.skills)
+    service = EngineeringMissionService(uow_factory, qa_registry, runtime, ["python -m pytest -q tests"])
+    engine = WorkflowOrchestrationEngine(runtime, MemorySaver(), qa_registry.skills, engineering_service=service)
+    spec = engineering_spec()
+    tasks = [
+        {
+            "task_key": str(qa_scope.task),
+            "role": AgentRole.BACKEND_ENGINEER.value,
+            "objective": spec.objective,
+            "dependencies": [],
+            "execution_spec": spec.model_dump(mode="json"),
+        }
+    ]
+    state = {
+        "mission_id": str(qa_scope.mission),
+        "org_id": str(qa_scope.org),
+        "mission_version": 1,
+        "domain_state": MissionState.AWAITING_APPROVAL.value,
+        "task_dag": tasks,
+        "plan_digest": hashlib.sha256(json.dumps(tasks, sort_keys=True).encode()).hexdigest(),
+        "objective": "Reject zero quantities and add an independent regression test",
+        "replan_count": 0,
+        "max_replan_limit": 3,
+    }
+    return SimpleNamespace(engine=engine, service=service, provider=provider, runtime=runtime, human=human, state=state)
+
+
+@pytest.mark.parametrize("cancellation_point", ["before_resume", "between_approval_and_ready"])
+async def test_audit_p1_plan_approval_cannot_revive_cancelled_mission(
+    uow_factory,
+    qa_scope,
+    qa_plan_context,
+    cancellation_point,
+):
+    from langgraph.graph import END, START, StateGraph
+
+    from syntra.orchestration.checkpointer import build_mission_thread_id
+    from syntra.orchestration.lifecycle_service import cancel_mission
+    from syntra.orchestration.mission_graph import awaiting_approval_node, ready_node
+    from syntra.orchestration.state import MissionWorkflowState
+
+    context = qa_plan_context
+
+    async def ready_after_possible_cancellation(state, config):
+        if cancellation_point == "between_approval_and_ready":
+            async with uow_factory() as uow:
+                await cancel_mission(qa_scope.mission, qa_scope.org, "Cancellation raced with ready", uow=uow)
+        return await ready_node(state, config)
+
+    graph = StateGraph(MissionWorkflowState)
+    graph.add_node("plan_approval", awaiting_approval_node)
+    graph.add_node("ready", ready_after_possible_cancellation)
+    graph.add_edge(START, "plan_approval")
+    graph.add_edge("plan_approval", "ready")
+    graph.add_edge("ready", END)
+    context.engine.mission_graph = graph.compile(checkpointer=context.engine.checkpointer)
+    async with uow_factory() as uow:
+        started = await context.engine.mission_graph.ainvoke(
+            context.state,
+            config={
+                "configurable": {
+                    "thread_id": build_mission_thread_id(qa_scope.mission),
+                    "uow": uow,
+                    "runtime": context.runtime,
+                    "engineering_service": context.service,
+                }
+            },
+        )
+    approval_payload = started["__interrupt__"][0].value
+    assert approval_payload["action_type"] == "TASK_PLAN_APPROVAL"
+    if cancellation_point == "before_resume":
+        async with uow_factory() as uow:
+            await cancel_mission(qa_scope.mission, qa_scope.org, "Cancelled at pending plan approval", uow=uow)
+    try:
+        async with uow_factory() as uow:
+            await context.engine.resume_approval(
+                qa_scope.mission,
+                {
+                    "decision": "APPROVED",
+                    "org_id": str(qa_scope.org),
+                    "user_id": str(context.human),
+                    "action_digest": approval_payload["action_digest"],
+                },
+                uow=uow,
+            )
+    except (ValueError, DomainError):
+        pass
+    except RuntimeError as exc:
+        assert isinstance(exc.__cause__, (DomainError, ValueError)), "Unexpected failure at plan cancellation boundary"
+    async with uow_factory() as uow:
+        from uuid import UUID
+
+        mission = await uow.missions.get_by_id_for_org(qa_scope.mission, qa_scope.org)
+        assert mission.state == MissionState.CANCELLED, "Plan approval resurrected a cancelled mission as READY"
+        assert mission.active_plan_version == 1
+        assert (await uow.tasks.get_by_id(qa_scope.task)).state == TaskState.CANCELLED
+        if cancellation_point == "before_resume":
+            approval = await uow.approvals.get_by_id_for_org(UUID(approval_payload["approval_id"]), qa_scope.org)
+            assert approval.decision != ApprovalDecision.CONSUMED, (
+                "Cancellation was ignored by the checkpoint-state shortcut"
+            )
+
+
+@pytest.mark.parametrize("started", [False, True], ids=["assigned_not_started", "running_abandoned"])
+async def test_audit_p1_cancelled_task_is_revisited_for_settlement_after_lease_expiry(
+    uow_factory,
+    qa_scope,
+    qa_dispatch,
+    started,
+):
+    from syntra.orchestration.lifecycle_service import cancel_mission
+
+    scheduler, dispatch = qa_dispatch
+    if started:
+        assert await scheduler.begin_dispatch(dispatch, "abandoned-cancelled-worker")
+    async with uow_factory() as uow:
+        await cancel_mission(qa_scope.mission, qa_scope.org, "Cancel before worker lease expires", uow=uow)
+    reconciler = SchedulerReconciler(uow_factory)
+    await reconciler.reconcile_mission(qa_scope.mission, qa_scope.org)
+    async with uow_factory() as uow:
+        task = await uow.tasks.get_by_id(dispatch.task_id)
+        budget = await uow.budgets.get_for_mission(qa_scope.mission)
+        assert task.state == TaskState.CANCELLED
+        assert budget.reserved_tokens == dispatch.budget_reserved_tokens
+        assert budget.reserved_cost_usd == dispatch.budget_reserved_cost_usd
+        lease = await uow.session.get(WorkerLeaseModel, dispatch.task_id)
+        assert lease is not None
+        lease.lease_expires_at = datetime.now(UTC) - timedelta(seconds=1)
+        await uow.commit()
+    # The task is already CANCELLED on this later sweep; expiry still needs settlement.
+    await reconciler.reconcile_mission(qa_scope.mission, qa_scope.org)
+    for _ in range(2):
+        async with uow_factory() as uow:
+            budget = await uow.budgets.get_for_mission(qa_scope.mission)
+            task = await uow.tasks.get_by_id(dispatch.task_id)
+            attempt = await uow.tasks.get_latest_attempt(dispatch.task_id)
+            settled = await uow.idempotency.get(f"phase10:usage:{attempt.id}", qa_scope.org)
+            assert budget.reserved_tokens == 0 and budget.reserved_cost_usd == 0, (
+                "Cancelled task retained an expired reservation"
+            )
+            assert budget.consumed_tokens == (dispatch.budget_reserved_tokens if started else 0)
+            assert budget.consumed_cost_usd == (dispatch.budget_reserved_cost_usd if started else Decimal("0"))
+            assert task.state == TaskState.CANCELLED and attempt.state == AttemptState.TIMED_OUT
+            assert await uow.session.get(WorkerLeaseModel, dispatch.task_id) is None
+            assert settled is not None
+            assert settled.response_body["classification"] == ("CONSERVATIVE_UNVERIFIED" if started else "NOT_STARTED")
+        await reconciler.reconcile_mission(qa_scope.mission, qa_scope.org)
+
+
+class PendingStreamRedis:
+    """Redis protocol double with explicit idle time; no real-time 60-second wait."""
+
+    def __init__(self):
+        self.entries = {}
+        self.delivered = set()
+        self.pending = {}
+        self.acknowledged = set()
+        self.now_ms = 0
+        self.idle_thresholds = []
+        self.before_ack = None
+
+    async def xgroup_create(self, **kwargs):
+        return True
+
+    async def xadd(self, name, fields):
+        message_id = f"{len(self.entries) + 1}-0"
+        self.entries[message_id] = fields
+        return message_id
+
+    async def xreadgroup(self, groupname, consumername, streams, count, block):
+        messages = []
+        for message_id, fields in self.entries.items():
+            if message_id not in self.delivered:
+                self.delivered.add(message_id)
+                self.pending[message_id] = (consumername, self.now_ms)
+                messages.append((message_id, fields))
+                if len(messages) >= count:
+                    break
+        return [(next(iter(streams)), messages)] if messages else []
+
+    async def xautoclaim(self, name, groupname, consumername, min_idle_time, start_id, count):
+        self.idle_thresholds.append(min_idle_time)
+        messages = []
+        for message_id, (_, last_delivery) in list(self.pending.items()):
+            if self.now_ms - last_delivery >= min_idle_time:
+                self.pending[message_id] = (consumername, self.now_ms)
+                messages.append((message_id, self.entries[message_id]))
+                if len(messages) >= count:
+                    break
+        return "0-0", messages, []
+
+    async def xack(self, name, groupname, message_id):
+        if self.before_ack is not None:
+            await self.before_ack(message_id)
+        existed = message_id in self.pending
+        self.pending.pop(message_id, None)
+        self.acknowledged.add(message_id)
+        return int(existed)
+
+
+async def misrouted_stream(uow_factory, qa_scope, qa_registry, dispatch, scheduler, tmp_path):
+    redis = PendingStreamRedis()
+    dispatcher = RedisTaskDispatcher(stream_key="qa:phase10:misrouting:" + uuid4().hex)
+    dispatcher._client = redis
+    message_id = await dispatcher.publish_dispatch(dispatch)
+    wrong = EngineeringSandboxWorker(
+        tmp_path,
+        worker_id="wrong-project-stream-worker",
+        registry=qa_registry,
+        provider_model=MockModelProvider(),
+        uow_factory=uow_factory,
+        authorized_org_id=qa_scope.org,
+        authorized_project_id=uuid4(),
+    )
+    assert await SandboxWorkerConsumer(scheduler, dispatcher, wrong, wrong.worker_id).run_once(block_ms=1) == 0
+    assert message_id in redis.pending and message_id not in redis.acknowledged
+    async with uow_factory() as uow:
+        task = await uow.tasks.get_by_id(dispatch.task_id)
+        assert task.state == TaskState.ASSIGNED and task.attempt_count == dispatch.attempt_number
+        lease = await uow.session.get(WorkerLeaseModel, dispatch.task_id)
+        lease.lease_expires_at = datetime.now(UTC) - timedelta(seconds=1)
+        await uow.commit()
+    redis.now_ms = 60_001
+    return redis, dispatcher, message_id
+
+
+async def test_audit_p1_expired_misrouted_reclaim_persists_recovery_before_ack(
+    uow_factory,
+    qa_scope,
+    qa_registry,
+    qa_dispatch,
+    tmp_path,
+):
+    from sqlalchemy import select
+
+    scheduler, dispatch = qa_dispatch
+    redis, dispatcher, original_id = await misrouted_stream(
+        uow_factory,
+        qa_scope,
+        qa_registry,
+        dispatch,
+        scheduler,
+        tmp_path,
+    )
+    snapshots = []
+
+    async def observe_ack(message_id):
+        if message_id != original_id:
+            return
+        async with uow_factory() as uow:
+            task = await uow.tasks.get_by_id(dispatch.task_id)
+            events = (
+                (
+                    await uow.session.execute(
+                        select(TransactionalOutboxModel).where(
+                            TransactionalOutboxModel.event_type == "TASK_DISPATCHED",
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            recovery = [
+                event
+                for event in events
+                if event.payload.get("task_id") == str(dispatch.task_id)
+                and event.payload.get("fencing_token", 0) > dispatch.fencing_token
+            ]
+            snapshots.append((task.state, task.attempt_count, len(recovery)))
+
+    redis.before_ack = observe_ack
+    right = EngineeringSandboxWorker(
+        tmp_path,
+        worker_id="correct-project-stream-worker",
+        registry=qa_registry,
+        provider_model=MockModelProvider(),
+        uow_factory=uow_factory,
+        authorized_org_id=qa_scope.org,
+        authorized_project_id=qa_scope.project,
+    )
+    reclaimed = await dispatcher.reclaim_abandoned_messages(right.worker_id)
+    assert [mid for mid, _ in reclaimed] == [original_id]
+    assert redis.idle_thresholds, "The real dispatcher must drive the reclaim policy"
+    assert await SandboxWorkerConsumer(scheduler, dispatcher, right, right.worker_id).process(*reclaimed[0]) is False
+    assert snapshots and snapshots[0][0] == TaskState.ASSIGNED
+    assert snapshots[0][1] > dispatch.attempt_number and snapshots[0][2] == 1, (
+        "Expired message was ACKed before durable replacement dispatch"
+    )
+    async with uow_factory() as uow:
+        task = await uow.tasks.get_by_id(dispatch.task_id)
+        attempt = await uow.tasks.get_latest_attempt(dispatch.task_id)
+        lease = await uow.session.get(WorkerLeaseModel, dispatch.task_id)
+        budget = await uow.budgets.get_for_mission(qa_scope.mission)
+        assert task.attempt_count == dispatch.attempt_number + 1 and attempt.state == AttemptState.INITIALIZING
+        assert lease.fencing_token > dispatch.fencing_token
+        assert budget.reserved_tokens == dispatch.budget_reserved_tokens and budget.consumed_tokens == 0
+
+
+async def test_audit_p1_cli_worker_recovers_expired_misrouting_without_external_reconciler(
+    uow_factory,
+    qa_scope,
+    qa_registry,
+    qa_dispatch,
+    tmp_path,
+    monkeypatch,
+):
+    import syntra.cli.engineering as cli
+
+    scheduler, dispatch = qa_dispatch
+    redis, dispatcher, _ = await misrouted_stream(uow_factory, qa_scope, qa_registry, dispatch, scheduler, tmp_path)
+    provider = MockModelProvider()
+    service = EngineeringMissionService(
+        uow_factory, qa_registry, ModelRuntime(provider, qa_registry.skills), ["pytest"]
+    )
+
+    @asynccontextmanager
+    async def fixture_composition(verify):
+        yield uow_factory, None, service, dispatcher, qa_registry, provider
+
+    class SafeAdapter(EngineeringSandboxWorker):
+        async def execute_task(self, payload, before_effect):
+            await before_effect()
+            return TaskExecutionResult(
+                task_id=payload.task_id,
+                attempt_number=payload.attempt_number,
+                worker_id=self.worker_id,
+                fencing_token=payload.fencing_token,
+                status=AttemptState.FAILED,
+                exit_code=1,
+                error_message="Controlled container boundary for CLI recovery test",
+            )
+
+    captured = []
+
+    class AsyncioEntryPoint:
+        def run(self, coroutine):
+            captured.append(coroutine)
+
+        def __getattr__(self, name):
+            return getattr(asyncio, name)
+
+    monkeypatch.setattr(cli, "composition", fixture_composition)
+    monkeypatch.setattr(cli, "EngineeringSandboxWorker", SafeAdapter)
+    monkeypatch.setattr(cli, "asyncio", AsyncioEntryPoint())
+    cli.worker(qa_scope.org, qa_scope.project, tmp_path, worker_id="cli-recovery-worker", once=True)
+    assert len(captured) == 1
+    await captured.pop()
+    async with uow_factory() as uow:
+        task = await uow.tasks.get_by_id(dispatch.task_id)
+        assert task.attempt_count > dispatch.attempt_number, "CLI acknowledged expired work without recovering it"
+        # A newer attempt must have a durable notification even if --once read an older duplicate.
+        recoverable = any(
+            TaskDispatchPayload.model_validate_json(fields["payload_json"]).fencing_token > dispatch.fencing_token
+            and mid not in redis.acknowledged
+            for mid, fields in redis.entries.items()
+        )
+        assert recoverable or task.state in {TaskState.READY, TaskState.COMPLETED, TaskState.FAILED}
+
+
+async def test_audit_p1_full_graph_rejection_rebuilds_immutable_version_two_handoffs(
+    uow_factory,
+    qa_scope,
+    qa_registry,
+    qa_plan_context,
+):
+    context = qa_plan_context
+    for version in (1, 2):
+        requirements = independent_requirements().model_copy(
+            update={
+                "summary": f"Revision {version}: reject nonpositive order quantities while preserving positive inputs",
+            }
+        )
+        context.provider.queue_response(requirements)
+        context.provider.queue_response(
+            ArchitectureProposal(
+                title=f"Revision {version} minimal order validation architecture",
+                architectural_decisions=["Retain the current API and change only quantity validation"],
+                component_contracts=["Order validation rejects zero and negative quantities"],
+                data_persistence_spec="No persistence schema changes are required",
+                security_invariants=["Validation must reject invalid requests before creating orders"],
+                tradeoffs_and_alternatives=["A local validation correction preserves the existing architecture"],
+                requirement_refs=requirements.acceptance_criteria,
+            )
+        )
+        context.provider.queue_response(
+            TaskPlanProposal(
+                plan_summary=f"Revision {version} implements one bounded order validation correction",
+                tasks=[
+                    TaskPlanItem(
+                        task_key=f"FIX-{version:03d}",
+                        role="backend_engineer",
+                        objective="Correct quantity validation with regression coverage",
+                        acceptance_criteria=requirements.acceptance_criteria,
+                        required_skills=["backend-api-development"],
+                        required_capabilities=["syntra.read_file"],
+                        expected_artifacts=["UnifiedDiff", "TestReport"],
+                        verification_requirements=["Execute independent positive, zero and negative quantity checks"],
+                        estimated_tokens=100000,
+                    )
+                ],
+                critical_path=[f"FIX-{version:03d}"],
+                concurrency_limits=1,
+            )
+        )
+    async with uow_factory() as uow:
+        mission = await uow.missions.get_by_id_for_org(qa_scope.mission, qa_scope.org)
+        mission.state = MissionState.PLANNING
+        await uow.commit()
+    async with uow_factory() as uow:
+        first = await context.engine.start_mission(
+            qa_scope.mission,
+            qa_scope.org,
+            context.state["objective"],
+            uow=uow,
+        )
+    old_approval = first["__interrupt__"][0].value
+    assert old_approval["action_type"] == "TASK_PLAN_APPROVAL"
+    keys = ("prd_handoff", "architecture_handoff", "plan_handoff")
+    old_refs = {key: ArtifactHandoff.model_validate(first[key]) for key in keys}
+    old_bodies = {}
+    async with uow_factory() as uow:
+        for key, ref in old_refs.items():
+            old_bodies[key] = await read_artifact(
+                uow,
+                artifact_id=ref.artifact_id,
+                org_id=qa_scope.org,
+                mission_id=qa_scope.mission,
+            )
+    # Exercise the compiled production route, including config injection, not just its helper function.
+    async with uow_factory() as uow:
+        second = await context.engine.resume_approval(
+            qa_scope.mission,
+            {
+                "decision": "REJECTED",
+                "org_id": str(qa_scope.org),
+                "user_id": str(context.human),
+                "action_digest": old_approval["action_digest"],
+                "feedback": "Regenerate the complete approved-scope plan",
+            },
+            uow=uow,
+        )
+    new_approval = second["__interrupt__"][0].value
+    assert new_approval["action_type"] == "TASK_PLAN_APPROVAL" and new_approval["mission_version"] == 2
+    assert new_approval["approval_id"] != old_approval["approval_id"]
+    assert second["mission_version"] == 2 and second["replan_count"] == 1
+    expected_roles = ["product_manager", "software_architect", "engineering_manager"] * 2
+    assert [request.agent_role for request in context.provider.call_history] == expected_roles
+    async with uow_factory() as uow:
+        mission = await uow.missions.get_by_id_for_org(qa_scope.mission, qa_scope.org)
+        assert mission.active_plan_version == second["mission_version"] == 2
+        assert mission.state == MissionState.AWAITING_APPROVAL
+        for key, old_ref in old_refs.items():
+            new_ref = ArtifactHandoff.model_validate(second[key])
+            assert new_ref.plan_version == 2 and new_ref.artifact_id != old_ref.artifact_id
+            assert new_ref.artifact_hash != old_ref.artifact_hash
+            assert (
+                await read_artifact(
+                    uow,
+                    artifact_id=old_ref.artifact_id,
+                    org_id=qa_scope.org,
+                    mission_id=qa_scope.mission,
+                )
+                == old_bodies[key]
+            ), "Rejection mutated an existing immutable artifact"
+            with pytest.raises(ValueError, match="[Ss]tale|[Pp]lan"):
+                await consume(uow, qa_registry, old_ref)
+            await consume(uow, qa_registry, new_ref)

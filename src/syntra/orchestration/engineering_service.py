@@ -9,7 +9,7 @@ import base64
 import hashlib
 import json
 import shlex
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -26,13 +26,15 @@ from syntra.agents.handoffs import (
     validate_task_reviews,
 )
 from syntra.agents.operational import AgentInvocation, AgentRegistry, AgentResult, SpecialistAgent
-from syntra.agents.sandbox_gateway import effective_capabilities
+from syntra.agents.sandbox_gateway import build_sandbox_gateway, effective_capabilities
+from syntra.core.redactor import redact_secrets
 from syntra.domain.entities import AgentRole, ApprovalDecision, ArtifactType, MissionState, TaskPlanStatus, TaskState
 from syntra.llm.runtime import ModelRuntime, RuntimeUsage
 from syntra.persistence.artifact_store import read_artifact, store_artifact
 from syntra.persistence.models import ArtifactModel, MembershipModel, TaskPlanModel, UserModel
 from syntra.sandbox.models import ContainerConfig
 from syntra.sandbox.provider import DockerSandboxProvider
+from syntra.sandbox.tool_bridge import SandboxToolBridge
 from syntra.scheduling.models import EngineeringTaskSpecification, TaskExecutionResult
 from syntra.scheduling.scheduler import TaskScheduler
 from syntra.skills.profiles import get_agent_profile
@@ -48,6 +50,7 @@ class EngineeringMissionService:
         repository_context: str = "",
         integration_repository_path: Path | None = None,
         integration_config: ContainerConfig | None = None,
+        planning_repository_path: Path | None = None,
     ) -> None:
         if not verification_commands:
             raise ValueError("Operational engineering requires configured verification commands")
@@ -56,6 +59,7 @@ class EngineeringMissionService:
         self.scheduler = TaskScheduler(uow_factory)
         self.integration_repository_path = integration_repository_path
         self.integration_config = integration_config or ContainerConfig()
+        self.planning_repository_path = planning_repository_path
 
     async def selected_results(self, uow: Any, state: dict[str, Any]) -> list[dict[str, Any]]:
         org, mission = UUID(state["org_id"]), UUID(state["mission_id"])
@@ -284,6 +288,7 @@ class EngineeringMissionService:
             deadline=datetime.now(UTC) + timedelta(seconds=definition.timeout_seconds),
         )
         result: AgentResult | None = None
+        retrieved_memories_text: str | None = None
         try:
             async with self.uow_factory() as uow:
                 inv = inv.model_copy(update={"approved_capabilities": await effective_capabilities(uow, inv)})
@@ -297,7 +302,97 @@ class EngineeringMissionService:
                             ),
                         }
                     )
-            result = await SpecialistAgent(self.registry, self.runtime).execute(inv, usage_meter=meter)
+                # Precompute tenant-safe memory context for planning agent
+                if hasattr(uow, "memories"):
+                    try:
+                        from syntra.domain.entities import MemoryScope
+                        from syntra.domain.memory_service import MemoryRetrievalService
+
+                        auth_project_id: UUID | None = None
+                        if hasattr(uow, "missions"):
+                            try:
+                                mission_entity = await uow.missions.get_by_id_for_org(mission, org)
+                                if mission_entity:
+                                    auth_project_id = mission_entity.project_id
+                            except Exception:
+                                auth_project_id = None
+
+                        query_text = f"{state.get('objective', '')} {inv.objective}".strip()
+                        mem_service = MemoryRetrievalService()
+                        retrieved_list = []
+                        if auth_project_id:
+                            retrieved_list = await mem_service.retrieve_memories(
+                                uow=uow,
+                                org_id=org,
+                                query_text=query_text,
+                                scope=MemoryScope.PROJECT,
+                                project_id=auth_project_id,
+                                limit=5,
+                            )
+                        if not retrieved_list:
+                            retrieved_list = await mem_service.retrieve_memories(
+                                uow=uow,
+                                org_id=org,
+                                query_text=query_text,
+                                scope=MemoryScope.ORGANIZATION,
+                                limit=5,
+                            )
+                        if retrieved_list:
+                            retrieved_memories_text = mem_service.format_for_context(retrieved_list)
+                    except Exception as exc:
+                        retrieved_memories_text = None
+                        await uow.outbox.record_event(
+                            org,
+                            "MEMORY_RETRIEVAL_DEGRADED",
+                            {
+                                "role": role.value,
+                                "error_type": type(exc).__name__,
+                                "detail": redact_secrets(str(exc))[:200],
+                            },
+                            mission,
+                        )
+            if self.planning_repository_path is None:
+                result = await SpecialistAgent(self.registry, self.runtime).execute(
+                    inv, usage_meter=meter, retrieved_memories=retrieved_memories_text
+                )
+            else:
+
+                async def planning_guard() -> None:
+                    async with self.uow_factory() as scoped:
+                        owner = await scoped.missions.get_by_id_for_org(mission, org)
+                        if owner.state not in {MissionState.PLANNING, MissionState.REPLANNING}:
+                            raise ValueError("Mission no longer authorizes repository inspection")
+                        if owner.active_plan_version != version:
+                            raise ValueError("Repository inspection uses a stale plan version")
+
+                await planning_guard()
+                snapshot = await DockerSandboxProvider().create_sandbox(
+                    task_id=iid,
+                    attempt_number=1,
+                    repository_path=self.planning_repository_path,
+                    config=replace(self.integration_config, workspace_read_only=True),
+                )
+                try:
+                    gateway, tools = build_sandbox_gateway(
+                        inv, SandboxToolBridge(snapshot), self.uow_factory, planning_guard
+                    )
+                    # Planning roles get repository reads, never a shell or file writes.
+                    tools = [
+                        tool
+                        for tool in tools
+                        if tool.name in {"syntra.read_file", "syntra.list_directory", "syntra.workspace_search"}
+                    ]
+                    runtime = ModelRuntime(
+                        self.runtime.provider,
+                        self.registry.skills,
+                        context_builder=self.runtime.context_builder,
+                        tool_gateway=gateway,
+                    )
+                    result = await SpecialistAgent(self.registry, runtime).execute(
+                        inv, tools=tools, usage_meter=meter, retrieved_memories=retrieved_memories_text
+                    )
+                finally:
+                    await snapshot.cleanup()
             if result.status != "SUCCEEDED":
                 raise ValueError(f"{role.value} returned {result.status}; clarification or intervention required")
         finally:
@@ -323,6 +418,17 @@ class EngineeringMissionService:
                     },
                     mission,
                 )
+                if not (result and result.status == "SUCCEEDED"):
+                    from sqlalchemy import delete
+
+                    from syntra.persistence.models import IdempotencyKeyModel
+
+                    await uow.session.execute(
+                        delete(IdempotencyKeyModel).where(
+                            IdempotencyKeyModel.key == claim_key,
+                            IdempotencyKeyModel.org_id == org,
+                        )
+                    )
                 await uow.commit()
         async with self.uow_factory() as uow:
             ref = await persist_role_result(uow, inv, result, consumer)
@@ -506,4 +612,105 @@ class EngineeringMissionService:
                 "domain_state": domain_state,
                 "verification_passed": passed,
             }
+        if name in {"release_delivery", "delivery", "awaiting_delivery_approval"}:
+            async with self.uow_factory() as uow:
+                await self.verify_delivery_gate(uow, state)
+            return {
+                **base,
+                "current_phase": "AWAITING_DELIVERY_APPROVAL",
+                "delivery_gate_verified": True,
+            }
         raise ValueError(f"Unsupported operational node: {name}")
+
+    async def verify_delivery_gate(self, uow: Any, state: dict[str, Any]) -> None:
+        """Verify delivery gate preconditions before authorization/release.
+
+        Enforces:
+        (a) VerificationRecord exists for the mission's active task attempt(s).
+        (b) VerificationRecord.status == "PASSED".
+        (c) VerificationRecord.patch_hash matches the approved diff digest.
+        (d) VerificationRecord.plan_version matches mission.active_plan_version.
+
+        Raises:
+            DeliveryBlockedError: if any precondition fails.
+        """
+        from syntra.domain.exceptions import DeliveryBlockedError
+        from syntra.observability.audit_logger import (
+            AUDIT_DELIVERY_APPROVED,
+            AUDIT_DELIVERY_BLOCKED,
+            get_audit_logger,
+        )
+
+        org_id = UUID(str(state["org_id"]))
+        mission_id = UUID(str(state["mission_id"]))
+        owner = await uow.missions.get_by_id_for_org(mission_id, org_id)
+
+        if "selected_results" in state and isinstance(state["selected_results"], list):
+            selected = state["selected_results"]
+        else:
+            selected = await self.selected_results(uow, state)
+        for item in selected:
+            task_id = UUID(item["task_id"])
+            attempt_id = UUID(item["attempt_id"])
+            expected_patch_hash = item["patch_hash"]
+
+            rec = await uow.verifications.get_latest_record_for_attempt(
+                org_id=org_id,
+                mission_id=mission_id,
+                task_id=task_id,
+                task_attempt_id=attempt_id,
+            )
+
+            if rec is None:
+                reason = f"No VerificationRecord found for task {task_id} attempt {attempt_id}"
+                get_audit_logger().log_event(
+                    AUDIT_DELIVERY_BLOCKED,
+                    mission_id=mission_id,
+                    task_id=task_id,
+                    outcome="BLOCKED",
+                    payload={"reason": reason},
+                )
+                raise DeliveryBlockedError(f"Delivery blocked: {reason}")
+
+            rec_status = rec.status.value if hasattr(rec.status, "value") else str(rec.status)
+            if rec_status != "PASSED":
+                reason = f"VerificationRecord status is {rec_status}, expected PASSED"
+                get_audit_logger().log_event(
+                    AUDIT_DELIVERY_BLOCKED,
+                    mission_id=mission_id,
+                    task_id=task_id,
+                    outcome="BLOCKED",
+                    payload={"reason": reason},
+                )
+                raise DeliveryBlockedError(f"Delivery blocked: {reason}")
+
+            if rec.patch_hash != expected_patch_hash:
+                reason = f"Patch hash mismatch: recorded {rec.patch_hash} != expected {expected_patch_hash}"
+                get_audit_logger().log_event(
+                    AUDIT_DELIVERY_BLOCKED,
+                    mission_id=mission_id,
+                    task_id=task_id,
+                    outcome="BLOCKED",
+                    payload={"reason": reason},
+                )
+                raise DeliveryBlockedError(f"Delivery blocked: {reason}")
+
+            if rec.plan_version != owner.active_plan_version:
+                reason = (
+                    f"Plan version mismatch: recorded {rec.plan_version} != mission active {owner.active_plan_version}"
+                )
+                get_audit_logger().log_event(
+                    AUDIT_DELIVERY_BLOCKED,
+                    mission_id=mission_id,
+                    task_id=task_id,
+                    outcome="BLOCKED",
+                    payload={"reason": reason},
+                )
+                raise DeliveryBlockedError(f"Delivery blocked: {reason}")
+
+        get_audit_logger().log_event(
+            AUDIT_DELIVERY_APPROVED,
+            mission_id=mission_id,
+            outcome="APPROVED",
+            payload={"task_count": len(selected)},
+        )

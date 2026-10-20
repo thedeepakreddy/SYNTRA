@@ -93,11 +93,13 @@ async def create_mission(
         },
     )
 
+    resolved_title = req.title or (req.objective[:60].strip() + ("..." if len(req.objective) > 60 else ""))
+
     resp_data = MissionResponse(
         id=mission.id,
         org_id=mission.org_id,
         project_id=mission.project_id,
-        title=req.title,
+        title=resolved_title,
         objective=mission.objective,
         state=mission.state,
         autonomy_mode=AutonomyMode(mission.autonomy_mode),
@@ -117,6 +119,38 @@ async def create_mission(
 
     await uow.commit()
     return JSONResponse(status_code=status.HTTP_201_CREATED, content=resp_data)
+
+
+@router.get("", response_model=list[MissionResponse])
+async def list_missions(
+    user: Annotated[AuthenticatedUser, Depends(require_viewer_or_above)],
+    uow: Annotated[SqlAlchemyUnitOfWork, Depends(get_uow)],
+    project_id: UUID | None = None,
+    state: str | None = None,
+    limit: int = 100,
+) -> list[MissionResponse]:
+    """List missions for the caller's organization with optional project_id and state filters."""
+    missions = await uow.missions.list_for_org(
+        org_id=user.org_id,
+        project_id=project_id,
+        state=state,
+        limit=limit,
+    )
+    return [
+        MissionResponse(
+            id=m.id,
+            org_id=m.org_id,
+            project_id=m.project_id,
+            title=None,
+            objective=m.objective,
+            state=m.state,
+            autonomy_mode=AutonomyMode(m.autonomy_mode),
+            version=m.version,
+            created_at=m.created_at,
+            updated_at=m.updated_at,
+        )
+        for m in missions
+    ]
 
 
 @router.get("/{mission_id}", response_model=MissionResponse)

@@ -1,5 +1,7 @@
 """Domain and persistence repositories with strict multi-tenant isolation and optimistic concurrency."""
 
+import math
+import re
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
@@ -8,15 +10,19 @@ from uuid import UUID, uuid4
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from syntra.core.redactor import SecretRedactor
 from syntra.domain.entities import (
     ApprovalDecision,
     ArtifactType,
     AttemptState,
     MCPTransportType,
+    MemoryRecord,
+    MemoryScope,
     MissionState,
     OutboxStatus,
     TaskPlanStatus,
     TaskState,
+    VerificationRecord,
     VerificationVerdict,
     compute_action_digest,
     verify_action_digest,
@@ -30,6 +36,7 @@ from syntra.domain.exceptions import (
     CrossTenantAccessError,
     DigestMismatchError,
     DuplicateIdempotencyKeyError,
+    MemoryValidationError,
     OptimisticLockError,
 )
 from syntra.persistence.models import (
@@ -42,6 +49,8 @@ from syntra.persistence.models import (
     MCPInvocationModel,
     MCPServerModel,
     MCPToolVersionModel,
+    MemoryFeedbackModel,
+    MemoryRecordModel,
     MissionModel,
     OrganizationModel,
     ProjectModel,
@@ -51,6 +60,7 @@ from syntra.persistence.models import (
     TaskPlanModel,
     TransactionalOutboxModel,
     UsageRecordModel,
+    VerificationRecordModel,
     VerificationRunModel,
     WorkerLeaseModel,
 )
@@ -192,6 +202,26 @@ class MissionRepository:
             raise CrossTenantAccessError(f"Mission {mission_id} not found for org {org_id}.")
 
         return await self.get_by_id_for_org(mission_id=mission_id, org_id=org_id)
+
+    async def list_for_org(
+        self,
+        org_id: UUID,
+        project_id: UUID | None = None,
+        state: str | None = None,
+        limit: int = 100,
+    ) -> list[MissionModel]:
+        stmt = (
+            select(MissionModel)
+            .where(MissionModel.org_id == org_id)
+            .order_by(MissionModel.created_at.desc())
+            .limit(limit)
+        )
+        if project_id:
+            stmt = stmt.where(MissionModel.project_id == project_id)
+        if state:
+            stmt = stmt.where(MissionModel.state == state)
+        res = await self.session.execute(stmt)
+        return list(res.scalars().all())
 
 
 class TaskRepository:
@@ -394,9 +424,10 @@ class TaskRepository:
         task_id: UUID,
         attempt_number: int,
         state: AttemptState = AttemptState.INITIALIZING,
+        attempt_id: UUID | None = None,
     ) -> TaskAttemptModel:
         attempt = TaskAttemptModel(
-            id=uuid4(),
+            id=attempt_id or uuid4(),
             task_id=task_id,
             attempt_number=attempt_number,
             state=state,
@@ -405,6 +436,11 @@ class TaskRepository:
         self.session.add(attempt)
         await self.session.flush()
         return attempt
+
+    async def get_attempt(self, attempt_id: UUID) -> TaskAttemptModel | None:
+        stmt = select(TaskAttemptModel).where(TaskAttemptModel.id == attempt_id)
+        res = await self.session.execute(stmt)
+        return res.scalar_one_or_none()
 
     async def get_latest_attempt(self, task_id: UUID) -> TaskAttemptModel | None:
         stmt = (
@@ -968,6 +1004,23 @@ class ApprovalRepository:
         approval.resolved_at = now
         return approval
 
+    async def list_for_org(
+        self,
+        org_id: UUID,
+        decision: ApprovalDecision | None = None,
+        limit: int = 100,
+    ) -> list[HumanApprovalModel]:
+        stmt = (
+            select(HumanApprovalModel)
+            .where(HumanApprovalModel.org_id == org_id)
+            .order_by(HumanApprovalModel.created_at.desc())
+            .limit(limit)
+        )
+        if decision:
+            stmt = stmt.where(HumanApprovalModel.decision == decision)
+        res = await self.session.execute(stmt)
+        return list(res.scalars().all())
+
 
 class ArtifactRepository:
     def __init__(self, session: AsyncSession) -> None:
@@ -1252,6 +1305,122 @@ class VerificationRepository:
         res = await self.session.execute(stmt)
         return res.scalar_one_or_none()
 
+    async def create_record(self, record: VerificationRecord) -> VerificationRecordModel:
+        """Persist a cryptographic independent verification record."""
+        import json
+
+        record.validate()
+        evidence_dict = {
+            "tests_passed": record.evidence.tests_passed,
+            "tests_failed": record.evidence.tests_failed,
+            "tests_skipped": record.evidence.tests_skipped,
+            "tests_errored": record.evidence.tests_errored,
+            "raw_stdout": record.evidence.raw_stdout,
+            "raw_stderr": record.evidence.raw_stderr,
+            "error_message": record.evidence.error_message,
+        }
+        db_model = VerificationRecordModel(
+            id=record.id,
+            org_id=record.org_id,
+            mission_id=record.mission_id,
+            task_id=record.task_id,
+            task_attempt_id=record.task_attempt_id,
+            plan_version=record.plan_version,
+            status=record.status.value,
+            clean_base_commit=record.clean_base_commit,
+            patch_hash=record.patch_hash,
+            protected_test_suite_hash=record.protected_test_suite_hash,
+            exit_code=record.evidence.exit_code,
+            execution_duration_ms=record.evidence.execution_duration_ms,
+            stdout_digest=record.evidence.stdout_digest,
+            stderr_digest=record.evidence.stderr_digest,
+            evidence_json=json.dumps(evidence_dict),
+            verifier_signature=record.verifier_signature,
+            trace_id=record.trace_id,
+            span_id=record.span_id,
+            created_at=record.created_at,
+        )
+        self.session.add(db_model)
+        await self.session.flush()
+        return db_model
+
+    async def get_record_by_id(self, record_id: UUID) -> VerificationRecordModel | None:
+        stmt = select(VerificationRecordModel).where(VerificationRecordModel.id == record_id)
+        res = await self.session.execute(stmt)
+        return res.scalar_one_or_none()
+
+    async def get_latest_record_for_attempt(
+        self,
+        org_id: UUID,
+        mission_id: UUID,
+        task_id: UUID,
+        task_attempt_id: UUID,
+    ) -> VerificationRecordModel | None:
+        stmt = (
+            select(VerificationRecordModel)
+            .where(
+                VerificationRecordModel.org_id == org_id,
+                VerificationRecordModel.mission_id == mission_id,
+                VerificationRecordModel.task_id == task_id,
+                VerificationRecordModel.task_attempt_id == task_attempt_id,
+            )
+            .order_by(VerificationRecordModel.created_at.desc())
+            .limit(1)
+        )
+        res = await self.session.execute(stmt)
+        return res.scalar_one_or_none()
+
+    async def get_records_for_mission(
+        self,
+        org_id: UUID,
+        mission_id: UUID,
+    ) -> list[VerificationRecordModel]:
+        stmt = (
+            select(VerificationRecordModel)
+            .where(
+                VerificationRecordModel.org_id == org_id,
+                VerificationRecordModel.mission_id == mission_id,
+            )
+            .order_by(VerificationRecordModel.created_at.asc())
+        )
+        res = await self.session.execute(stmt)
+        return list(res.scalars().all())
+
+    async def get_records_for_task(
+        self,
+        org_id: UUID,
+        task_id: UUID,
+    ) -> list[VerificationRecordModel]:
+        stmt = (
+            select(VerificationRecordModel)
+            .where(
+                VerificationRecordModel.org_id == org_id,
+                VerificationRecordModel.task_id == task_id,
+            )
+            .order_by(VerificationRecordModel.created_at.asc())
+        )
+        res = await self.session.execute(stmt)
+        return list(res.scalars().all())
+
+    async def get_record_by_patch_hash(
+        self,
+        org_id: UUID,
+        mission_id: UUID,
+        patch_hash: str,
+    ) -> VerificationRecordModel | None:
+        stmt = (
+            select(VerificationRecordModel)
+            .where(
+                VerificationRecordModel.org_id == org_id,
+                VerificationRecordModel.mission_id == mission_id,
+                VerificationRecordModel.patch_hash == patch_hash,
+            )
+            .order_by(VerificationRecordModel.created_at.desc())
+            .limit(1)
+        )
+        res = await self.session.execute(stmt)
+        return res.scalar_one_or_none()
+
 
 class MCPRepository:
     def __init__(self, session: AsyncSession) -> None:
@@ -1401,3 +1570,667 @@ class MCPRepository:
             inv.completed_at = datetime.now(UTC)
             await self.session.flush()
         return inv
+
+
+class MemoryRepository:
+    """Transactional repository for persistent memory records with strict multi-tenant isolation,
+    mandatory secret redaction, and lifecycle management.
+    """
+
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def create(
+        self,
+        org_id: UUID,
+        category: str,
+        lesson_key: str,
+        content: str,
+        scope: MemoryScope = MemoryScope.ORGANIZATION,
+        project_id: UUID | None = None,
+        provenance_task_id: UUID | None = None,
+        confidence_score: Decimal = Decimal("1.00"),
+        record_id: UUID | None = None,
+        embedding: list[float] | None = None,
+    ) -> MemoryRecordModel:
+        """Create and persist a new memory record after mandatory validation and secret redaction."""
+        # 1. Tenancy validation
+        if not isinstance(org_id, UUID):
+            raise MemoryValidationError("Organization ID (org_id) is mandatory and must be a UUID.")
+
+        if not isinstance(scope, MemoryScope):
+            try:
+                scope = MemoryScope(scope)
+            except ValueError:
+                raise MemoryValidationError(
+                    f"Unsupported memory scope: {scope}. Must be one of {[s.value for s in MemoryScope]}."
+                )
+
+        # Enforce server-side cross-tenant boundary for project_id
+        if project_id is not None:
+            stmt_p = select(ProjectModel).where(ProjectModel.id == project_id)
+            res_p = await self.session.execute(stmt_p)
+            project = res_p.scalar_one_or_none()
+            if not project:
+                raise CrossTenantAccessError(f"Project {project_id} does not exist.")
+            if project.org_id != org_id:
+                raise CrossTenantAccessError(
+                    f"Cross-tenant violation: project {project_id} belongs to org {project.org_id}, not {org_id}."
+                )
+
+        # Enforce server-side cross-tenant boundary for provenance_task_id
+        if provenance_task_id is not None:
+            stmt_t = select(TaskModel).where(TaskModel.id == provenance_task_id)
+            res_t = await self.session.execute(stmt_t)
+            task = res_t.scalar_one_or_none()
+            if not task:
+                raise CrossTenantAccessError(f"Provenance task {provenance_task_id} does not exist.")
+            if task.org_id != org_id:
+                raise CrossTenantAccessError(
+                    f"Cross-tenant violation: task {provenance_task_id} belongs to org {task.org_id}, not {org_id}."
+                )
+
+        # Scope-specific invariants
+        if scope == MemoryScope.PROJECT and project_id is None:
+            raise MemoryValidationError("project_id is mandatory when memory scope is PROJECT.")
+
+        if scope == MemoryScope.EXECUTION and provenance_task_id is None:
+            raise MemoryValidationError("provenance_task_id is mandatory when memory scope is EXECUTION.")
+
+        # Required fields validation
+        if not category or not category.strip():
+            raise MemoryValidationError("category must be a non-empty string.")
+        if len(category) > 100:
+            raise MemoryValidationError("category cannot exceed 100 characters.")
+
+        if not lesson_key or not lesson_key.strip():
+            raise MemoryValidationError("lesson_key must be a non-empty string.")
+        if len(lesson_key) > 255:
+            raise MemoryValidationError("lesson_key cannot exceed 255 characters.")
+
+        if not content or not content.strip():
+            raise MemoryValidationError("content must be a non-empty string.")
+
+        if not isinstance(confidence_score, Decimal):
+            try:
+                confidence_score = Decimal(str(confidence_score))
+            except Exception:
+                raise MemoryValidationError("confidence_score must be a valid Decimal value.")
+
+        if confidence_score < Decimal("0.00") or confidence_score > Decimal("1.00"):
+            raise MemoryValidationError(f"confidence_score must be between 0.00 and 1.00, got {confidence_score}.")
+
+        if embedding is not None:
+            if not isinstance(embedding, list) or len(embedding) == 0:
+                raise MemoryValidationError("embedding must be a non-empty list of floats.")
+            for idx, val in enumerate(embedding):
+                if not isinstance(val, (int, float)) or not math.isfinite(val):
+                    raise MemoryValidationError(
+                        f"embedding element at index {idx} must be a finite float, got {val!r}."
+                    )
+
+        # 2. Mandatory Secret Redaction (fails closed)
+        clean_category = SecretRedactor.redact(category.strip())
+        clean_lesson_key = SecretRedactor.redact(lesson_key.strip())
+        clean_content = SecretRedactor.redact(content)
+
+        # 3. Model instantiation and persistence
+        record = MemoryRecordModel(
+            id=record_id or uuid4(),
+            org_id=org_id,
+            project_id=project_id,
+            scope=scope,
+            category=clean_category,
+            lesson_key=clean_lesson_key,
+            content=clean_content,
+            provenance_task_id=provenance_task_id,
+            confidence_score=confidence_score,
+            created_at=datetime.now(UTC),
+            embedding=embedding,
+        )
+        self.session.add(record)
+        await self.session.flush()
+        return record
+
+    async def save(self, record: MemoryRecord) -> MemoryRecordModel:
+        """Persist a domain MemoryRecord entity transactionally."""
+        record.validate()
+        return await self.create(
+            org_id=record.org_id,
+            category=record.category,
+            lesson_key=record.lesson_key,
+            content=record.content,
+            scope=record.scope,
+            project_id=record.project_id,
+            provenance_task_id=record.provenance_task_id,
+            confidence_score=record.confidence_score,
+            record_id=record.id,
+            embedding=record.embedding,
+        )
+
+    async def get_by_id(
+        self,
+        memory_id: UUID,
+        org_id: UUID,
+        project_id: UUID | None = None,
+    ) -> MemoryRecordModel | None:
+        """Retrieve a memory record by ID with strict tenant boundary validation."""
+        stmt = select(MemoryRecordModel).where(MemoryRecordModel.id == memory_id)
+        res = await self.session.execute(stmt)
+        record = res.scalar_one_or_none()
+        if not record:
+            return None
+
+        if record.org_id != org_id:
+            raise CrossTenantAccessError(
+                f"Unauthorized cross-tenant access: memory {memory_id} belongs to org {record.org_id}, not {org_id}."
+            )
+
+        if project_id is not None and record.project_id is not None and record.project_id != project_id:
+            raise CrossTenantAccessError(
+                f"Unauthorized cross-project access: memory {memory_id} belongs to project {record.project_id}, not {project_id}."
+            )
+
+        return record
+
+    async def query_by_scope(
+        self,
+        org_id: UUID,
+        scope: MemoryScope,
+        project_id: UUID | None = None,
+        category: str | None = None,
+        min_confidence: Decimal | None = None,
+        include_deprecated: bool = False,
+        limit: int = 50,
+    ) -> list[MemoryRecordModel]:
+        """Query memory records filtered strictly by tenant org_id and scope."""
+        stmt = select(MemoryRecordModel).where(
+            MemoryRecordModel.org_id == org_id,
+            MemoryRecordModel.scope == scope,
+        )
+
+        if project_id is not None:
+            stmt = stmt.where(MemoryRecordModel.project_id == project_id)
+
+        if category is not None:
+            stmt = stmt.where(MemoryRecordModel.category == category)
+
+        if not include_deprecated:
+            stmt = stmt.where(MemoryRecordModel.confidence_score > Decimal("0.00"))
+
+        if min_confidence is not None:
+            stmt = stmt.where(MemoryRecordModel.confidence_score >= min_confidence)
+
+        stmt = stmt.order_by(
+            MemoryRecordModel.confidence_score.desc(),
+            MemoryRecordModel.created_at.desc(),
+        ).limit(min(limit, 200))
+
+        res = await self.session.execute(stmt)
+        return list(res.scalars().all())
+
+    async def deprecate(
+        self,
+        memory_id: UUID,
+        org_id: UUID,
+    ) -> bool:
+        """Soft-deprecate a memory record by setting its confidence score to 0.00 with tenant enforcement."""
+        stmt = select(MemoryRecordModel).where(MemoryRecordModel.id == memory_id).with_for_update()
+        res = await self.session.execute(stmt)
+        record = res.scalar_one_or_none()
+        if not record:
+            return False
+
+        if record.org_id != org_id:
+            raise CrossTenantAccessError(
+                f"Unauthorized cross-tenant deprecation attempt: memory {memory_id} belongs to org {record.org_id}, not {org_id}."
+            )
+
+        record.confidence_score = Decimal("0.00")
+        await self.session.flush()
+        return True
+
+    async def list_for_org(
+        self,
+        org_id: UUID,
+        include_deprecated: bool = False,
+        limit: int = 50,
+    ) -> list[MemoryRecordModel]:
+        """List memory records belonging to an organization."""
+        stmt = select(MemoryRecordModel).where(MemoryRecordModel.org_id == org_id)
+        if not include_deprecated:
+            stmt = stmt.where(MemoryRecordModel.confidence_score > Decimal("0.00"))
+        stmt = stmt.order_by(MemoryRecordModel.created_at.desc()).limit(min(limit, 200))
+        res = await self.session.execute(stmt)
+        return list(res.scalars().all())
+
+    async def delete(
+        self,
+        memory_id: UUID,
+        org_id: UUID,
+    ) -> bool:
+        """Hard delete a memory record with tenant check."""
+        stmt = select(MemoryRecordModel).where(MemoryRecordModel.id == memory_id).with_for_update()
+        res = await self.session.execute(stmt)
+        record = res.scalar_one_or_none()
+        if not record:
+            return False
+
+        if record.org_id != org_id:
+            raise CrossTenantAccessError(
+                f"Unauthorized cross-tenant deletion attempt: memory {memory_id} belongs to org {record.org_id}, not {org_id}."
+            )
+
+        await self.session.delete(record)
+        await self.session.flush()
+        return True
+
+    async def search_vector(
+        self,
+        org_id: UUID,
+        query_vector: list[float],
+        scope: MemoryScope = MemoryScope.ORGANIZATION,
+        project_id: UUID | None = None,
+        provenance_task_id: UUID | None = None,
+        category: str | None = None,
+        min_confidence: Decimal = Decimal("0.50"),
+        min_similarity: float = 0.50,
+        limit: int = 10,
+    ) -> list[tuple[MemoryRecordModel, float]]:
+        """Retrieve memory records ranked by cosine similarity with strict multi-tenant SQL filtering."""
+        from syntra.domain.embeddings import compute_cosine_similarity
+
+        if not isinstance(org_id, UUID):
+            raise MemoryValidationError("Organization ID (org_id) is mandatory and must be a UUID.")
+
+        if not isinstance(query_vector, list) or len(query_vector) == 0:
+            raise MemoryValidationError("query_vector must be a non-empty list of floats.")
+
+        for idx, val in enumerate(query_vector):
+            if not isinstance(val, (int, float)) or not math.isfinite(val):
+                raise MemoryValidationError(f"query_vector element at index {idx} must be a finite float, got {val!r}.")
+
+        if not isinstance(scope, MemoryScope):
+            try:
+                scope = MemoryScope(scope)
+            except ValueError:
+                raise MemoryValidationError(f"Unsupported memory scope: {scope}.")
+
+        # Enforce exact scope rules
+        if scope == MemoryScope.PROJECT:
+            if project_id is None:
+                raise MemoryValidationError("project_id is mandatory when querying PROJECT scope.")
+            stmt_p = select(ProjectModel).where(ProjectModel.id == project_id)
+            res_p = await self.session.execute(stmt_p)
+            project = res_p.scalar_one_or_none()
+            if not project or project.org_id != org_id:
+                raise CrossTenantAccessError(
+                    f"Unauthorized project access: project {project_id} does not belong to org {org_id}."
+                )
+
+        if scope == MemoryScope.EXECUTION:
+            if provenance_task_id is None:
+                raise MemoryValidationError("provenance_task_id is mandatory when querying EXECUTION scope.")
+            stmt_t = select(TaskModel).where(TaskModel.id == provenance_task_id)
+            res_t = await self.session.execute(stmt_t)
+            task = res_t.scalar_one_or_none()
+            if not task or task.org_id != org_id:
+                raise CrossTenantAccessError(
+                    f"Unauthorized task access: task {provenance_task_id} does not belong to org {org_id}."
+                )
+
+        # SQL filter enforcing multi-tenant isolation, scope, and confidence
+        stmt = select(MemoryRecordModel).where(
+            MemoryRecordModel.org_id == org_id,
+            MemoryRecordModel.scope == scope,
+            MemoryRecordModel.confidence_score > Decimal("0.00"),
+            MemoryRecordModel.confidence_score >= min_confidence,
+            MemoryRecordModel.embedding.isnot(None),
+        )
+
+        if project_id is not None:
+            stmt = stmt.where(MemoryRecordModel.project_id == project_id)
+
+        if provenance_task_id is not None:
+            stmt = stmt.where(MemoryRecordModel.provenance_task_id == provenance_task_id)
+
+        if category is not None:
+            stmt = stmt.where(MemoryRecordModel.category == category)
+
+        res = await self.session.execute(stmt)
+        candidates = list(res.scalars().all())
+
+        ranked: list[tuple[MemoryRecordModel, float]] = []
+        for cand in candidates:
+            if not cand.embedding:
+                continue
+            sim = compute_cosine_similarity(query_vector, cand.embedding)
+            if sim >= min_similarity:
+                ranked.append((cand, sim))
+
+        # Sort by similarity desc, then confidence desc, then created_at desc
+        ranked.sort(key=lambda item: (item[1], item[0].confidence_score, item[0].created_at), reverse=True)
+        return ranked[:limit]
+
+    async def search_lexical(
+        self,
+        org_id: UUID,
+        query_text: str,
+        scope: MemoryScope = MemoryScope.ORGANIZATION,
+        project_id: UUID | None = None,
+        provenance_task_id: UUID | None = None,
+        category: str | None = None,
+        min_confidence: Decimal = Decimal("0.50"),
+        limit: int = 10,
+    ) -> list[tuple[MemoryRecordModel, float]]:
+        """Retrieve memory records using deterministic lexical token overlap matching."""
+        if not isinstance(org_id, UUID):
+            raise MemoryValidationError("Organization ID (org_id) is mandatory and must be a UUID.")
+
+        if not isinstance(scope, MemoryScope):
+            try:
+                scope = MemoryScope(scope)
+            except ValueError:
+                raise MemoryValidationError(f"Unsupported memory scope: {scope}.")
+
+        if scope == MemoryScope.PROJECT:
+            if project_id is None:
+                raise MemoryValidationError("project_id is mandatory when querying PROJECT scope.")
+            stmt_p = select(ProjectModel).where(ProjectModel.id == project_id)
+            res_p = await self.session.execute(stmt_p)
+            project = res_p.scalar_one_or_none()
+            if not project or project.org_id != org_id:
+                raise CrossTenantAccessError(
+                    f"Unauthorized project access: project {project_id} does not belong to org {org_id}."
+                )
+
+        if scope == MemoryScope.EXECUTION:
+            if provenance_task_id is None:
+                raise MemoryValidationError("provenance_task_id is mandatory when querying EXECUTION scope.")
+            stmt_t = select(TaskModel).where(TaskModel.id == provenance_task_id)
+            res_t = await self.session.execute(stmt_t)
+            task = res_t.scalar_one_or_none()
+            if not task or task.org_id != org_id:
+                raise CrossTenantAccessError(
+                    f"Unauthorized task access: task {provenance_task_id} does not belong to org {org_id}."
+                )
+
+        # SQL pre-filter for active records
+        stmt = select(MemoryRecordModel).where(
+            MemoryRecordModel.org_id == org_id,
+            MemoryRecordModel.scope == scope,
+            MemoryRecordModel.confidence_score > Decimal("0.00"),
+            MemoryRecordModel.confidence_score >= min_confidence,
+        )
+
+        if project_id is not None:
+            stmt = stmt.where(MemoryRecordModel.project_id == project_id)
+
+        if provenance_task_id is not None:
+            stmt = stmt.where(MemoryRecordModel.provenance_task_id == provenance_task_id)
+
+        if category is not None:
+            stmt = stmt.where(MemoryRecordModel.category == category)
+
+        res = await self.session.execute(stmt)
+        candidates = list(res.scalars().all())
+
+        clean_query = SecretRedactor.redact(query_text).lower().strip()
+        query_tokens = set(re.findall(r"[a-zA-Z0-9]+", clean_query))
+        if not query_tokens:
+            return []
+
+        scored: list[tuple[MemoryRecordModel, float]] = []
+        for cand in candidates:
+            cand_key_tokens = set(re.findall(r"[a-zA-Z0-9]+", cand.lesson_key.lower()))
+            cand_content_tokens = set(re.findall(r"[a-zA-Z0-9]+", cand.content.lower()))
+            cand_cat_tokens = set(re.findall(r"[a-zA-Z0-9]+", cand.category.lower()))
+            all_cand_tokens = cand_key_tokens | cand_content_tokens | cand_cat_tokens
+
+            # Exact match on lesson key gets priority
+            if cand.lesson_key.lower() == clean_query:
+                score = 1.0
+            elif query_tokens.issubset(cand_key_tokens):
+                score = 0.95
+            else:
+                intersection = query_tokens & all_cand_tokens
+                if not intersection:
+                    continue
+                score = len(intersection) / len(query_tokens | all_cand_tokens)
+
+            scored.append((cand, round(score, 4)))
+
+        scored.sort(key=lambda item: (item[1], item[0].confidence_score, item[0].created_at), reverse=True)
+        return scored[:limit]
+
+    async def search_hybrid(
+        self,
+        org_id: UUID,
+        query_text: str,
+        query_vector: list[float] | None = None,
+        scope: MemoryScope = MemoryScope.ORGANIZATION,
+        project_id: UUID | None = None,
+        provenance_task_id: UUID | None = None,
+        category: str | None = None,
+        min_confidence: Decimal = Decimal("0.50"),
+        min_similarity: float = 0.50,
+        limit: int = 10,
+    ) -> list[tuple[MemoryRecordModel, float]]:
+        """Retrieve memory records via vector search with automatic deterministic lexical fallback."""
+        results: list[tuple[MemoryRecordModel, float]] = []
+        if query_vector is not None:
+            try:
+                results = await self.search_vector(
+                    org_id=org_id,
+                    query_vector=query_vector,
+                    scope=scope,
+                    project_id=project_id,
+                    provenance_task_id=provenance_task_id,
+                    category=category,
+                    min_confidence=min_confidence,
+                    min_similarity=min_similarity,
+                    limit=limit,
+                )
+            except Exception:
+                results = []
+
+        # Fallback to deterministic lexical search if vector results are empty
+        if not results:
+            results = await self.search_lexical(
+                org_id=org_id,
+                query_text=query_text,
+                scope=scope,
+                project_id=project_id,
+                provenance_task_id=provenance_task_id,
+                category=category,
+                min_confidence=min_confidence,
+                limit=limit,
+            )
+
+        return results
+
+    async def record_feedback(
+        self,
+        org_id: UUID,
+        memory_id: UUID,
+        outcome: str,
+        confidence_delta: Decimal,
+        idempotency_key: str,
+        project_id: UUID | None = None,
+        task_id: UUID | None = None,
+        attempt_id: UUID | None = None,
+        source_artifact_id: UUID | None = None,
+        source_artifact_version: str | None = None,
+        source_artifact_checksum: str | None = None,
+        patch_hash: str | None = None,
+        deprecation_threshold: Decimal = Decimal("0.20"),
+    ) -> tuple[MemoryFeedbackModel, MemoryRecordModel]:
+        """Record an append-only feedback audit event and adapt memory confidence transactionally.
+
+        Idempotency: If idempotency_key already exists, returns the existing feedback record
+        and current memory record without re-applying the confidence delta.
+        """
+        if not isinstance(org_id, UUID):
+            raise MemoryValidationError("org_id must be a valid UUID.")
+        if not isinstance(memory_id, UUID):
+            raise MemoryValidationError("memory_id must be a valid UUID.")
+        if not outcome or not outcome.strip():
+            raise MemoryValidationError("outcome must be a non-empty string.")
+        if not idempotency_key or not idempotency_key.strip():
+            raise MemoryValidationError("idempotency_key must be a non-empty string.")
+
+        # 1. Check idempotency key first (fail-safe for retries, reclaims, re-execution)
+        stmt_idem = select(MemoryFeedbackModel).where(MemoryFeedbackModel.idempotency_key == idempotency_key)
+        res_idem = await self.session.execute(stmt_idem)
+        existing_feedback = res_idem.scalar_one_or_none()
+        if existing_feedback:
+            stmt_rec = select(MemoryRecordModel).where(MemoryRecordModel.id == memory_id)
+            res_rec = await self.session.execute(stmt_rec)
+            rec = res_rec.scalar_one_or_none()
+            if not rec:
+                raise MemoryValidationError(f"Target memory record {memory_id} not found.")
+            return existing_feedback, rec
+
+        # 2. Acquire record with lock and tenant validation
+        stmt_rec = select(MemoryRecordModel).where(MemoryRecordModel.id == memory_id).with_for_update()
+        res_rec = await self.session.execute(stmt_rec)
+        record = res_rec.scalar_one_or_none()
+        if not record:
+            raise MemoryValidationError(f"Target memory record {memory_id} not found.")
+
+        if record.org_id != org_id:
+            raise CrossTenantAccessError(
+                f"Cross-tenant feedback violation: memory {memory_id} belongs to org {record.org_id}, not {org_id}."
+            )
+
+        if project_id is not None and record.project_id is not None and record.project_id != project_id:
+            raise CrossTenantAccessError(
+                f"Cross-project feedback violation: memory {memory_id} belongs to project {record.project_id}, not {project_id}."
+            )
+
+        # 2b. Mandatory provenance check: Confidence-changing events require source artifact provenance
+        if confidence_delta != Decimal("0.00"):
+            if not source_artifact_id or not source_artifact_version or not source_artifact_checksum:
+                raise MemoryValidationError(
+                    "Source artifact provenance (source_artifact_id, source_artifact_version, source_artifact_checksum) "
+                    "is mandatory for confidence-changing feedback."
+                )
+
+        # 2c. Mutual authorization and referential checks across project, task, attempt, and artifact
+        if project_id is not None:
+            stmt_proj = select(ProjectModel).where(ProjectModel.id == project_id)
+            res_proj = await self.session.execute(stmt_proj)
+            proj = res_proj.scalar_one_or_none()
+            if not proj or proj.org_id != org_id:
+                raise CrossTenantAccessError(
+                    f"Cross-tenant feedback violation: project {project_id} does not belong to org {org_id}."
+                )
+
+        if task_id is not None:
+            stmt_task = select(TaskModel).where(TaskModel.id == task_id)
+            res_task = await self.session.execute(stmt_task)
+            task = res_task.scalar_one_or_none()
+            if not task or task.org_id != org_id:
+                raise CrossTenantAccessError(
+                    f"Cross-tenant feedback violation: task {task_id} does not belong to org {org_id}."
+                )
+            if attempt_id is not None:
+                stmt_att = select(TaskAttemptModel).where(TaskAttemptModel.id == attempt_id)
+                res_att = await self.session.execute(stmt_att)
+                att = res_att.scalar_one_or_none()
+                if not att:
+                    raise MemoryValidationError(f"Task attempt {attempt_id} not found.")
+                if att.task_id != task_id:
+                    raise MemoryValidationError(
+                        f"Attempt task mismatch: attempt {attempt_id} belongs to task {att.task_id}, not {task_id}."
+                    )
+
+        if source_artifact_id is not None:
+            stmt_art = select(ArtifactModel).where(ArtifactModel.id == source_artifact_id)
+            res_art = await self.session.execute(stmt_art)
+            art = res_art.scalar_one_or_none()
+            if not art:
+                raise MemoryValidationError(f"Source artifact {source_artifact_id} not found.")
+            stmt_m = select(MissionModel).where(MissionModel.id == art.mission_id)
+            res_m = await self.session.execute(stmt_m)
+            m_art = res_m.scalar_one_or_none()
+            if not m_art or m_art.org_id != org_id:
+                raise CrossTenantAccessError(
+                    f"Cross-tenant feedback violation: artifact {source_artifact_id} belongs to org {m_art.org_id if m_art else 'unknown'}, not {org_id}."
+                )
+            if task_id is not None and art.task_id is not None and art.task_id != task_id:
+                raise MemoryValidationError(
+                    f"Artifact task mismatch: artifact {source_artifact_id} belongs to task {art.task_id}, not {task_id}."
+                )
+            if source_artifact_version is not None and source_artifact_checksum is not None:
+                try:
+                    ver_num = int(source_artifact_version)
+                except (ValueError, TypeError):
+                    ver_num = 1
+                stmt_ver = select(ArtifactVersionModel).where(
+                    ArtifactVersionModel.artifact_id == source_artifact_id,
+                    ArtifactVersionModel.version == ver_num,
+                )
+                res_ver = await self.session.execute(stmt_ver)
+                ver = res_ver.scalar_one_or_none()
+                if not ver:
+                    raise MemoryValidationError(
+                        f"Artifact version {ver_num} not found for artifact {source_artifact_id}."
+                    )
+                if ver.sha256_checksum != source_artifact_checksum:
+                    raise MemoryValidationError(
+                        f"Artifact checksum mismatch: expected {source_artifact_checksum}, got {ver.sha256_checksum}."
+                    )
+
+        # 3. Calculate adapted confidence clamped to [0.00, 1.00]
+        if not isinstance(confidence_delta, Decimal):
+            confidence_delta = Decimal(str(confidence_delta))
+
+        new_score = record.confidence_score + confidence_delta
+        clamped_score = max(Decimal("0.00"), min(Decimal("1.00"), new_score))
+
+        # Check deprecation threshold on decay
+        if clamped_score <= deprecation_threshold and confidence_delta < Decimal("0.00"):
+            clamped_score = Decimal("0.00")
+
+        record.confidence_score = clamped_score
+
+        # 4. Create and persist append-only audit feedback event
+        feedback_event = MemoryFeedbackModel(
+            id=uuid4(),
+            org_id=org_id,
+            memory_id=memory_id,
+            project_id=project_id,
+            task_id=task_id,
+            attempt_id=attempt_id,
+            source_artifact_id=source_artifact_id,
+            source_artifact_version=source_artifact_version,
+            source_artifact_checksum=source_artifact_checksum,
+            patch_hash=patch_hash,
+            outcome=outcome.strip(),
+            confidence_delta=confidence_delta,
+            resulting_confidence_score=clamped_score,
+            idempotency_key=idempotency_key.strip(),
+            created_at=datetime.now(UTC),
+        )
+        self.session.add(feedback_event)
+        await self.session.flush()
+
+        return feedback_event, record
+
+    async def get_feedback_history(
+        self,
+        memory_id: UUID,
+        org_id: UUID,
+    ) -> list[MemoryFeedbackModel]:
+        """Retrieve the append-only feedback audit trail for a memory record."""
+        stmt = (
+            select(MemoryFeedbackModel)
+            .where(
+                MemoryFeedbackModel.memory_id == memory_id,
+                MemoryFeedbackModel.org_id == org_id,
+            )
+            .order_by(MemoryFeedbackModel.created_at.asc())
+        )
+        res = await self.session.execute(stmt)
+        return list(res.scalars().all())

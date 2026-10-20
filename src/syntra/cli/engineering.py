@@ -59,7 +59,7 @@ def list_agents() -> None:
 
 
 @asynccontextmanager
-async def composition(verify: list[str]):
+async def composition(verify: list[str], repository: Path | None = None, image: str = "syntra-sandbox:latest"):
     settings = get_settings()
     provider = GeminiModelProvider()
     if not provider.is_configured():
@@ -76,7 +76,15 @@ async def composition(verify: list[str]):
 
     reg = registry()
     runtime = ModelRuntime(provider, reg.skills)
-    service = EngineeringMissionService(uow_factory, reg, runtime, verify)
+    service = EngineeringMissionService(
+        uow_factory,
+        reg,
+        runtime,
+        verify,
+        integration_repository_path=repository,
+        planning_repository_path=repository,
+        integration_config=ContainerConfig(image=image),
+    )
     pool, saver = await CheckpointerFactory.create_postgres_checkpointer(settings.database_url)
     dispatcher = RedisTaskDispatcher(settings.redis_url)
     engine = WorkflowOrchestrationEngine(runtime, saver, reg.skills, engineering_service=service)
@@ -106,12 +114,14 @@ def print_state(state: dict) -> None:
 def start(
     mission_id: UUID,
     org_id: UUID,
+    repository: Path = typer.Option(..., "--repository", exists=True, file_okay=False, resolve_path=True),
+    image: str = "syntra-sandbox:latest",
     verify: list[str] = typer.Option(
         ..., "--verify-command", help="Operator-approved command executed inside the target sandbox"
     ),
 ) -> None:
     async def run():
-        async with composition(verify) as (factory, engine, *_):
+        async with composition(verify, repository, image) as (factory, engine, *_):
             async with factory() as uow:
                 mission = await uow.missions.get_by_id_for_org(mission_id, org_id)
                 print_state(await engine.start_mission(mission_id, org_id, mission.objective, uow=uow))
@@ -120,9 +130,15 @@ def start(
 
 
 @engineering_app.command("advance")
-def advance(mission_id: UUID, org_id: UUID, verify: list[str] = typer.Option(..., "--verify-command")) -> None:
+def advance(
+    mission_id: UUID,
+    org_id: UUID,
+    repository: Path = typer.Option(..., "--repository", exists=True, file_okay=False, resolve_path=True),
+    image: str = "syntra-sandbox:latest",
+    verify: list[str] = typer.Option(..., "--verify-command"),
+) -> None:
     async def run():
-        async with composition(verify) as (factory, engine, *_):
+        async with composition(verify, repository, image) as (factory, engine, *_):
             async with factory() as uow:
                 await uow.missions.get_by_id_for_org(mission_id, org_id)
                 print_state(await engine.resume_approval(mission_id, {"org_id": str(org_id)}, uow=uow))
@@ -136,6 +152,8 @@ def decide(
     org_id: UUID,
     user_id: UUID,
     digest: str,
+    repository: Path = typer.Option(..., "--repository", exists=True, file_okay=False, resolve_path=True),
+    image: str = "syntra-sandbox:latest",
     decision: str = typer.Option("APPROVED", "--decision"),
     verify: list[str] = typer.Option(..., "--verify-command"),
 ) -> None:
@@ -143,7 +161,7 @@ def decide(
         raise typer.BadParameter("Decision must be APPROVED, REJECTED or CANCELLED")
 
     async def run():
-        async with composition(verify) as (factory, engine, *_):
+        async with composition(verify, repository, image) as (factory, engine, *_):
             async with factory() as uow:
                 await uow.missions.get_by_id_for_org(mission_id, org_id)
                 print_state(

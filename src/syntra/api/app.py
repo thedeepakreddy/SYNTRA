@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from syntra.api.errors import register_exception_handlers
-from syntra.api.middleware import RequestSizeLimitMiddleware
+from syntra.api.middleware import RequestSizeLimitMiddleware, TracePropagationMiddleware
 from syntra.api.routes import checkpoints, events, health, sessions, workspace
 from syntra.api.v1.router import v1_router
 from syntra.core.config import get_settings
@@ -64,6 +64,7 @@ def create_app() -> FastAPI:
     )
 
     # Middleware registration (executed in reverse order of addition)
+    app.add_middleware(TracePropagationMiddleware)
     app.add_middleware(CorrelationIdMiddleware)
     app.add_middleware(RequestSizeLimitMiddleware, max_bytes=settings.max_request_body_bytes)
     app.add_middleware(

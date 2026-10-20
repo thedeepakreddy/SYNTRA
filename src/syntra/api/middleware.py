@@ -34,3 +34,29 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
 
         response: Response = await call_next(request)
         return response
+
+
+class TracePropagationMiddleware(BaseHTTPMiddleware):
+    """Middleware extracting incoming W3C traceparent and attaching active OpenTelemetry context."""
+
+    async def dispatch(self, request: Request, call_next: Any) -> Response:
+        from opentelemetry import context as context_api
+
+        from syntra.observability.propagation import extract_trace_context, inject_trace_context
+
+        token = None
+        headers_dict = {k.lower(): v for k, v in request.headers.items()}
+        if "traceparent" in headers_dict:
+            ctx = extract_trace_context(headers_dict)
+            token = context_api.attach(ctx)
+
+        try:
+            response: Response = await call_next(request)
+            resp_headers: dict[str, str] = {}
+            inject_trace_context(resp_headers)
+            if "traceparent" in resp_headers:
+                response.headers["traceparent"] = resp_headers["traceparent"]
+            return response
+        finally:
+            if token is not None:
+                context_api.detach(token)
