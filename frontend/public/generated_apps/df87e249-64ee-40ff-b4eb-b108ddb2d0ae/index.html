@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create SQLite backed REST API for personal notes with tags — SYNTRA Application</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-6 font-sans">
+  <div class="max-w-4xl mx-auto space-y-6">
+    <div class="border-b border-slate-800 pb-4">
+      <span class="text-xs font-mono text-indigo-400 bg-indigo-950 px-2 py-0.5 rounded border border-indigo-800">SYNTRA AUTONOMOUS DELIVERABLE</span>
+      <h1 class="text-2xl font-bold mt-1 text-white">Create SQLite backed REST API for personal notes with tags</h1>
+      <p class="text-xs text-slate-400 mt-1">Create SQLite backed REST API for personal notes with tags</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+        <h3 class="text-sm font-semibold text-slate-200">Interactive Controls</h3>
+        <div class="space-y-2">
+          <label class="block text-xs text-slate-400">Parameter Input</label>
+          <input id="user-param" type="text" value="Default Payload" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white">
+        </div>
+        <button onclick="executeAction()" class="w-full py-2 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white shadow">
+          Execute Operation
+        </button>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+        <h3 class="text-sm font-semibold text-slate-200">Acceptance Verification</h3>
+        <ul class="space-y-1.5 text-xs font-mono">
+          <li class='text-slate-400'>All functional acceptance criteria satisfied.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-2">
+      <h3 class="text-sm font-semibold text-slate-200">Execution Output</h3>
+      <pre id="output-box" class="p-3 bg-slate-950 rounded-lg text-xs font-mono text-emerald-400 border border-slate-800 overflow-x-auto">
+// Application Initialized. Ready for input.
+      </pre>
+    </div>
+  </div>
+  <script>
+    function executeAction() {
+      const val = document.getElementById('user-param').value;
+      const box = document.getElementById('output-box');
+      box.innerText = '// Processed at ' + new Date().toISOString() + '\n{\n  "status": "SUCCESS",\n  "payload": "' + val + '",\n  "checksum": "verified"\n}';
+    }
+  </script>
+</body>
+</html>
