@@ -1100,23 +1100,20 @@ async def get_mission_app(
                         },
                     )
 
-    # 3. Fallback for the active hardware calculator app
-    calc_file = Path("frontend/public/calculator.html")
-    if calc_file.exists():
-        calc_html = calc_file.read_text(encoding="utf-8")
-        try:
-            app_file.parent.mkdir(parents=True, exist_ok=True)
-            app_file.write_text(calc_html, encoding="utf-8")
-        except Exception:
-            pass
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={
-                "mission_id": str(mission_id),
-                "title": mission.objective,
-                "html": calc_html,
-                "url": f"/generated_apps/{mission_id}/index.html",
-            },
-        )
-
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No application output found for this mission.")
+    # 3. On-demand synthesis tailored strictly to this mission's objective
+    from syntra.agents.app_synthesizer import synthesize_application
+    fresh_html = synthesize_application(mission.objective, [])
+    try:
+        app_file.parent.mkdir(parents=True, exist_ok=True)
+        app_file.write_text(fresh_html, encoding="utf-8")
+    except Exception:
+        pass
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "mission_id": str(mission_id),
+            "title": mission.objective,
+            "html": fresh_html,
+            "url": f"/generated_apps/{mission_id}/index.html",
+        },
+    )
