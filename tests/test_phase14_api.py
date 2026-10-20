@@ -434,3 +434,44 @@ async def test_mission_artifacts_content_retrieval(p14_client):
     assert item["content"] == raw_markdown
     assert item["path"] == "Calculator_PRD_Spec.md"
 
+
+@pytest.mark.asyncio
+async def test_mission_app_endpoint(p14_client):
+    """Verify GET /v1/missions/{id}/app returns synthesized application HTML and launch URL."""
+    import base64
+    from syntra.domain.entities import ArtifactType
+
+    client = p14_client["client"]
+    token = p14_client["dev_token"]
+    session_factory = p14_client["session_factory"]
+    org_id = p14_client["org_id"]
+
+    mission_id = uuid.uuid4()
+    app_html = "<!DOCTYPE html><html><head><title>Test App</title></head><body><h1>Hello World</h1></body></html>"
+    b64_content = base64.b64encode(app_html.encode("utf-8")).decode("utf-8")
+
+    async with SqlAlchemyUnitOfWork(session_factory) as uow:
+        p = await uow.projects.create(uuid.uuid4(), org_id, "App Project", "app-proj")
+        await uow.missions.create(mission_id, org_id, p.id, "Objective for App Serving")
+        art = await uow.artifacts.create(
+            mission_id=mission_id,
+            title="Built Application: Test App",
+            type=ArtifactType.UNIFIED_DIFF,
+        )
+        await uow.artifacts.add_version(
+            artifact_id=art.id,
+            version=1,
+            storage_path=f"inline:{b64_content}",
+            sha256_checksum="abc",
+            size_bytes=len(app_html),
+        )
+        await uow.commit()
+
+    resp = await client.get(f"/v1/missions/{mission_id}/app", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["mission_id"] == str(mission_id)
+    assert "<!DOCTYPE html>" in data["html"]
+    assert "url" in data
+
+

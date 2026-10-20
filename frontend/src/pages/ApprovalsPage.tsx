@@ -13,6 +13,7 @@ import {
   FileCheck2,
   Eye,
   ExternalLink,
+  Sparkles,
 } from 'lucide-react';
 
 export const ApprovalsPage: React.FC = () => {
@@ -24,6 +25,8 @@ export const ApprovalsPage: React.FC = () => {
   // Respond Modal State
   const [selectedApproval, setSelectedApproval] = useState<Approval | null>(null);
   const [gateArtifacts, setGateArtifacts] = useState<Artifact[]>([]);
+  const [missionApp, setMissionApp] = useState<{ mission_id: string; title: string; html: string; url: string } | null>(null);
+  const [previewingApp, setPreviewingApp] = useState(false);
   const [viewingGateArtifact, setViewingGateArtifact] = useState<Artifact | null>(null);
   const [respondData, setRespondData] = useState<ApprovalRespondPayload>({
     decision: 'APPROVED',
@@ -55,6 +58,8 @@ export const ApprovalsPage: React.FC = () => {
   const openReviewModal = (approval: Approval) => {
     setSelectedApproval(approval);
     setGateArtifacts([]);
+    setMissionApp(null);
+    setPreviewingApp(false);
     const digest = approval.signature_digest || approval.action_digest || '';
     const userCtx = apiClient.getUserContext();
     setRespondData({
@@ -65,12 +70,17 @@ export const ApprovalsPage: React.FC = () => {
     });
     setRespondError(null);
 
-    // Fetch deliverables for the mission
+    // Fetch deliverables and live app for the mission
     if (approval.mission_id) {
       apiClient
         .getMissionArtifacts(approval.mission_id)
         .then((res) => setGateArtifacts(res.items || []))
         .catch(() => setGateArtifacts([]));
+
+      apiClient
+        .getMissionApp(approval.mission_id)
+        .then((res) => setMissionApp(res))
+        .catch(() => setMissionApp(null));
     }
   };
 
@@ -232,6 +242,7 @@ export const ApprovalsPage: React.FC = () => {
           isOpen={!!selectedApproval}
           onClose={() => setSelectedApproval(null)}
           title={`Review Approval Ticket: ${selectedApproval.action_type}`}
+          maxWidth={previewingApp ? 'max-w-4xl' : 'max-w-2xl'}
         >
           <form onSubmit={handleRespondSubmit} className="space-y-4">
             {respondError && (
@@ -253,6 +264,49 @@ export const ApprovalsPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Live Application Deliverable Preview Card */}
+            <div className="rounded-lg border border-emerald-800/60 bg-emerald-950/20 p-3 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center space-x-2">
+                  <Sparkles className="h-4 w-4 text-emerald-400" />
+                  <span className="font-semibold text-emerald-300">
+                    Live Application Deliverable
+                  </span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewingApp(!previewingApp)}
+                    className="inline-flex items-center space-x-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 text-[11px] font-medium transition-colors border border-slate-700"
+                  >
+                    <span>{previewingApp ? 'Collapse Live Frame' : 'Preview Live App'}</span>
+                  </button>
+                  <a
+                    href={missionApp?.url || (selectedApproval.mission_id ? `/generated_apps/${selectedApproval.mission_id}/index.html` : '/calculator.html')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center space-x-1 text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold underline"
+                    title="Open live built application in new window"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    <span>Launch in New Tab</span>
+                  </a>
+                </div>
+              </div>
+
+              {previewingApp && (
+                <div className="relative rounded-lg border border-slate-800 bg-slate-950 overflow-hidden shadow-inner h-[380px] mt-2">
+                  <iframe
+                    src={missionApp?.url || (selectedApproval.mission_id ? `/generated_apps/${selectedApproval.mission_id}/index.html` : '/calculator.html')}
+                    title="Live Deliverable Preview"
+                    className="w-full h-full border-0"
+                    sandbox="allow-scripts allow-forms allow-same-origin allow-popups"
+                  />
+                </div>
+              )}
+            </div>
+
             {/* Deliverables Staged for Verification */}
             {gateArtifacts.length > 0 && (
               <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-3 space-y-2">
@@ -261,7 +315,7 @@ export const ApprovalsPage: React.FC = () => {
                     Deliverables Awaiting Verification ({gateArtifacts.length})
                   </span>
                   <a
-                    href="/calculator.html"
+                    href={missionApp?.url || (selectedApproval.mission_id ? `/generated_apps/${selectedApproval.mission_id}/index.html` : '/calculator.html')}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center space-x-1 text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold underline"

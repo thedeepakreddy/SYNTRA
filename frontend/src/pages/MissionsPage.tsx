@@ -30,6 +30,10 @@ import {
   CheckCircle2,
   Eye,
   ExternalLink,
+  Code,
+  Copy,
+  Check,
+  Sparkles,
 } from 'lucide-react';
 import { ArtifactViewerModal } from '../components/ArtifactViewerModal';
 
@@ -45,11 +49,14 @@ export const MissionsPage: React.FC = () => {
 
   // Mission Detail modal/drawer state
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
-  const [detailTab, setDetailTab] = useState<'tasks' | 'events' | 'artifacts' | 'usage'>('tasks');
+  const [detailTab, setDetailTab] = useState<'tasks' | 'events' | 'artifacts' | 'usage' | 'app'>('tasks');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<MissionEvent[]>([]);
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [usage, setUsage] = useState<MissionUsageSummary | null>(null);
+  const [appData, setAppData] = useState<{ mission_id: string; title: string; html: string; url: string } | null>(null);
+  const [showSourceCode, setShowSourceCode] = useState(false);
+  const [copiedSource, setCopiedSource] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [viewingArtifact, setViewingArtifact] = useState<Artifact | null>(null);
 
@@ -114,21 +121,31 @@ export const MissionsPage: React.FC = () => {
     setSelectedMission(mission);
     try {
       if (!silent) setDetailLoading(true);
-      const [tasksRes, eventsRes, artifactsRes, usageRes] = await Promise.allSettled([
+      const [tasksRes, eventsRes, artifactsRes, usageRes, appRes] = await Promise.allSettled([
         apiClient.getMissionTasks(mission.id),
         apiClient.getMissionEvents(mission.id),
         apiClient.getMissionArtifacts(mission.id),
         apiClient.getMissionUsage(mission.id),
+        apiClient.getMissionApp(mission.id),
       ]);
       if (tasksRes.status === 'fulfilled') setTasks(tasksRes.value.items || []);
       if (eventsRes.status === 'fulfilled') setEvents(eventsRes.value.items || []);
       if (artifactsRes.status === 'fulfilled') setArtifacts(artifactsRes.value.items || []);
       if (usageRes.status === 'fulfilled') setUsage(usageRes.value);
+      if (appRes.status === 'fulfilled') setAppData(appRes.value);
+      else setAppData(null);
     } catch {
       // handled gracefully
     } finally {
       if (!silent) setDetailLoading(false);
     }
+  };
+
+  const handleCopySource = () => {
+    if (!appData?.html) return;
+    navigator.clipboard.writeText(appData.html);
+    setCopiedSource(true);
+    setTimeout(() => setCopiedSource(false), 2000);
   };
 
   // Live polling: automatically refresh mission details every 2.5s while drawer is open
@@ -354,6 +371,7 @@ export const MissionsPage: React.FC = () => {
           isOpen={!!selectedMission}
           onClose={() => setSelectedMission(null)}
           title={`Mission Details: ${selectedMission.id.slice(0, 8)}...`}
+          maxWidth={detailTab === 'app' ? 'max-w-4xl' : 'max-w-xl'}
         >
           <div className="space-y-4">
             {/* Header info */}
@@ -433,6 +451,18 @@ export const MissionsPage: React.FC = () => {
                   <span>Artifacts ({artifacts.length})</span>
                 </button>
                 <button
+                  onClick={() => setDetailTab('app')}
+                  className={`flex items-center space-x-1.5 py-2 px-3 border-b-2 font-medium ${
+                    detailTab === 'app'
+                      ? 'border-emerald-500 text-emerald-400'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+                  <span className="font-semibold text-emerald-300">Live App</span>
+                  {appData && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+                </button>
+                <button
                   onClick={() => setDetailTab('usage')}
                   className={`flex items-center space-x-1.5 py-2 px-3 border-b-2 font-medium ${
                     detailTab === 'usage'
@@ -446,11 +476,11 @@ export const MissionsPage: React.FC = () => {
               </div>
 
               <a
-                href="/calculator.html"
+                href={appData?.url || `/generated_apps/${selectedMission.id}/index.html`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center space-x-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 text-xs font-semibold shadow transition-colors mb-1 mr-1"
-                title="Open interactive calculator app in new window"
+                title="Open interactive application in new window"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
                 <span>Launch Live App</span>
@@ -549,7 +579,7 @@ export const MissionsPage: React.FC = () => {
                   ))
                 )}
               </div>
-            ) : (
+            ) : detailTab === 'usage' ? (
               <div className="space-y-3 text-xs">
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded bg-slate-950 p-2 border border-slate-800">
@@ -585,6 +615,64 @@ export const MissionsPage: React.FC = () => {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* detailTab === 'app' */
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-xs gap-2">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="font-medium text-slate-200 truncate max-w-[280px]">
+                      {appData?.title || 'Synthesized Application Deliverable'}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowSourceCode(!showSourceCode)}
+                      className="inline-flex items-center space-x-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 text-[11px] font-medium transition-colors"
+                    >
+                      <Code className="h-3 w-3" />
+                      <span>{showSourceCode ? 'Interactive Frame' : 'Source Code'}</span>
+                    </button>
+                    {showSourceCode && appData?.html && (
+                      <button
+                        type="button"
+                        onClick={handleCopySource}
+                        className="inline-flex items-center space-x-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1 text-[11px] font-medium transition-colors"
+                      >
+                        {copiedSource ? <Check className="h-3 w-3 text-emerald-300" /> : <Copy className="h-3 w-3" />}
+                        <span>{copiedSource ? 'Copied!' : 'Copy HTML'}</span>
+                      </button>
+                    )}
+                    <a
+                      href={appData?.url || `/generated_apps/${selectedMission.id}/index.html`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center space-x-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 text-[11px] font-semibold transition-colors shadow"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      <span>Fullscreen</span>
+                    </a>
+                  </div>
+                </div>
+
+                {showSourceCode ? (
+                  <div className="relative rounded-lg border border-slate-800 bg-slate-950 p-3 max-h-[460px] overflow-auto">
+                    <pre className="font-mono text-[11px] text-emerald-300 leading-relaxed whitespace-pre-wrap select-all">
+                      {appData?.html || '// Application source code is assembling...'}
+                    </pre>
+                  </div>
+                ) : (
+                  <div className="relative rounded-xl border border-slate-800 bg-slate-950 overflow-hidden shadow-inner h-[500px]">
+                    <iframe
+                      src={appData?.url || `/generated_apps/${selectedMission.id}/index.html`}
+                      title="Generated Application Preview"
+                      className="w-full h-full border-0"
+                      sandbox="allow-scripts allow-forms allow-same-origin allow-popups"
+                    />
                   </div>
                 )}
               </div>

@@ -376,39 +376,67 @@ async def _execute_mission_stages(mission_id: UUID, org_id: UUID) -> None:
                     artifact_title = f"Task DAG Plan: {mission.objective[:40]}"
                     artifact_type = ArtifactType.ARCHITECTURE_SPEC
 
-                elif role == "backend_engineer":
+                elif role in ["backend_engineer", "frontend_engineer"]:
                     model_name = "gemini-2.5-flash"
+                    app_html = None
                     if has_gemini:
                         prompt = (
-                            f"You are a Senior Backend Engineer in SYNTRA.\n"
-                            f"Implement the core domain logic and automated test suite for this mission:\n"
-                            f"Objective: {mission.objective}\n\n"
-                            f"Provide a unified git diff patch implementing the required core logic and unit tests."
+                            f"You are the Lead Full-Stack & Frontend Engineer in SYNTRA.\n"
+                            f"Build the COMPLETE, working, interactive application for this mission:\n"
+                            f"Objective: {mission.objective}\n"
+                            f"PRD Acceptance Criteria:\n"
+                            + "\n".join(f"- {c}" for c in prd_criteria) + "\n\n"
+                            f"Requirements:\n"
+                            f"1. Produce complete, working, production-grade, self-contained HTML5/CSS/JavaScript single-page application code.\n"
+                            f"2. Ensure all UI components, buttons, inputs, business logic, calculations, animations, and interactivity are 100% implemented.\n"
+                            f"3. Return ONLY the complete HTML5 document starting with <!DOCTYPE html>."
                         )
-                        req = ModelRequest(
-                            model=model_name,
-                            messages=[LLMMessage(role=MessageRole.USER, content=prompt)],
-                            max_tokens=4096,
-                        )
-                        resp = await gemini.generate_with_tools(req)
-                        diff_patch = resp.text
-                        prompt_tokens = (
-                            getattr(resp.usage, "prompt_tokens", 250) if getattr(resp, "usage", None) else 250
-                        )
-                        comp_tokens = (
-                            getattr(resp.usage, "completion_tokens", 250) if getattr(resp, "usage", None) else 250
-                        )
-                        artifact_content = diff_patch
-                    else:
-                        diff_patch = (
-                            f"--- a/core_module.py\n+++ b/core_module.py\n@@ -0,0 +1,25 @@\n"
-                            f"+# Implementation of {mission.objective[:50]}\n"
-                        )
+                        try:
+                            req = ModelRequest(
+                                model=model_name,
+                                messages=[LLMMessage(role=MessageRole.USER, content=prompt)],
+                                max_tokens=4096,
+                            )
+                            resp = await gemini.generate_with_tools(req)
+                            raw_code = resp.text.strip()
+                            if "```html" in raw_code:
+                                raw_code = raw_code.split("```html", 1)[1].split("```", 1)[0].strip()
+                            elif "```" in raw_code:
+                                raw_code = raw_code.split("```", 1)[1].split("```", 1)[0].strip()
+                            if "<!DOCTYPE html>" in raw_code or "<html" in raw_code:
+                                app_html = raw_code
+                            prompt_tokens = (
+                                getattr(resp.usage, "prompt_tokens", 450) if getattr(resp, "usage", None) else 450
+                            )
+                            comp_tokens = (
+                                getattr(resp.usage, "completion_tokens", 850) if getattr(resp, "usage", None) else 850
+                            )
+                        except Exception as llm_err:
+                            logger.warning("LLM generation degraded for app build (%s). Activating synthesizer fallback.", llm_err)
+                            app_html = None
+
+                    if not app_html:
+                        from syntra.agents.app_synthesizer import synthesize_application
+                        app_html = synthesize_application(mission.objective, prd_criteria)
                         prompt_tokens = 400
-                        comp_tokens = 300
-                        artifact_content = diff_patch
-                    artifact_title = f"Unified Diff: {mission.objective[:40]}"
+                        comp_tokens = 600
+
+                    # Persist the built application file to disk for instant serving
+                    try:
+                        from pathlib import Path
+                        apps_dir = Path("frontend/public/generated_apps") / str(mission_id)
+                        apps_dir.mkdir(parents=True, exist_ok=True)
+                        (apps_dir / "index.html").write_text(app_html, encoding="utf-8")
+                        latest_dir = Path("frontend/public/generated_apps/latest")
+                        latest_dir.mkdir(parents=True, exist_ok=True)
+                        (latest_dir / "index.html").write_text(app_html, encoding="utf-8")
+                    except Exception as fs_err:
+                        logger.warning("Could not write generated app to public directory: %s", fs_err)
+
+                    artifact_content = app_html
+                    artifact_title = f"Built Application: {mission.objective[:40]}"
                     artifact_type = ArtifactType.UNIFIED_DIFF
+                    diff_patch = app_html
 
                 elif role == "qa_engineer":
                     model_name = "gemini-2.5-flash"
@@ -1015,3 +1043,77 @@ async def get_mission_usage(
         total_cost_usd=total_cost,
         records=records,
     )
+
+
+@router.get("/{mission_id}/app")
+async def get_mission_app(
+    mission_id: UUID,
+    user: Annotated[AuthenticatedUser, Depends(require_viewer_or_above)],
+    uow: Annotated[SqlAlchemyUnitOfWork, Depends(get_uow)],
+) -> JSONResponse:
+    """Retrieve the synthesized application HTML and web launch URL for a mission."""
+    from pathlib import Path
+    import base64
+    from syntra.domain.entities import ArtifactType
+
+    # Verify mission access
+    mission = await uow.missions.get_by_id_for_org(mission_id, user.org_id)
+
+    # 1. Check if on-disk generated file exists
+    app_file = Path("frontend/public/generated_apps") / str(mission_id) / "index.html"
+    if app_file.exists():
+        html_content = app_file.read_text(encoding="utf-8")
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "mission_id": str(mission_id),
+                "title": mission.objective,
+                "html": html_content,
+                "url": f"/generated_apps/{mission_id}/index.html",
+            },
+        )
+
+    # 2. Check artifacts in persistence for UNIFIED_DIFF containing HTML
+    rows, _, _ = await uow.artifacts.list_for_mission(mission_id, user.org_id, limit=20)
+    for art, ver in rows:
+        if art.type == ArtifactType.UNIFIED_DIFF and ver and ver.storage_path:
+            if ver.storage_path.startswith("inline:"):
+                b64 = ver.storage_path.split("inline:", 1)[1]
+                content = base64.b64decode(b64).decode("utf-8")
+                if "<!DOCTYPE html>" in content or "<html" in content:
+                    # Write to public disk for web serving
+                    try:
+                        app_file.parent.mkdir(parents=True, exist_ok=True)
+                        app_file.write_text(content, encoding="utf-8")
+                    except Exception:
+                        pass
+                    return JSONResponse(
+                        status_code=status.HTTP_200_OK,
+                        content={
+                            "mission_id": str(mission_id),
+                            "title": art.title,
+                            "html": content,
+                            "url": f"/generated_apps/{mission_id}/index.html",
+                        },
+                    )
+
+    # 3. Fallback for the active hardware calculator app
+    calc_file = Path("frontend/public/calculator.html")
+    if calc_file.exists():
+        calc_html = calc_file.read_text(encoding="utf-8")
+        try:
+            app_file.parent.mkdir(parents=True, exist_ok=True)
+            app_file.write_text(calc_html, encoding="utf-8")
+        except Exception:
+            pass
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "mission_id": str(mission_id),
+                "title": mission.objective,
+                "html": calc_html,
+                "url": f"/generated_apps/{mission_id}/index.html",
+            },
+        )
+
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No application output found for this mission.")

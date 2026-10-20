@@ -6,9 +6,10 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  maxWidth?: string;
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl' }) => {
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -32,7 +33,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
     >
       <div
         ref={modalRef}
-        className="w-full max-w-xl max-h-[88vh] flex flex-col rounded-xl border border-slate-800 bg-slate-900 shadow-2xl text-slate-200 overflow-hidden"
+        className={`w-full ${maxWidth} max-h-[88vh] flex flex-col rounded-xl border border-slate-800 bg-slate-900 shadow-2xl text-slate-200 overflow-hidden transition-all duration-200`}
       >
         <div className="flex items-center justify-between p-5 border-b border-slate-800 flex-shrink-0">
           <h2 id="modal-title" className="text-base font-semibold text-slate-100">
