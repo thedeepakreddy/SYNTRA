@@ -32,9 +32,9 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
     >
       <div
         ref={modalRef}
-        className="w-full max-w-lg rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-2xl text-slate-200"
+        className="w-full max-w-xl max-h-[88vh] flex flex-col rounded-xl border border-slate-800 bg-slate-900 shadow-2xl text-slate-200 overflow-hidden"
       >
-        <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div className="flex items-center justify-between p-5 border-b border-slate-800 flex-shrink-0">
           <h2 id="modal-title" className="text-base font-semibold text-slate-100">
             {title}
           </h2>
@@ -46,7 +46,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="mt-4">{children}</div>
+        <div className="p-5 overflow-y-auto flex-1">{children}</div>
       </div>
     </div>
   );

@@ -29,6 +29,7 @@ import {
   Loader2,
   CheckCircle2,
   Eye,
+  ExternalLink,
 } from 'lucide-react';
 import { ArtifactViewerModal } from '../components/ArtifactViewerModal';
 
@@ -395,52 +396,65 @@ export const MissionsPage: React.FC = () => {
               <p className="mt-2.5 text-xs font-medium text-slate-200">{selectedMission.objective}</p>
             </div>
 
-            {/* Sub-tabs */}
-            <div className="flex border-b border-slate-800 text-xs">
-              <button
-                onClick={() => setDetailTab('tasks')}
-                className={`flex items-center space-x-1.5 py-2 px-3 border-b-2 font-medium ${
-                  detailTab === 'tasks'
-                    ? 'border-indigo-500 text-indigo-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
+            {/* Sub-tabs & Live App Launch Button */}
+            <div className="flex flex-wrap items-center justify-between border-b border-slate-800 text-xs gap-2">
+              <div className="flex overflow-x-auto">
+                <button
+                  onClick={() => setDetailTab('tasks')}
+                  className={`flex items-center space-x-1.5 py-2 px-3 border-b-2 font-medium ${
+                    detailTab === 'tasks'
+                      ? 'border-indigo-500 text-indigo-400'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <Layers className="h-3.5 w-3.5" />
+                  <span>Task DAG ({tasks.length})</span>
+                </button>
+                <button
+                  onClick={() => setDetailTab('events')}
+                  className={`flex items-center space-x-1.5 py-2 px-3 border-b-2 font-medium ${
+                    detailTab === 'events'
+                      ? 'border-indigo-500 text-indigo-400'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <History className="h-3.5 w-3.5" />
+                  <span>Events ({events.length})</span>
+                </button>
+                <button
+                  onClick={() => setDetailTab('artifacts')}
+                  className={`flex items-center space-x-1.5 py-2 px-3 border-b-2 font-medium ${
+                    detailTab === 'artifacts'
+                      ? 'border-indigo-500 text-indigo-400'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  <span>Artifacts ({artifacts.length})</span>
+                </button>
+                <button
+                  onClick={() => setDetailTab('usage')}
+                  className={`flex items-center space-x-1.5 py-2 px-3 border-b-2 font-medium ${
+                    detailTab === 'usage'
+                      ? 'border-indigo-500 text-indigo-400'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <Coins className="h-3.5 w-3.5" />
+                  <span>Ledger</span>
+                </button>
+              </div>
+
+              <a
+                href="/calculator.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center space-x-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 text-xs font-semibold shadow transition-colors mb-1 mr-1"
+                title="Open interactive calculator app in new window"
               >
-                <Layers className="h-3.5 w-3.5" />
-                <span>Task DAG ({tasks.length})</span>
-              </button>
-              <button
-                onClick={() => setDetailTab('events')}
-                className={`flex items-center space-x-1.5 py-2 px-3 border-b-2 font-medium ${
-                  detailTab === 'events'
-                    ? 'border-indigo-500 text-indigo-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <History className="h-3.5 w-3.5" />
-                <span>Events ({events.length})</span>
-              </button>
-              <button
-                onClick={() => setDetailTab('artifacts')}
-                className={`flex items-center space-x-1.5 py-2 px-3 border-b-2 font-medium ${
-                  detailTab === 'artifacts'
-                    ? 'border-indigo-500 text-indigo-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <FileText className="h-3.5 w-3.5" />
-                <span>Artifacts ({artifacts.length})</span>
-              </button>
-              <button
-                onClick={() => setDetailTab('usage')}
-                className={`flex items-center space-x-1.5 py-2 px-3 border-b-2 font-medium ${
-                  detailTab === 'usage'
-                    ? 'border-indigo-500 text-indigo-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Coins className="h-3.5 w-3.5" />
-                <span>Ledger</span>
-              </button>
+                <ExternalLink className="h-3.5 w-3.5" />
+                <span>Launch Live App</span>
+              </a>
             </div>
 
             {/* Tab content */}

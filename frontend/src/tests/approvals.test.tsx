@@ -67,7 +67,7 @@ describe('ApprovalsPage Component - Human Delivery Gate', () => {
     fireEvent.change(commentInput, { target: { value: 'Verified deployment artifact.' } });
 
     // Submit Authorize (Approve)
-    const submitButton = screen.getByText('Confirm APPROVED');
+    const submitButton = screen.getByText('Authorize & Approve');
     fireEvent.click(submitButton);
 
     await waitFor(() => {

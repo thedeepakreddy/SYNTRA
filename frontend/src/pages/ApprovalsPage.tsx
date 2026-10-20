@@ -12,6 +12,7 @@ import {
   AlertCircle,
   FileCheck2,
   Eye,
+  ExternalLink,
 } from 'lucide-react';
 
 export const ApprovalsPage: React.FC = () => {
@@ -73,22 +74,34 @@ export const ApprovalsPage: React.FC = () => {
     }
   };
 
-  const handleRespondSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitDecision = async (decision: 'APPROVED' | 'REJECTED') => {
     if (!selectedApproval) return;
 
     try {
       setSubmitting(true);
       setRespondError(null);
-      await apiClient.respondApproval(selectedApproval.id, respondData);
-      setActionSuccess(`Approval ${selectedApproval.id.slice(0, 8)} successfully ${respondData.decision}.`);
+      const payload: ApprovalRespondPayload = {
+        ...respondData,
+        decision,
+      };
+      await apiClient.respondApproval(selectedApproval.id, payload);
+      setActionSuccess(
+        `Approval ticket ${selectedApproval.id.slice(0, 8)} successfully ${decision}. Mission state updated to ${
+          decision === 'APPROVED' ? 'COMPLETED' : 'REPLANNING'
+        }.`
+      );
       setSelectedApproval(null);
       await loadApprovals();
     } catch (err: any) {
-      setRespondError(err.message || 'Failed to respond to approval request.');
+      setRespondError(err.message || `Failed to submit ${decision.toLowerCase()} decision.`);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleRespondSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await submitDecision(respondData.decision);
   };
 
   const filteredApprovals = approvals.filter((a) => {
@@ -247,7 +260,16 @@ export const ApprovalsPage: React.FC = () => {
                   <span className="font-semibold text-slate-300">
                     Deliverables Awaiting Verification ({gateArtifacts.length})
                   </span>
-                  <span className="text-[10px] text-slate-500 font-mono">Click to inspect</span>
+                  <a
+                    href="/calculator.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center space-x-1 text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold underline"
+                    title="Open live built application preview"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    <span>Launch Live App</span>
+                  </a>
                 </div>
                 <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1 text-xs">
                   {gateArtifacts.map((art) => (
@@ -277,35 +299,20 @@ export const ApprovalsPage: React.FC = () => {
               </div>
             )}
 
-            <div>
-              <label className="block text-xs font-medium text-slate-300">Decision *</label>
-              <div className="mt-1 flex space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setRespondData({ ...respondData, decision: 'APPROVED' })}
-                  className={`flex-1 py-2 px-3 rounded-lg border text-xs font-medium flex items-center justify-center space-x-1.5 transition-colors ${
-                    respondData.decision === 'APPROVED'
-                      ? 'bg-emerald-950/80 border-emerald-600 text-emerald-300'
-                      : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                  <span>Authorize (Approve)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRespondData({ ...respondData, decision: 'REJECTED' })}
-                  className={`flex-1 py-2 px-3 rounded-lg border text-xs font-medium flex items-center justify-center space-x-1.5 transition-colors ${
-                    respondData.decision === 'REJECTED'
-                      ? 'bg-rose-950/80 border-rose-600 text-rose-300'
-                      : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <ShieldX className="h-4 w-4 text-rose-400" />
-                  <span>Reject Ticket</span>
-                </button>
+            {/* Role Notice */}
+            {apiClient.getUserContext().role !== 'admin' && (
+              <div className="flex items-start space-x-2 rounded-lg border border-amber-600/50 bg-amber-950/40 p-3 text-xs text-amber-200">
+                <AlertCircle className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                <span>
+                  <strong>Role Warning:</strong> You are operating as{' '}
+                  <code className="bg-amber-900/60 px-1 py-0.5 rounded font-mono">
+                    {apiClient.getUserContext().role}
+                  </code>
+                  . Only <code className="bg-amber-900/60 px-1 py-0.5 rounded font-mono">admin</code>{' '}
+                  can authorize delivery gates. Switch role to Admin in the top-right header if submission fails.
+                </span>
               </div>
-            </div>
+            )}
 
             <div>
               <label className="block text-xs font-medium text-slate-300">Cryptographic Digest *</label>
@@ -317,7 +324,7 @@ export const ApprovalsPage: React.FC = () => {
                 className="mt-1 w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-xs text-slate-200 focus:border-indigo-500 focus:outline-none"
               />
               <span className="text-[10px] text-slate-500 mt-1 block">
-                Must cryptographically match the target resource & mission version HMAC signature.
+                Pre-filled HMAC-SHA256 signature binding this ticket to unmodified mission version.
               </span>
             </div>
 
@@ -343,25 +350,34 @@ export const ApprovalsPage: React.FC = () => {
               />
             </div>
 
-            <div className="mt-6 flex justify-end space-x-3 pt-3 border-t border-slate-800">
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-800">
               <button
                 type="button"
                 onClick={() => setSelectedApproval(null)}
-                className="rounded-lg border border-slate-700 px-4 py-2 text-xs font-medium text-slate-300 hover:bg-slate-800"
+                className="w-full sm:w-auto rounded-lg border border-slate-700 px-4 py-2 text-xs font-medium text-slate-300 hover:bg-slate-800"
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                className={`rounded-lg px-4 py-2 text-xs font-medium text-white shadow disabled:opacity-50 ${
-                  respondData.decision === 'APPROVED'
-                    ? 'bg-emerald-600 hover:bg-emerald-500'
-                    : 'bg-rose-600 hover:bg-rose-500'
-                }`}
-              >
-                {submitting ? 'Submitting Verdict...' : `Confirm ${respondData.decision}`}
-              </button>
+              <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={() => submitDecision('REJECTED')}
+                  className="flex-1 sm:flex-initial inline-flex items-center justify-center space-x-1.5 rounded-lg border border-rose-800 bg-rose-950/80 px-4 py-2 text-xs font-medium text-rose-300 hover:bg-rose-900 disabled:opacity-50"
+                >
+                  <ShieldX className="h-4 w-4 text-rose-400" />
+                  <span>Reject Ticket</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={() => submitDecision('APPROVED')}
+                  className="flex-1 sm:flex-initial inline-flex items-center justify-center space-x-1.5 rounded-lg bg-emerald-600 px-5 py-2 text-xs font-semibold text-white shadow-lg hover:bg-emerald-500 disabled:opacity-50"
+                >
+                  <ShieldCheck className="h-4 w-4 text-white" />
+                  <span>{submitting ? 'Authorizing...' : 'Authorize & Approve'}</span>
+                </button>
+              </div>
             </div>
           </form>
         </Modal>
