@@ -178,6 +178,12 @@ class SyntraApiClient {
     });
   }
 
+  public async rebuildProject(projectId: string): Promise<Mission> {
+    return this.request<Mission>(`/projects/${projectId}/rebuild`, {
+      method: 'POST',
+    });
+  }
+
   // Missions
   public async getMissions(projectId?: string, state?: string, limit = 100): Promise<Mission[]> {
     const params = new URLSearchParams();

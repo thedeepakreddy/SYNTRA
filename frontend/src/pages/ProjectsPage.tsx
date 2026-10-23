@@ -2,13 +2,29 @@ import React, { useEffect, useState } from 'react';
 import { apiClient } from '../api/client';
 import { CreateProjectPayload, Project } from '../types';
 import { Modal } from '../components/ConfirmModal';
-import { FolderGit2, Plus, Search, GitBranch, Calendar, AlertCircle, Zap } from 'lucide-react';
+import { FolderGit2, Plus, Search, GitBranch, Calendar, AlertCircle, Zap, RotateCw, CheckCircle2 } from 'lucide-react';
 
 export const ProjectsPage: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [rebuildingId, setRebuildingId] = useState<string | null>(null);
+  const [rebuildFeedback, setRebuildFeedback] = useState<string | null>(null);
+
+  const handleRebuildProject = async (projectId: string, projectName: string) => {
+    try {
+      setRebuildingId(projectId);
+      setRebuildFeedback(null);
+      await apiClient.rebuildProject(projectId);
+      setRebuildFeedback(`Rebuild initiated successfully for "${projectName}". Multi-agent execution pipeline dispatched.`);
+      setTimeout(() => setRebuildFeedback(null), 5000);
+    } catch (err: any) {
+      alert(err.message || `Failed to rebuild project ${projectName}.`);
+    } finally {
+      setRebuildingId(null);
+    }
+  };
 
   // Create Project Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -123,6 +139,13 @@ export const ProjectsPage: React.FC = () => {
         </div>
       )}
 
+      {rebuildFeedback && (
+        <div className="rounded-2xl border border-emerald-500/40 bg-emerald-950/40 p-4 text-xs text-emerald-300 backdrop-blur-md shadow-layered-sm flex items-center space-x-2.5 animate-fadeIn">
+          <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+          <span className="font-mono">{rebuildFeedback}</span>
+        </div>
+      )}
+
       {/* Filter / Search Bar with Liquid Glass Styling */}
       <div className="relative max-w-md">
         <Search className="absolute left-3.5 top-3 h-4 w-4 text-cyan-400/70" />
@@ -167,15 +190,27 @@ export const ProjectsPage: React.FC = () => {
                 </p>
               </div>
 
-              <div className="mt-5 pt-3.5 border-t border-white/[0.08] flex items-center justify-between text-[11px] text-slate-500">
-                <span className="inline-flex items-center space-x-1.5 font-mono text-cyan-200 bg-cyan-950/40 px-2.5 py-1 rounded-lg border border-cyan-500/25 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]">
-                  <GitBranch className="h-3 w-3 text-cyan-400" />
-                  <span>{p.default_branch || 'main'}</span>
-                </span>
-                <span className="inline-flex items-center space-x-1 font-mono text-[10px] text-slate-400">
-                  <Calendar className="h-3 w-3 text-slate-500" />
-                  <span>{new Date(p.created_at).toLocaleDateString()}</span>
-                </span>
+              <div className="mt-5 pt-3.5 border-t border-white/[0.08] flex items-center justify-between gap-2 text-[11px] text-slate-500 flex-wrap">
+                <div className="flex items-center space-x-2">
+                  <span className="inline-flex items-center space-x-1.5 font-mono text-cyan-200 bg-cyan-950/40 px-2.5 py-1 rounded-lg border border-cyan-500/25 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]">
+                    <GitBranch className="h-3 w-3 text-cyan-400" />
+                    <span>{p.default_branch || 'main'}</span>
+                  </span>
+                  <span className="inline-flex items-center space-x-1 font-mono text-[10px] text-slate-400">
+                    <Calendar className="h-3 w-3 text-slate-500" />
+                    <span>{new Date(p.created_at).toLocaleDateString()}</span>
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => handleRebuildProject(p.id, p.name)}
+                  disabled={rebuildingId === p.id}
+                  className="inline-flex items-center space-x-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1.5 text-xs font-mono font-bold transition-all shadow-[0_0_12px_rgba(245,158,11,0.15)] active:scale-[0.97] disabled:opacity-50"
+                  title={`Rebuild project deliverables for ${p.name}`}
+                >
+                  <RotateCw className={`h-3 w-3 ${rebuildingId === p.id ? 'animate-spin' : ''}`} />
+                  <span>{rebuildingId === p.id ? 'Rebuilding...' : 'Rebuild Project'}</span>
+                </button>
               </div>
             </div>
           ))}

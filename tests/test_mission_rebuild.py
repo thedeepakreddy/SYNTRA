@@ -108,5 +108,13 @@ async def test_rebuild_mission_endpoint(monkeypatch, tmp_path):
     models_content = (backend_dir / "models.py").read_text(encoding="utf-8")
     assert "CryptoAssetModel" in models_content
 
+    # Also test project-level rebuild endpoint: POST /v1/projects/{project_id}/rebuild
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        proj_resp = await ac.post(f"/v1/projects/{project_id}/rebuild")
+        assert proj_resp.status_code == 200
+        proj_data = proj_resp.json()
+        assert proj_data["project_id"] == str(project_id)
+        assert proj_data["state"] == "RUNNING"
+
     app.dependency_overrides.clear()
     await db.close()

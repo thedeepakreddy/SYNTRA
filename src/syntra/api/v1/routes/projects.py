@@ -5,7 +5,7 @@ import json
 from typing import Annotated, Any
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, Header, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, Response, status
 from fastapi.responses import JSONResponse
 
 from syntra.api.auth.dependencies import (
@@ -14,7 +14,9 @@ from syntra.api.auth.dependencies import (
     require_viewer_or_above,
 )
 from syntra.api.auth.models import AuthenticatedUser
-from syntra.api.v1.schemas import CreateProjectRequest, ProjectResponse
+from syntra.api.v1.schemas import CreateProjectRequest, MissionResponse, ProjectResponse
+from syntra.core.config import AutonomyMode
+from syntra.domain.entities import MissionState, TaskState
 from syntra.domain.exceptions import DuplicateIdempotencyKeyError
 from syntra.persistence.unit_of_work import SqlAlchemyUnitOfWork
 
@@ -122,3 +124,107 @@ async def list_projects(
         )
         for p in projects
     ]
+
+
+@router.post("/{project_id}/rebuild", response_model=MissionResponse)
+async def rebuild_project(
+    project_id: UUID,
+    background_tasks: BackgroundTasks,
+    user: Annotated[AuthenticatedUser, Depends(require_developer_or_above)],
+    uow: Annotated[SqlAlchemyUnitOfWork, Depends(get_uow)],
+) -> MissionResponse:
+    """Purge build cache and rebuild the project's engineering deliverables."""
+    import logging
+    import shutil
+    from pathlib import Path
+
+    from syntra.agents.fullstack_generator import (
+        generate_backend_package,
+        generate_marvelous_frontend_spa,
+    )
+    from syntra.api.v1.routes.missions import _execute_mission_stages
+
+    logger = logging.getLogger(__name__)
+    project = await uow.projects.get_by_id_for_org(project_id, user.org_id)
+    missions = await uow.missions.list_for_org(user.org_id, project_id=project_id, limit=5)
+
+    if missions:
+        target_mission = missions[0]
+    else:
+        target_mission = await uow.missions.create(
+            mission_id=uuid4(),
+            org_id=user.org_id,
+            project_id=project_id,
+            objective=f"Build and verify complete production fullstack solution for {project.name}",
+            autonomy_mode=AutonomyMode.SEMI_AUTONOMOUS.value,
+        )
+
+    # 1. Purge on-disk build cache for this mission
+    app_dir = Path("frontend/public/generated_apps") / str(target_mission.id)
+    if app_dir.exists():
+        try:
+            shutil.rmtree(app_dir, ignore_errors=True)
+        except Exception as e:
+            logger.warning("Could not purge app directory %s: %s", app_dir, e)
+
+    # 2. Reset tasks to PENDING
+    plan = await uow.tasks.get_plan_for_mission(target_mission.id, user.org_id)
+    if plan:
+        existing_tasks, _, _ = await uow.tasks.list_for_mission(target_mission.id, user.org_id, limit=100)
+        for t in existing_tasks:
+            t.state = TaskState.PENDING
+            t.attempt_count = 0
+
+    # 3. Transition mission to RUNNING
+    updated = await uow.missions.update_state(target_mission.id, user.org_id, MissionState.RUNNING)
+
+    # 4. Synthesize fresh backend & frontend immediately
+    try:
+        app_dir.mkdir(parents=True, exist_ok=True)
+        backend_dir = app_dir / "backend"
+        backend_dir.mkdir(parents=True, exist_ok=True)
+
+        backend_files = generate_backend_package(target_mission.objective, [])
+        for fname, fcontent in backend_files.items():
+            (backend_dir / fname).write_text(fcontent, encoding="utf-8")
+
+        fresh_html = generate_marvelous_frontend_spa(target_mission.objective, [])
+        (app_dir / "index.html").write_text(fresh_html, encoding="utf-8")
+
+        latest_dir = Path("frontend/public/generated_apps/latest")
+        latest_dir.mkdir(parents=True, exist_ok=True)
+        (latest_dir / "index.html").write_text(fresh_html, encoding="utf-8")
+        latest_backend = latest_dir / "backend"
+        latest_backend.mkdir(parents=True, exist_ok=True)
+        for fname, fcontent in backend_files.items():
+            (latest_backend / fname).write_text(fcontent, encoding="utf-8")
+    except Exception as synth_err:
+        logger.warning("Immediate synthesis during project rebuild encountered error: %s", synth_err)
+
+    # 5. Record event & enqueue background execution
+    await uow.outbox.record_event(
+        org_id=user.org_id,
+        event_type="project.rebuilt",
+        payload={
+            "project_id": str(project_id),
+            "mission_id": str(target_mission.id),
+            "project_name": project.name,
+        },
+        mission_id=target_mission.id,
+    )
+    await uow.commit()
+
+    background_tasks.add_task(_execute_mission_stages, target_mission.id, user.org_id)
+
+    return MissionResponse(
+        id=updated.id,
+        org_id=updated.org_id,
+        project_id=updated.project_id,
+        title=None,
+        objective=updated.objective,
+        state=updated.state,
+        autonomy_mode=AutonomyMode(updated.autonomy_mode),
+        version=updated.version,
+        created_at=updated.created_at,
+        updated_at=updated.updated_at,
+    )

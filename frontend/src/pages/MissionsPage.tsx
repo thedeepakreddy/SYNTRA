@@ -479,6 +479,19 @@ export const MissionsPage: React.FC = () => {
                       </span>
                     )}
 
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRebuildProject(m.id);
+                      }}
+                      disabled={isRebuilding}
+                      className="inline-flex items-center space-x-1.5 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 text-xs font-mono font-bold transition-all shadow-[0_0_10px_rgba(245,158,11,0.15)] active:scale-[0.97] disabled:opacity-50"
+                      title="Rebuild this project deliverable from scratch"
+                    >
+                      <RotateCw className={`h-3 w-3 ${isRebuilding ? 'animate-spin' : ''}`} />
+                      <span>Rebuild Project</span>
+                    </button>
+
                     <div className="flex items-center space-x-3 text-[11px] text-slate-400 font-mono">
                       <span className="inline-flex items-center space-x-1">
                         <Clock className="h-3 w-3 text-cyan-400" />
