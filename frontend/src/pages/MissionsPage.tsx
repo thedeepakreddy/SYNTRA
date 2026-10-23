@@ -156,6 +156,26 @@ export const MissionsPage: React.FC = () => {
     }
   };
 
+  // Rebuild Mission State
+  const [isRebuilding, setIsRebuilding] = useState<boolean>(false);
+
+  const handleRebuildProject = async (missionId?: string) => {
+    const targetId = missionId || selectedMission?.id;
+    if (!targetId || isRebuilding) return;
+    try {
+      setIsRebuilding(true);
+      const updated = await apiClient.rebuildMission(targetId);
+      setMissions((prev) => prev.map((m) => (m.id === targetId ? updated : m)));
+      setSelectedMission(updated);
+      setIframeKey((k) => k + 1);
+      await openMissionDetails(updated);
+    } catch (err: any) {
+      alert(err.message || 'Failed to rebuild mission project.');
+    } finally {
+      setIsRebuilding(false);
+    }
+  };
+
   const loadInitialData = async () => {
     try {
       setLoading(true);
@@ -561,6 +581,16 @@ export const MissionsPage: React.FC = () => {
                         </span>
                       </a>
                     )}
+
+                    <button
+                      onClick={() => handleRebuildProject(selectedMission.id)}
+                      disabled={isRebuilding}
+                      className="inline-flex items-center space-x-1.5 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3.5 py-1.5 text-xs font-mono font-bold transition-all active:scale-[0.97] disabled:opacity-50 shadow-[0_0_12px_rgba(245,158,11,0.2)]"
+                      title="Purge build cache and rebuild this project from scratch"
+                    >
+                      <RotateCw className={`h-3.5 w-3.5 ${isRebuilding ? 'animate-spin' : ''}`} />
+                      <span>{isRebuilding ? 'Rebuilding...' : 'Rebuild Project'}</span>
+                    </button>
 
                     <button
                       onClick={() => openMissionDetails(selectedMission)}
@@ -999,6 +1029,18 @@ export const MissionsPage: React.FC = () => {
                             title="Reload App Sandbox Frame"
                           >
                             <RefreshCcw className="h-4 w-4 text-cyan-400" />
+                          </button>
+
+                          {/* Rebuild Project */}
+                          <button
+                            type="button"
+                            onClick={() => handleRebuildProject(selectedMission.id)}
+                            disabled={isRebuilding}
+                            className="inline-flex items-center space-x-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1.5 text-xs font-mono font-bold transition-all active:scale-[0.97] disabled:opacity-50"
+                            title="Purge build cache and rebuild project deliverables from scratch"
+                          >
+                            <RotateCw className={`h-3.5 w-3.5 ${isRebuilding ? 'animate-spin' : ''}`} />
+                            <span>{isRebuilding ? 'Rebuilding...' : 'Rebuild Project'}</span>
                           </button>
 
                           {/* Open Fullscreen Tab */}

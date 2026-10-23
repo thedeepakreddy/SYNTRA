@@ -948,6 +948,101 @@ async def run_mission(
     )
 
 
+@router.post("/{mission_id}/rebuild", response_model=MissionResponse)
+async def rebuild_mission(
+    mission_id: UUID,
+    background_tasks: BackgroundTasks,
+    user: Annotated[AuthenticatedUser, Depends(require_developer_or_above)],
+    uow: Annotated[SqlAlchemyUnitOfWork, Depends(get_uow)],
+) -> MissionResponse:
+    """Purge generated application artifacts and re-execute autonomous engineering pipeline."""
+    import logging
+    import shutil
+    from pathlib import Path
+
+    logger = logging.getLogger(__name__)
+
+    from syntra.agents.fullstack_generator import (
+        generate_backend_package,
+        generate_marvelous_frontend_spa,
+    )
+
+    mission = await uow.missions.get_by_id_for_org(mission_id, user.org_id)
+
+    # 1. Purge on-disk build cache
+    app_dir = Path("frontend/public/generated_apps") / str(mission_id)
+    if app_dir.exists():
+        try:
+            shutil.rmtree(app_dir, ignore_errors=True)
+        except Exception as e:
+            logger.warning("Could not purge app directory %s: %s", app_dir, e)
+
+    # 2. Reset tasks to PENDING
+    plan = await uow.tasks.get_plan_for_mission(mission_id, user.org_id)
+    if plan:
+        existing_tasks, _, _ = await uow.tasks.list_for_mission(mission_id, user.org_id, limit=100)
+        for t in existing_tasks:
+            t.state = TaskState.PENDING
+            t.attempt_count = 0
+
+    # 3. Transition mission to RUNNING
+    updated = await uow.missions.update_state(mission.id, user.org_id, MissionState.RUNNING)
+
+    # 4. Synthesize fresh backend & frontend deliverables immediately so live preview is instantly ready
+    try:
+        app_dir.mkdir(parents=True, exist_ok=True)
+        backend_dir = app_dir / "backend"
+        backend_dir.mkdir(parents=True, exist_ok=True)
+
+        backend_files = generate_backend_package(mission.objective, [])
+        for fname, fcontent in backend_files.items():
+            (backend_dir / fname).write_text(fcontent, encoding="utf-8")
+
+        fresh_html = generate_marvelous_frontend_spa(mission.objective, [])
+        (app_dir / "index.html").write_text(fresh_html, encoding="utf-8")
+
+        # Also sync to latest/
+        latest_dir = Path("frontend/public/generated_apps/latest")
+        latest_dir.mkdir(parents=True, exist_ok=True)
+        (latest_dir / "index.html").write_text(fresh_html, encoding="utf-8")
+        latest_backend = latest_dir / "backend"
+        latest_backend.mkdir(parents=True, exist_ok=True)
+        for fname, fcontent in backend_files.items():
+            (latest_backend / fname).write_text(fcontent, encoding="utf-8")
+    except Exception as synth_err:
+        logger.warning("Immediate synthesis during rebuild encountered error: %s", synth_err)
+
+    # 5. Emit audit outbox event
+    await uow.outbox.record_event(
+        org_id=user.org_id,
+        event_type="mission.rebuilt",
+        payload={
+            "mission_id": str(mission.id),
+            "org_id": str(mission.org_id),
+            "state": updated.state,
+            "objective": mission.objective,
+        },
+        mission_id=mission.id,
+    )
+    await uow.commit()
+
+    # 6. Enqueue background multi-agent execution pipeline
+    background_tasks.add_task(_execute_mission_stages, mission.id, user.org_id)
+
+    return MissionResponse(
+        id=updated.id,
+        org_id=updated.org_id,
+        project_id=updated.project_id,
+        title=None,
+        objective=updated.objective,
+        state=updated.state,
+        autonomy_mode=AutonomyMode(updated.autonomy_mode),
+        version=updated.version,
+        created_at=updated.created_at,
+        updated_at=updated.updated_at,
+    )
+
+
 @router.post(
     "/{mission_id}/plan", response_model=PlanningCapabilityResponse, status_code=status.HTTP_501_NOT_IMPLEMENTED
 )
@@ -1203,14 +1298,11 @@ def _load_or_generate_backend_files(mission_id: UUID, objective: str) -> dict[st
             except Exception:
                 pass
 
-    is_restaurant = bool(
-        re.search(
-            r"\b(menu|restaurant|food|dining|dishes|dish|cuisine|tandoor|chaat|biryani|curry|cafe|bakery|eatery|culinary)\b",
-            objective,
-            re.IGNORECASE,
-        )
-    )
-    is_mismatched = is_restaurant and "models.py" in files and "NoteModel" in files["models.py"]
+    from syntra.agents.fullstack_generator import extract_universal_domain
+
+    domain = extract_universal_domain(objective)
+    expected_model = f"{domain['entity_name']}Model"
+    is_mismatched = bool(files and "models.py" in files and expected_model not in files["models.py"])
 
     if not files or is_mismatched:
         files = generate_backend_package(objective, [])

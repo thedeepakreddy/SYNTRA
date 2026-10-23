@@ -17,6 +17,7 @@ import {
   Copy,
   Check,
   Lock,
+  RotateCw,
 } from 'lucide-react';
 
 export const ApprovalsPage: React.FC = () => {
@@ -41,6 +42,23 @@ export const ApprovalsPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [respondError, setRespondError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [isRebuilding, setIsRebuilding] = useState(false);
+  const [appIframeKey, setAppIframeKey] = useState(0);
+
+  const handleRebuildDeliverable = async (missionId: string) => {
+    if (isRebuilding) return;
+    try {
+      setIsRebuilding(true);
+      await apiClient.rebuildMission(missionId);
+      const app = await apiClient.getMissionApp(missionId);
+      setMissionApp(app);
+      setAppIframeKey((k) => k + 1);
+    } catch (err: any) {
+      alert(err.message || 'Failed to rebuild deliverable.');
+    } finally {
+      setIsRebuilding(false);
+    }
+  };
 
   const loadApprovals = async () => {
     try {
@@ -334,6 +352,18 @@ export const ApprovalsPage: React.FC = () => {
                   >
                     <span>{previewingApp ? 'Collapse Live Frame' : 'Preview Live App'}</span>
                   </button>
+                  {selectedApproval.mission_id && (
+                    <button
+                      type="button"
+                      onClick={() => handleRebuildDeliverable(selectedApproval.mission_id!)}
+                      disabled={isRebuilding}
+                      className="inline-flex items-center space-x-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 px-2.5 py-1 text-[11px] font-medium transition-colors border border-amber-500/20 disabled:opacity-50"
+                      title="Rebuild deliverable application from scratch"
+                    >
+                      <RotateCw className={`h-3 w-3 ${isRebuilding ? 'animate-spin' : ''}`} />
+                      <span>{isRebuilding ? 'Rebuilding...' : 'Rebuild Deliverable'}</span>
+                    </button>
+                  )}
                   <a
                     href={missionApp?.url || (selectedApproval.mission_id ? `/generated_apps/${selectedApproval.mission_id}/index.html` : '/calculator.html')}
                     target="_blank"
@@ -350,6 +380,7 @@ export const ApprovalsPage: React.FC = () => {
               {previewingApp && (
                 <div className="relative rounded-xl border border-white/[0.08] bg-slate-950 overflow-hidden shadow-inner h-[380px] mt-2">
                   <iframe
+                    key={appIframeKey}
                     src={missionApp?.url || (selectedApproval.mission_id ? `/generated_apps/${selectedApproval.mission_id}/index.html` : '/calculator.html')}
                     title="Live Deliverable Preview"
                     className="w-full h-full border-0"

@@ -477,57 +477,244 @@ INDIAN_DISH_DATA: list[dict[str, Any]] = [
 ]
 
 
-def _extract_domain_profile(objective: str) -> dict[str, Any]:
-    """Analyze the engineering objective to derive domain entities, attributes, and initial data."""
+STOP_WORDS: set[str] = {
+    "build", "create", "make", "develop", "implement", "design", "construct",
+    "produce", "generate", "an", "a", "the", "and", "or", "for", "with", "in",
+    "on", "at", "to", "of", "from", "by", "interactive", "web", "app", "application",
+    "platform", "system", "tool", "page", "dashboard", "fullstack", "frontend",
+    "backend", "spa", "service", "project", "new", "complete", "rich", "dynamic",
+    "responsive", "high", "end", "autonomous", "modern", "suite", "portal",
+    "management", "manager", "tracking", "tracker", "interface"
+}
+
+
+def parse_prompt_categories_and_items(text: str) -> tuple[list[str], list[dict[str, Any]]]:
+    """Parse numbered/bulleted categories and items from ANY markdown or prompt text."""
+    categories: list[str] = []
+    items: list[dict[str, Any]] = []
+
+    current_category: str | None = None
+    lines = text.split("\n")
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+
+        # Match category header: e.g. "1. Appetizers & Street Chaat (5 items)" or "### 1. Categories"
+        cat_match = re.match(
+            r"^(?:#{1,4}\s*)?(?:\d+[\.\)]\s*)([A-Za-z0-9\s&,/'-]+?)(?:\s*\(\d+\s*items?\))?$",
+            stripped,
+        )
+        if cat_match:
+            cat_name = cat_match.group(1).strip()
+            # Ignore structural headings like "Structure & Scale" or "Requirements"
+            if cat_name and len(cat_name) > 2 and cat_name.lower() not in [
+                "structure & scale", "structure and scale", "required data", "interactive ui", "features required",
+                "system architecture", "acceptance criteria", "prd", "overview", "executive summary", "steps", "tasks", "scale"
+            ]:
+                current_category = cat_name
+                if current_category not in categories:
+                    categories.append(current_category)
+                continue
+
+        # Match bullet items: e.g. "- Samosa Chaat" or "* Dish Name" or "• Item"
+        item_match = re.match(r"^[-*•]\s+([A-Za-z0-9\s&,/()'-]+)$", stripped)
+        if item_match and current_category:
+            raw_name = item_match.group(1).strip()
+            lower_raw = raw_name.lower()
+            if any(lower_raw.startswith(p) for p in [
+                "id:", "name:", "category:", "description:", "price:", "spice_level:", "spicelevel:",
+                "dietary_tags:", "dietarytags:", "allergens:", "image:", "status:", "priority:"
+            ]):
+                continue
+            item_slug = re.sub(r"[^a-zA-Z0-9]+", "_", raw_name).strip("_").lower()
+            items.append({
+                "id": item_slug or f"item_{len(items)+1}",
+                "name": raw_name,
+                "title": raw_name,
+                "category": current_category,
+                "status": "AVAILABLE",
+                "priority": "RECOMMENDED",
+                "price": 14.50,
+                "description": f"Curated {raw_name} crafted for {current_category}.",
+                "tags": [current_category.split()[0], "Featured"],
+            })
+
+    return categories, items
+
+
+def extract_universal_domain(objective: str) -> dict[str, Any]:
+    """Universal domain classifier and schema extractor.
+
+    1. Parses prompt-defined categories & items (supports any user-specified structure).
+    2. Detects brand/project name from quotes or 'called/named' patterns.
+    3. Classifies domain across 11 families (Hospitality, Crypto, Real Estate, Healthcare,
+       Fitness, E-Commerce, Logistics, Education, DevOps, Support, Knowledge/Notes).
+    4. Applies clean noun extraction fallback strictly filtering out verbs and stop words
+       so 'Build' or 'Create' NEVER becomes an entity name.
+    """
     obj_lower = objective.lower()
 
+    # 1. Parse prompt categories and items
+    prompt_cats, prompt_items = parse_prompt_categories_and_items(objective)
+
+    # 2. Extract brand name if quoted or specified
+    brand_match = re.search(r'"([^"]{2,60})"', objective)
+    if not brand_match:
+        brand_match = re.search(r"'([^']{2,60})'", objective)
+    if not brand_match:
+        brand_match = re.search(
+            r'\b(?:called|named|brand(?:ed)?|project)\s+([A-Z][A-Za-z0-9\s&]+?)(?:\s+(?:with|for|to|and|in|\.|\,)|$)',
+            objective,
+        )
+    brand_name = brand_match.group(1).strip() if brand_match else None
+
+    # Domain Family 1: Hospitality / Food / Dining / Cafe / Bakery / Bar
     is_restaurant = bool(
         re.search(
-            r"\b(menu|restaurant|food|dining|dishes|dish|cuisine|tandoor|chaat|biryani|curry|cafe|bakery|eatery|culinary)\b",
+            r"\b(menu|restaurant|food|dining|dishes|dish|cuisine|cafe|bakery|eatery|culinary|bistro|bar|cocktail|pizza|sushi|burger|tandoor|curry|biryani|chaat|bbq|taco|pasta|diner)\b",
             obj_lower,
         )
     )
 
+    # Domain Family 2: Crypto / Web3 / DeFi / Blockchain / Trading
+    is_crypto = bool(
+        re.search(
+            r"\b(crypto|token|tokens|blockchain|wallet|defi|trading|exchange|web3|nft|nfts|bitcoin|ethereum|solana|portfolio|coin|coins|altcoin)\b",
+            obj_lower,
+        )
+    )
+
+    # Domain Family 3: Real Estate / Housing / PropTech / Listings
+    is_real_estate = bool(
+        re.search(
+            r"\b(real\s*estate|property|properties|listing|listings|realtor|realty|housing|villa|villas|apartment|apartments|condo|condos|mortgage|rental|rentals|tenant|tenants|landlord)\b",
+            obj_lower,
+        )
+    )
+
+    # Domain Family 4: Healthcare / Medical / Clinic / Patient Care
+    is_healthcare = bool(
+        re.search(
+            r"\b(health|healthcare|medical|clinic|clinical|patient|patients|doctor|doctors|hospital|telehealth|pharmacy|prescription|ehr|emr|wellness|diagnosis)\b",
+            obj_lower,
+        )
+    )
+
+    # Domain Family 5: Fitness / Gym / Workout / Routine / Training
+    is_fitness = bool(
+        re.search(
+            r"\b(fitness|gym|workout|workouts|exercise|exercises|routine|routines|training|bodybuilding|crossfit|athlete|athletes|calisthenics|reps|sets)\b",
+            obj_lower,
+        )
+    )
+
+    # Domain Family 6: E-Commerce / Store / Retail / Shop / Marketplace
+    is_ecommerce = bool(
+        re.search(
+            r"\b(ecommerce|e-commerce|store|shop|retail|merchandise|checkout|cart|shopping|product|products|marketplace|apparel|catalog|catalogue)\b",
+            obj_lower,
+        )
+    )
+
+    # Domain Family 7: Logistics / Fleet / Warehouse / Supply Chain
+    is_logistics = bool(
+        re.search(
+            r"\b(logistics|fleet|vehicle|vehicles|shipment|shipments|delivery|cargo|freight|truck|trucks|dispatch|warehouse|inventory|stock|supply\s*chain)\b",
+            obj_lower,
+        )
+    )
+
+    # Domain Family 8: Education / Courses / LMS / Learning
+    is_education = bool(
+        re.search(
+            r"\b(course|courses|education|learning|lms|school|academy|syllabus|student|students|instructor|instructors|lesson|lessons|curriculum|class|classes)\b",
+            obj_lower,
+        )
+    )
+
+    # Domain Family 9: DevOps / Cloud / Infrastructure / Monitoring
+    is_devops = bool(
+        re.search(
+            r"\b(devops|cloud|infrastructure|kubernetes|k8s|server|servers|cluster|clusters|microservice|microservices|telemetry|latency|metrics|docker|container|nodes?)\b",
+            obj_lower,
+        )
+    )
+
+    # Domain Family 10: Support / Tickets / Bug Tracker / Helpdesk
+    is_support = bool(
+        re.search(
+            r"\b(ticket|tickets|support|issue|issues|bug|bugs|incident|incidents|trouble|helpdesk)\b",
+            obj_lower,
+        )
+    )
+
+    # Domain Family 11: Notes / Docs / Wiki / Knowledge Base
+    is_notes = bool(
+        re.search(
+            r"\b(notes?|memo|journal|docs?|knowledge\s*base|wiki)\b",
+            obj_lower,
+        )
+    )
+
+    # Domain Specific Configurations
     if is_restaurant:
         entity_name = "MenuItem"
         entity_singular = "Menu Item"
         entity_plural = "Menu Items"
         table_name = "menu_items"
         fields = [
-            {"name": "name", "type": "str", "label": "Dish Name", "default": "Butter Chicken (Murgh Makhani)"},
-            {"name": "category", "type": "str", "label": "Category", "default": "Rich Curries & Masalas"},
-            {"name": "price", "type": "float", "label": "Price ($)", "default": 19.50},
+            {"name": "title", "type": "str", "label": "Dish Name", "default": "Signature Entree"},
+            {"name": "category", "type": "str", "label": "Category", "default": "Signature Entrees"},
+            {"name": "price", "type": "float", "label": "Price ($)", "default": 18.50},
             {"name": "spice_level", "type": "int", "label": "Spice Level", "default": 1},
             {"name": "status", "type": "str", "label": "Status", "default": "AVAILABLE"},
             {"name": "priority", "type": "str", "label": "Priority", "default": "RECOMMENDED"},
-            {"name": "description", "type": "str", "label": "Description", "default": "Slow-simmered rich curry."},
+            {"name": "description", "type": "str", "label": "Description", "default": "Slow-simmered culinary specialty."},
         ]
-        status_options = ["AVAILABLE", "SOLD_OUT", "CHEF_RECOMMENDED"]
-        category_options = [
-            "Appetizers & Street Chaat",
-            "Tandoor & Grills",
-            "Rich Curries & Masalas",
-            "Biryanis & Rice Specialties",
-            "Breads & Accompaniments",
-            "Desserts & Drinks",
+        status_options = ["AVAILABLE", "CHEF_RECOMMENDED", "LIMITED_RUN", "SOLD_OUT"]
+        category_options = prompt_cats if prompt_cats else [
+            "Appetizers & Starters",
+            "Chef Grills & Specialties",
+            "Signature Entrees",
+            "Specialty Rice & Pastas",
+            "Artisanal Breads & Sides",
+            "Desserts & Refreshments",
         ]
-        seed_items = [
-            {
-                "title": d["name"],
-                "name": d["name"],
-                "category": d["category"],
-                "status": "AVAILABLE",
-                "priority": f"Spice {d['spice_level']}",
-                "description": d["description"],
-                "tags": d["dietary_tags"],
-                "price": d["price"],
-                "spice_level": d["spice_level"],
-                "allergens": d["allergens"],
-                "ingredients": d.get("ingredients", []),
-                "image": d["image"],
-            }
-            for d in INDIAN_DISH_DATA
-        ]
+
+        if prompt_items:
+            seed_items = prompt_items
+        elif any(k in obj_lower for k in ["indian", "tandoor", "curry", "biryani", "chaat", "masala"]):
+            seed_items = [
+                {
+                    "title": d["name"],
+                    "name": d["name"],
+                    "category": d["category"],
+                    "status": "AVAILABLE",
+                    "priority": f"Spice {d['spice_level']}",
+                    "description": d["description"],
+                    "tags": d["dietary_tags"],
+                    "price": d["price"],
+                    "spice_level": d["spice_level"],
+                    "allergens": d["allergens"],
+                    "ingredients": d.get("ingredients", []),
+                    "image": d["image"],
+                }
+                for d in INDIAN_DISH_DATA
+            ]
+        else:
+            seed_items = [
+                {"title": "Crispy Calamari Fritti", "category": "Appetizers & Starters", "price": 14.50, "status": "AVAILABLE", "priority": "RECOMMENDED", "description": "Tender squid rings with Meyer lemon aioli and crushed herbs.", "tags": ["Seafood", "Crispy"]},
+                {"title": "Burrata Pugliese", "category": "Appetizers & Starters", "price": 16.00, "status": "AVAILABLE", "priority": "CHEF_RECOMMENDED", "description": "Creamy heirloom tomato salad, aged balsamic glaze, and torn basil.", "tags": ["Vegetarian", "Artisanal"]},
+                {"title": "Wood-Fired Ribeye Steak", "category": "Chef Grills & Specialties", "price": 38.00, "status": "AVAILABLE", "priority": "RECOMMENDED", "description": "Prime aged cut served with roasted garlic bone marrow butter.", "tags": ["Prime", "Grill"]},
+                {"title": "Pan-Seared Chilean Sea Bass", "category": "Chef Grills & Specialties", "price": 42.00, "status": "AVAILABLE", "priority": "LIMITED_RUN", "description": "Miso glaze with charred baby bok choy and ginger broth.", "tags": ["Signature", "Seafood"]},
+                {"title": "Wild Forest Truffle Risotto", "category": "Specialty Rice & Pastas", "price": 28.50, "status": "AVAILABLE", "priority": "RECOMMENDED", "description": "Acquerello carnaroli rice with black winter truffle and aged parmesan.", "tags": ["Vegetarian", "Truffle"]},
+                {"title": "Handmade Pappardelle Ragù", "category": "Specialty Rice & Pastas", "price": 26.00, "status": "AVAILABLE", "priority": "RECOMMENDED", "description": "Slow-braised short rib ragù folded into wide ribbon pasta.", "tags": ["Housemade", "Classic"]},
+                {"title": "Rosemary Garlic Focaccia", "category": "Artisanal Breads & Sides", "price": 8.00, "status": "AVAILABLE", "priority": "RECOMMENDED", "description": "Extra virgin olive oil and flaky Maldon sea salt.", "tags": ["Bakery", "Fresh"]},
+                {"title": "Espresso Tiramisu Classico", "category": "Desserts & Refreshments", "price": 11.00, "status": "AVAILABLE", "priority": "RECOMMENDED", "description": "Mascarpone sabayon layered with house ladyfingers and cocoa.", "tags": ["Dessert", "Classic"]},
+            ]
+
         return {
             "entity_name": entity_name,
             "entity_singular": entity_singular,
@@ -538,287 +725,365 @@ def _extract_domain_profile(objective: str) -> dict[str, Any]:
             "category_options": category_options,
             "seed_items": seed_items,
             "is_restaurant": True,
-            "restaurant_name": "Tandoor & Spice",
+            "brand_name": brand_name or "Epicurean & Co.",
         }
-    elif any(k in obj_lower for k in ["inventory", "warehouse", "stock", "catalog", "supply"]):
-        entity_name = "InventoryItem"
-        entity_singular = "Inventory Item"
-        entity_plural = "Inventory Items"
-        table_name = "inventory_items"
+
+    elif is_crypto:
+        entity_name = "CryptoAsset"
+        entity_singular = "Crypto Asset"
+        entity_plural = "Crypto Assets"
+        table_name = "crypto_assets"
         fields = [
-            {"name": "name", "type": "str", "label": "Item Name", "default": "Pro Wireless Headset"},
-            {"name": "sku", "type": "str", "label": "SKU Code", "default": "SKU-9921-WH"},
-            {"name": "category", "type": "str", "label": "Category", "default": "Electronics"},
-            {"name": "stock_quantity", "type": "int", "label": "Stock Qty", "default": 45},
-            {"name": "min_threshold", "type": "int", "label": "Reorder Threshold", "default": 10},
-            {"name": "unit_price", "type": "float", "label": "Unit Price ($)", "default": 149.99},
-            {"name": "status", "type": "str", "label": "Status", "default": "IN_STOCK"},
-            {"name": "location", "type": "str", "label": "Warehouse Bin", "default": "Bay-4B"},
+            {"name": "title", "type": "str", "label": "Asset Name / Ticker", "default": "Bitcoin (BTC)"},
+            {"name": "category", "type": "str", "label": "Protocol Tier", "default": "Layer 1 Protocols"},
+            {"name": "status", "type": "str", "label": "Market Trend", "default": "BULLISH"},
+            {"name": "priority", "type": "str", "label": "Risk Tier", "default": "HIGH"},
+            {"name": "description", "type": "str", "label": "Asset Overview", "default": "Decentralized cryptographic digital store of value."},
         ]
-        status_options = ["IN_STOCK", "LOW_STOCK", "REORDER_PLACED", "OUT_OF_STOCK"]
-        category_options = ["Electronics", "Hardware", "Packaging", "Accessories", "Components"]
-        seed_items = [
-            {
-                "name": "High-Precision Stepper Motor",
-                "sku": "MOT-440-X",
-                "category": "Hardware",
-                "stock_quantity": 84,
-                "min_threshold": 15,
-                "unit_price": 42.50,
-                "status": "IN_STOCK",
-                "location": "Rack-A1",
-                "tags": ["Motor", "Robotics"],
-            },
-            {
-                "name": "Anodized Aluminum Frame 4040",
-                "sku": "FRM-4040-BLK",
-                "category": "Hardware",
-                "stock_quantity": 8,
-                "min_threshold": 12,
-                "unit_price": 28.00,
-                "status": "LOW_STOCK",
-                "location": "Rack-A3",
-                "tags": ["Chassis", "Aluminum"],
-            },
-            {
-                "name": "Optical Rotary Encoder 1024PPR",
-                "sku": "ENC-1024-OPT",
-                "category": "Electronics",
-                "stock_quantity": 0,
-                "min_threshold": 5,
-                "unit_price": 75.90,
-                "status": "OUT_OF_STOCK",
-                "location": "Bin-C9",
-                "tags": ["Sensor", "Electronics"],
-            },
-            {
-                "name": "Antistatic ESD Packaging Bag 50pk",
-                "sku": "PKG-ESD-50",
-                "category": "Packaging",
-                "stock_quantity": 120,
-                "min_threshold": 20,
-                "unit_price": 14.25,
-                "status": "IN_STOCK",
-                "location": "Bay-P2",
-                "tags": ["Packaging", "ESD"],
-            },
-            {
-                "name": "Microcontroller Core Board v3",
-                "sku": "MCU-CORE-V3",
-                "category": "Electronics",
-                "stock_quantity": 32,
-                "min_threshold": 10,
-                "unit_price": 19.50,
-                "status": "IN_STOCK",
-                "location": "Bin-E2",
-                "tags": ["MCU", "Embedded"],
-            },
-            {
-                "name": "Braided Silicone Ribbon Cable 1m",
-                "sku": "CBL-SIL-1M",
-                "category": "Components",
-                "stock_quantity": 5,
-                "min_threshold": 15,
-                "unit_price": 8.75,
-                "status": "LOW_STOCK",
-                "location": "Bin-E7",
-                "tags": ["Cables", "Wiring"],
-            },
+        status_options = ["BULLISH", "ACCUMULATING", "STABLE", "WATCHLIST"]
+        category_options = prompt_cats if prompt_cats else [
+            "Layer 1 Protocols", "DeFi Bluechips", "Layer 2 Rollups", "AI & Compute", "Real World Assets", "Infrastructure"
         ]
-    elif re.search(r"\b(notes?|memo|journal|docs?|knowledge\s*base)\b", obj_lower) and not re.search(
-        r"\b(cook(ing)?|recipe|taste|flavor)\b", obj_lower
-    ):
-        entity_name = "Note"
-        entity_singular = "Note"
-        entity_plural = "Notes"
-        table_name = "notes"
+        seed_items = prompt_items if prompt_items else [
+            {"title": "Bitcoin (BTC)", "category": "Layer 1 Protocols", "status": "BULLISH", "priority": "CRITICAL", "description": "Primary digital store of value and proof-of-work consensus backbone.", "tags": ["L1", "PoW", "StoreOfValue"]},
+            {"title": "Ethereum (ETH)", "category": "Layer 1 Protocols", "status": "BULLISH", "priority": "CRITICAL", "description": "Turing-complete decentralized smart contract virtual machine.", "tags": ["L1", "PoS", "SmartContracts"]},
+            {"title": "Solana (SOL)", "category": "Layer 1 Protocols", "status": "ACCUMULATING", "priority": "HIGH", "description": "High-throughput parallelized execution runtime with Proof-of-History.", "tags": ["L1", "Fast", "HighTPS"]},
+            {"title": "Uniswap (UNI)", "category": "DeFi Bluechips", "status": "ACCUMULATING", "priority": "HIGH", "description": "Automated market maker protocol providing decentralized liquidity.", "tags": ["DeFi", "AMM", "Liquidity"]},
+            {"title": "Arbitrum (ARB)", "category": "Layer 2 Rollups", "status": "STABLE", "priority": "MEDIUM", "description": "Optimistic rollup suite scaling Ethereum throughput with low gas fees.", "tags": ["L2", "Rollup", "Scaling"]},
+            {"title": "Render Network (RENDER)", "category": "AI & Compute", "status": "BULLISH", "priority": "HIGH", "description": "Decentralized GPU rendering network powering AI training and 3D visual graphics.", "tags": ["AI", "Compute", "DePIN"]},
+        ]
+
+    elif is_real_estate:
+        entity_name = "PropertyListing"
+        entity_singular = "Property Listing"
+        entity_plural = "Property Listings"
+        table_name = "property_listings"
         fields = [
-            {"name": "title", "type": "str", "label": "Note Title", "default": "System Architecture Decisions"},
-            {
-                "name": "content",
-                "type": "str",
-                "label": "Content",
-                "default": "Documenting ADR 001 for SQLite backend.",
-            },
-            {"name": "category", "type": "str", "label": "Notebook", "default": "Engineering"},
-            {"name": "status", "type": "str", "label": "State", "default": "PUBLISHED"},
-            {"name": "is_pinned", "type": "bool", "label": "Pinned Note", "default": False},
+            {"name": "title", "type": "str", "label": "Property Title", "default": "Oceanfront Modern Villa"},
+            {"name": "category", "type": "str", "label": "Property Class", "default": "Waterfront Villas"},
+            {"name": "status", "type": "str", "label": "Market Status", "default": "FOR_SALE"},
+            {"name": "priority", "type": "str", "label": "Listing Priority", "default": "HIGH"},
+            {"name": "description", "type": "str", "label": "Property Specifications", "default": "Panoramic ocean views with custom infinity pool."},
         ]
-        status_options = ["DRAFT", "IN_REVIEW", "PUBLISHED", "ARCHIVED"]
-        category_options = ["Engineering", "Architecture", "Operations", "Product", "Personal"]
-        seed_items = [
-            {
-                "title": "RFC: SQLite Persistence Model with WAL Mode",
-                "content": "Adopting SQLite with Write-Ahead Logging for ultra-fast local read-write throughput and hermetic test isolation.",
-                "category": "Engineering",
-                "status": "PUBLISHED",
-                "is_pinned": True,
-                "tags": ["RFC", "Database", "Performance"],
-            },
-            {
-                "title": "FastAPI Dependency Injection Patterns",
-                "content": "Best practices for scoping unit of work sessions and authentication token validation across router endpoints.",
-                "category": "Architecture",
-                "status": "PUBLISHED",
-                "is_pinned": True,
-                "tags": ["FastAPI", "Python", "CleanCode"],
-            },
-            {
-                "title": "Deployment Runbook for Microservices",
-                "content": "Step-by-step procedures for zero-downtime rolling upgrades and database schema migration verification.",
-                "category": "Operations",
-                "status": "IN_REVIEW",
-                "is_pinned": False,
-                "tags": ["DevOps", "Runbook", "Release"],
-            },
-            {
-                "title": "Q3 Roadmap: Autonomous Multi-Agent Scheduling",
-                "content": "Design specification for cycle-free Directed Acyclic Graph scheduler with token reservations and budget limits.",
-                "category": "Product",
-                "status": "PUBLISHED",
-                "is_pinned": False,
-                "tags": ["Roadmap", "Agents", "EM"],
-            },
-            {
-                "title": "Security Invariant Review: Level-4 Human Gate",
-                "content": "All external code pushes and deployment mutations strictly require cryptographic HMAC-SHA256 signatures.",
-                "category": "Architecture",
-                "status": "PUBLISHED",
-                "is_pinned": True,
-                "tags": ["Security", "Gate", "HMAC"],
-            },
+        status_options = ["FOR_SALE", "PENDING_OFFER", "CONTINGENT", "JUST_LISTED", "SOLD"]
+        category_options = prompt_cats if prompt_cats else [
+            "Luxury Penthouses", "Waterfront Villas", "Urban Lofts", "Suburban Estates", "Modern Condos", "Commercial Spaces"
         ]
-    elif any(k in obj_lower for k in ["ticket", "support", "issue", "bug", "incident", "request"]):
+        seed_items = prompt_items if prompt_items else [
+            {"title": "Oceanfront Villa Azure", "category": "Waterfront Villas", "status": "FOR_SALE", "priority": "CRITICAL", "description": "6 bed, 7 bath private sanctuary with infinity edge pool and deep water dock.", "tags": ["Waterfront", "Pool", "Luxury"]},
+            {"title": "The Glass Penthouse at Hudson", "category": "Luxury Penthouses", "status": "JUST_LISTED", "priority": "HIGH", "description": "Duplex penthouse with 360-degree city skyline terrace and private elevator.", "tags": ["Penthouse", "Skyline", "Concierge"]},
+            {"title": "SoHo Cast Iron Loft", "category": "Urban Lofts", "status": "PENDING_OFFER", "priority": "MEDIUM", "description": "Historical 14ft ceilings, exposed brickwork, and imported Italian kitchen fixtures.", "tags": ["Historic", "Loft", "Downtown"]},
+            {"title": "Bel Air Modern Estate", "category": "Suburban Estates", "status": "FOR_SALE", "priority": "HIGH", "description": "Gated multi-acre architectural compound with wine cellar and screening room.", "tags": ["Gated", "Estate", "Private"]},
+            {"title": "Tribeca Horizon Condo", "category": "Modern Condos", "status": "FOR_SALE", "priority": "MEDIUM", "description": "Smart-home integrated 3-bedroom residence with floor-to-ceiling soundproof glass.", "tags": ["SmartHome", "Tribeca", "Doorman"]},
+        ]
+
+    elif is_healthcare:
+        entity_name = "PatientRecord"
+        entity_singular = "Patient Record"
+        entity_plural = "Patient Records"
+        table_name = "patient_records"
+        fields = [
+            {"name": "title", "type": "str", "label": "Patient & Case Identifier", "default": "Patient Consultation"},
+            {"name": "category", "type": "str", "label": "Clinical Department", "default": "Cardiology"},
+            {"name": "status", "type": "str", "label": "Clinical State", "default": "SCHEDULED"},
+            {"name": "priority", "type": "str", "label": "Triage Priority", "default": "HIGH"},
+            {"name": "description", "type": "str", "label": "Clinical Case Summary", "default": "Routine clinical assessment and diagnostic review."},
+        ]
+        status_options = ["SCHEDULED", "IN_TRIAGE", "IN_CONSULTATION", "COMPLETED", "FOLLOW_UP"]
+        category_options = prompt_cats if prompt_cats else [
+            "Cardiology", "Neurology", "General Medicine", "Pediatrics", "Orthopedics", "Emergency Care"
+        ]
+        seed_items = prompt_items if prompt_items else [
+            {"title": "Marcus Vance - Cardiac Evaluation", "category": "Cardiology", "status": "IN_CONSULTATION", "priority": "CRITICAL", "description": "Post-angioplasty follow up monitoring with stress ECG analysis.", "tags": ["Cardiac", "ECG", "Priority"]},
+            {"title": "Elena Rostova - Neurological Consult", "category": "Neurology", "status": "SCHEDULED", "priority": "HIGH", "description": "Persistent migraine diagnostic screening and cranial MRI review.", "tags": ["Neurology", "MRI", "Diagnostics"]},
+            {"title": "Liam Chen - Pediatric Wellness Check", "category": "Pediatrics", "status": "COMPLETED", "priority": "LOW", "description": "Annual pediatric growth metrics and developmental milestone exam.", "tags": ["Pediatrics", "Wellness", "Vaccine"]},
+            {"title": "Sophia Sterling - Orthopedic Follow-Up", "category": "Orthopedics", "status": "FOLLOW_UP", "priority": "MEDIUM", "description": "Knee arthroscopy rehabilitation check and range of motion measurement.", "tags": ["Orthopedics", "Rehab", "PostOp"]},
+            {"title": "David Miller - Acute Trauma Triage", "category": "Emergency Care", "status": "IN_TRIAGE", "priority": "CRITICAL", "description": "Acute lower limb fracture stabilized; scheduled for orthotic casting.", "tags": ["Trauma", "Emergency", "Urgent"]},
+        ]
+
+    elif is_fitness:
+        entity_name = "WorkoutRoutine"
+        entity_singular = "Workout Routine"
+        entity_plural = "Workout Routines"
+        table_name = "workout_routines"
+        fields = [
+            {"name": "title", "type": "str", "label": "Routine Title", "default": "Hypertrophy Push Day"},
+            {"name": "category", "type": "str", "label": "Training Focus", "default": "Hypertrophy & Strength"},
+            {"name": "status", "type": "str", "label": "Cycle Status", "default": "ACTIVE_CYCLE"},
+            {"name": "priority", "type": "str", "label": "Target Intensity", "default": "HIGH"},
+            {"name": "description", "type": "str", "label": "Routine Protocol", "default": "Compound movements and progressive overload protocol."},
+        ]
+        status_options = ["ACTIVE_CYCLE", "SCHEDULED", "COMPLETED", "REST_DAY"]
+        category_options = prompt_cats if prompt_cats else [
+            "Hypertrophy & Strength", "High-Intensity Interval", "Olympic Weightlifting", "Mobility & Recovery", "Endurance & Cardio", "Core & Calisthenics"
+        ]
+        seed_items = prompt_items if prompt_items else [
+            {"title": "Heavy Push: Barbell Bench & Overhead Press", "category": "Hypertrophy & Strength", "status": "ACTIVE_CYCLE", "priority": "HIGH", "description": "5x5 barbell bench press superset with standing overhead dumbbell press.", "tags": ["Strength", "UpperBody", "Compound"]},
+            {"title": "Posterior Chain: Romanian Deadlifts & Rows", "category": "Hypertrophy & Strength", "status": "SCHEDULED", "priority": "HIGH", "description": "4x8 RDLs with controlled eccentric tempo and chest-supported rows.", "tags": ["Back", "Hamstrings", "Hypertrophy"]},
+            {"title": "Tabata Sprint Conditioning Interval", "category": "High-Intensity Interval", "status": "COMPLETED", "priority": "CRITICAL", "description": "8 rounds of 20s maximal assault bike sprints paired with 10s rest.", "tags": ["HIIT", "Cardio", "VO2Max"]},
+            {"title": "Thoracic & Hip Capsule Mobility Flow", "category": "Mobility & Recovery", "status": "ACTIVE_CYCLE", "priority": "LOW", "description": "Controlled articular rotations, 90/90 hip switches, and band distraction.", "tags": ["Mobility", "Recovery", "Joints"]},
+            {"title": "Clean & Jerk Technique Progression", "category": "Olympic Weightlifting", "status": "SCHEDULED", "priority": "HIGH", "description": "Positional hang cleans followed by split jerk footwork drills.", "tags": ["Oly", "Explosive", "Technique"]},
+        ]
+
+    elif is_ecommerce:
+        entity_name = "ProductItem"
+        entity_singular = "Product Item"
+        entity_plural = "Product Items"
+        table_name = "product_items"
+        fields = [
+            {"name": "title", "type": "str", "label": "Product Title", "default": "Pro Wireless Headset"},
+            {"name": "category", "type": "str", "label": "Product Category", "default": "Featured Electronics"},
+            {"name": "status", "type": "str", "label": "Inventory Status", "default": "IN_STOCK"},
+            {"name": "priority", "type": "str", "label": "Sales Tier", "default": "HIGH"},
+            {"name": "description", "type": "str", "label": "Product Specifications", "default": "Premium engineered device with long battery life."},
+        ]
+        status_options = ["IN_STOCK", "LOW_STOCK", "BACKORDER", "BESTSELLER"]
+        category_options = prompt_cats if prompt_cats else [
+            "Featured Electronics", "Audio & Sound", "Ergonomic Gear", "Minimalist Apparel", "Smart Home Tech", "Travel Accessories"
+        ]
+        seed_items = prompt_items if prompt_items else [
+            {"title": "Spatial Audio Wireless Headphones", "category": "Audio & Sound", "status": "BESTSELLER", "priority": "HIGH", "description": "Active noise cancellation with 40mm beryllium drivers and 36hr battery.", "tags": ["Audio", "ANC", "Wireless"]},
+            {"title": "Magnetic Mechanical Desk Mat", "category": "Ergonomic Gear", "status": "IN_STOCK", "priority": "MEDIUM", "description": "Vegetable-tanned vegan leather with modular magnetic cord organizing hub.", "tags": ["DeskSetup", "Ergonomic"]},
+            {"title": "Ultralight USB-C GaN Charger 140W", "category": "Featured Electronics", "status": "IN_STOCK", "priority": "HIGH", "description": "Triple port gallium nitride charger with PPS fast charging protocol.", "tags": ["Power", "GaN", "Tech"]},
+            {"title": "Merino Wool Commuter Trench", "category": "Minimalist Apparel", "status": "LOW_STOCK", "priority": "HIGH", "description": "Water-resistant weatherproof merino blend designed for four seasons.", "tags": ["Apparel", "Minimalist", "Waterproof"]},
+            {"title": "Smart Air Quality & Ambient Monitor", "category": "Smart Home Tech", "status": "IN_STOCK", "priority": "MEDIUM", "description": "Continuous VOC, CO2, humidity, and particulate sensor with e-ink display.", "tags": ["SmartHome", "Sensor", "Health"]},
+        ]
+
+    elif is_logistics:
+        if any(k in obj_lower for k in ["fleet", "vehicle", "truck"]):
+            entity_name = "FleetVehicle"
+            entity_singular = "Fleet Vehicle"
+            entity_plural = "Fleet Vehicles"
+            table_name = "fleet_vehicles"
+            category_options = prompt_cats if prompt_cats else [
+                "Long-Haul Freight", "Express Courier", "Cold-Chain Transport", "Heavy Cargo", "Electric Fleet", "Regional Delivery"
+            ]
+            seed_items = prompt_items if prompt_items else [
+                {"title": "EV Hauler Alpha-01", "category": "Electric Fleet", "status": "IN_TRANSIT", "priority": "HIGH", "description": "Electric Class 8 tractor en route on Interstate 80 with 84% battery charge.", "tags": ["Electric", "LongHaul", "ZeroEmission"]},
+                {"title": "Refrigerated Courier Van 09", "category": "Cold-Chain Transport", "status": "DISPATCHED", "priority": "CRITICAL", "description": "Pharmaceutical shipment maintaining constant -20°C telemetry.", "tags": ["ColdChain", "Pharma", "Telemetry"]},
+                {"title": "Heavy Transport Unit 44", "category": "Heavy Cargo", "status": "MAINTENANCE", "priority": "MEDIUM", "description": "Scheduled preventative hydraulic inspection and brake pad replacement.", "tags": ["Service", "Brakes", "HeavyDuty"]},
+                {"title": "Express Sprinter Unit 12", "category": "Express Courier", "status": "IN_TRANSIT", "priority": "HIGH", "description": "Urban last-mile package distribution with optimized AI route scheduling.", "tags": ["LastMile", "Express", "Urban"]},
+                {"title": "Intermodal Container Rig 08", "category": "Long-Haul Freight", "status": "AVAILABLE", "priority": "LOW", "description": "Staged at Central Port terminal awaiting container manifest dispatch.", "tags": ["Port", "Intermodal", "Ready"]},
+            ]
+        else:
+            entity_name = "InventoryItem"
+            entity_singular = "Inventory Item"
+            entity_plural = "Inventory Items"
+            table_name = "inventory_items"
+            category_options = prompt_cats if prompt_cats else [
+                "Electronics", "Hardware", "Packaging", "Accessories", "Components", "Raw Materials"
+            ]
+            seed_items = prompt_items if prompt_items else [
+                {"title": "High-Precision Stepper Motor NEMA23", "category": "Hardware", "status": "IN_STOCK", "priority": "HIGH", "description": "1.8 deg step angle with high holding torque for automated gantries.", "tags": ["Robotics", "Motor"]},
+                {"title": "Anodized Aluminum T-Slot Extrusion", "category": "Hardware", "status": "LOW_STOCK", "priority": "HIGH", "description": "40x40 structural black anodized rail with pre-machined mounting bores.", "tags": ["Chassis", "Frame"]},
+                {"title": "Optical Rotary Encoder 1024PPR", "category": "Electronics", "status": "OUT_OF_STOCK", "priority": "CRITICAL", "description": "Differential quadrature optical encoder with zero index pulse.", "tags": ["Sensor", "Electronics"]},
+                {"title": "Antistatic ESD Shielding Pouches 100pk", "category": "Packaging", "status": "IN_STOCK", "priority": "LOW", "description": "Four-layer Faraday cage construction for sensitive microcontrollers.", "tags": ["Packaging", "ESD"]},
+                {"title": "Arm Cortex-M4 Core Controller Board", "category": "Components", "status": "IN_STOCK", "priority": "MEDIUM", "description": "168MHz MCU with hardware floating-point unit and CAN bus transceivers.", "tags": ["Embedded", "MCU"]},
+            ]
+        status_options = ["IN_TRANSIT", "DISPATCHED", "MAINTENANCE", "AVAILABLE", "IN_STOCK", "LOW_STOCK", "OUT_OF_STOCK"]
+        fields = [
+            {"name": "title", "type": "str", "label": "Identifier / Description", "default": "Operational Asset"},
+            {"name": "category", "type": "str", "label": "Category Tier", "default": "Hardware"},
+            {"name": "status", "type": "str", "label": "Current State", "default": "AVAILABLE"},
+            {"name": "priority", "type": "str", "label": "Dispatch Priority", "default": "HIGH"},
+            {"name": "description", "type": "str", "label": "Asset Overview", "default": "Core logistical resource tracked in real time."},
+        ]
+
+    elif is_education:
+        entity_name = "CourseModule"
+        entity_singular = "Course Module"
+        entity_plural = "Course Modules"
+        table_name = "course_modules"
+        fields = [
+            {"name": "title", "type": "str", "label": "Course Title", "default": "Distributed Systems Engineering"},
+            {"name": "category", "type": "str", "label": "Discipline Track", "default": "Distributed Systems"},
+            {"name": "status", "type": "str", "label": "Enrollment Status", "default": "ENROLLING"},
+            {"name": "priority", "type": "str", "label": "Course Difficulty", "default": "ADVANCED"},
+            {"name": "description", "type": "str", "label": "Syllabus Overview", "default": "Hands-on engineering curriculum with practical lab evaluations."},
+        ]
+        status_options = ["ENROLLING", "IN_SESSION", "COMPLETED", "SELF_PACED"]
+        category_options = prompt_cats if prompt_cats else [
+            "Full-Stack Engineering", "Distributed Systems", "Machine Learning & AI", "Cloud Architecture", "Applied Cryptography", "Product Design"
+        ]
+        seed_items = prompt_items if prompt_items else [
+            {"title": "Consensus Protocols: Raft, Paxos & Byzantine Fault Tolerance", "category": "Distributed Systems", "status": "IN_SESSION", "priority": "CRITICAL", "description": "Formal state machine replication and leader election algorithms in Rust.", "tags": ["Distributed", "Consensus", "Rust"]},
+            {"title": "Production LLM Architecture & Evaluation", "category": "Machine Learning & AI", "status": "ENROLLING", "priority": "HIGH", "description": "Fine-tuning, context engineering, RAG retrieval optimization, and latency profiling.", "tags": ["AI", "LLM", "Python"]},
+            {"title": "Modern Cloud Native Design with Kubernetes", "category": "Cloud Architecture", "status": "SELF_PACED", "priority": "MEDIUM", "description": "Custom controllers, operators, service mesh topology, and zero-trust security.", "tags": ["K8s", "Cloud", "DevOps"]},
+            {"title": "Applied Zero-Knowledge Proofs & Cryptography", "category": "Applied Cryptography", "status": "ENROLLING", "priority": "CRITICAL", "description": "Arithmetic circuits, zk-SNARKs, polynomial commitments, and verifiable computation.", "tags": ["Crypto", "ZK", "Math"]},
+            {"title": "Design Systems & High-Fidelity UI Craft", "category": "Product Design", "status": "COMPLETED", "priority": "MEDIUM", "description": "Figma token pipelines, microinteractions, accessible layout, and physics-based springs.", "tags": ["Design", "UI", "Craft"]},
+        ]
+
+    elif is_devops:
+        entity_name = "ServiceNode"
+        entity_singular = "Service Node"
+        entity_plural = "Service Nodes"
+        table_name = "service_nodes"
+        fields = [
+            {"name": "title", "type": "str", "label": "Service / Node Name", "default": "Edge Ingress Gateway"},
+            {"name": "category", "type": "str", "label": "Infrastructure Tier", "default": "API Gateways"},
+            {"name": "status", "type": "str", "label": "Health Status", "default": "HEALTHY"},
+            {"name": "priority", "type": "str", "label": "Criticality", "default": "HIGH"},
+            {"name": "description", "type": "str", "label": "Telemetry Overview", "default": "Cluster component operating within SLO performance parameters."},
+        ]
+        status_options = ["HEALTHY", "DEGRADED", "FAILOVER", "MAINTENANCE"]
+        category_options = prompt_cats if prompt_cats else [
+            "API Gateways", "Compute Clusters", "Database Shards", "Caching Tier", "Message Queues", "Edge CDN"
+        ]
+        seed_items = prompt_items if prompt_items else [
+            {"title": "Edge Envoy Gateway Cluster (us-east-1)", "category": "API Gateways", "status": "HEALTHY", "priority": "CRITICAL", "description": "Handling 45k req/sec with p99 latency of 4.2ms. Zero TLS handshake errors.", "tags": ["Envoy", "Ingress", "Gateway"]},
+            {"title": "Distributed Redis Cluster Shard 03", "category": "Caching Tier", "status": "HEALTHY", "priority": "HIGH", "description": "Memory saturation 62%, hit ratio 99.4%, eviction rate 0 keys/sec.", "tags": ["Redis", "Cache", "Memory"]},
+            {"title": "PostgreSQL Primary Write Replica (db-main)", "category": "Database Shards", "status": "HEALTHY", "priority": "CRITICAL", "description": "Active connection pool 38/100, replication lag 0.2ms, WAL write clean.", "tags": ["Postgres", "Database", "WAL"]},
+            {"title": "Kafka Streaming Telemetry Broker 02", "category": "Message Queues", "status": "DEGRADED", "priority": "HIGH", "description": "Under-replicated partitions detected during broker rebalancing phase.", "tags": ["Kafka", "Streaming", "Queue"]},
+            {"title": "CloudFront Dynamic Edge Distribution", "category": "Edge CDN", "status": "HEALTHY", "priority": "MEDIUM", "description": "Origin shield cache hit ratio 94.8% across global edge POP locations.", "tags": ["CDN", "Edge", "Cache"]},
+        ]
+
+    elif is_support:
         entity_name = "Ticket"
         entity_singular = "Ticket"
         entity_plural = "Tickets"
         table_name = "tickets"
         fields = [
-            {"name": "title", "type": "str", "label": "Ticket Title", "default": "Database connection pool timeout"},
+            {"name": "title", "type": "str", "label": "Ticket Summary", "default": "Database connection pool timeout"},
             {"name": "category", "type": "str", "label": "Category", "default": "Infrastructure"},
-            {"name": "priority", "type": "str", "label": "Priority", "default": "HIGH"},
             {"name": "status", "type": "str", "label": "Status", "default": "OPEN"},
-            {"name": "assignee", "type": "str", "label": "Assignee", "default": "DevOps Lead"},
-            {
-                "name": "description",
-                "type": "str",
-                "label": "Description",
-                "default": "Spike in connection pool latency during peak traffic.",
-            },
+            {"name": "priority", "type": "str", "label": "Priority", "default": "HIGH"},
+            {"name": "description", "type": "str", "label": "Issue Description", "default": "Spike in connection pool latency during peak traffic."},
         ]
         status_options = ["OPEN", "INVESTIGATING", "IN_PROGRESS", "RESOLVED", "CLOSED"]
-        category_options = ["Infrastructure", "Backend", "Frontend", "Security", "Billing"]
-        seed_items = [
-            {
-                "title": "Intermittent 504 Gateway Timeout during Batch Export",
-                "category": "Infrastructure",
-                "priority": "CRITICAL",
-                "status": "INVESTIGATING",
-                "assignee": "DevOps Engineer",
-                "description": "Worker threads exhausting async semaphore queue during large CSV downloads.",
-                "tags": ["Gateway", "Performance"],
-            },
-            {
-                "title": "CORS preflight validation failure on staging endpoint",
-                "category": "Backend",
-                "priority": "HIGH",
-                "status": "OPEN",
-                "assignee": "Backend Engineer",
-                "description": "Allowed origins list missing the new control center preview domain.",
-                "tags": ["CORS", "API"],
-            },
-            {
-                "title": "Subtle layout shift in mobile simulator navigation bar",
-                "category": "Frontend",
-                "priority": "MEDIUM",
-                "status": "IN_PROGRESS",
-                "assignee": "Frontend Engineer",
-                "description": "Dynamic island notch causing 2px shift on initial viewport hydration.",
-                "tags": ["UI", "Mobile"],
-            },
-            {
-                "title": "Audit log HMAC verification failure on modified digest",
-                "category": "Security",
-                "priority": "HIGH",
-                "status": "RESOLVED",
-                "assignee": "Security Reviewer",
-                "description": "Tamper detection correctly triggered when audit log content altered.",
-                "tags": ["Audit", "Cryptographic"],
-            },
-            {
-                "title": "Add Prometheus metrics endpoint for task queue latency",
-                "category": "Infrastructure",
-                "priority": "LOW",
-                "status": "OPEN",
-                "assignee": "Backend Engineer",
-                "description": "Expose histogram buckets for task scheduler dispatch duration.",
-                "tags": ["Telemetry", "Metrics"],
-            },
+        category_options = prompt_cats if prompt_cats else [
+            "Infrastructure", "Backend", "Frontend", "Security", "Billing", "Integrations"
         ]
+        seed_items = prompt_items if prompt_items else [
+            {"title": "Intermittent 504 Gateway Timeout during Batch Export", "category": "Infrastructure", "priority": "CRITICAL", "status": "INVESTIGATING", "description": "Worker threads exhausting async semaphore queue during large CSV downloads.", "tags": ["Gateway", "Performance"]},
+            {"title": "CORS preflight validation failure on staging endpoint", "category": "Backend", "priority": "HIGH", "status": "OPEN", "description": "Allowed origins list missing the new control center preview domain.", "tags": ["CORS", "API"]},
+            {"title": "Subtle layout shift in mobile simulator navigation bar", "category": "Frontend", "priority": "MEDIUM", "status": "IN_PROGRESS", "description": "Dynamic island notch causing 2px shift on initial viewport hydration.", "tags": ["UI", "Mobile"]},
+            {"title": "Audit log HMAC verification failure on modified digest", "category": "Security", "priority": "HIGH", "status": "RESOLVED", "description": "Tamper detection correctly triggered when audit log content altered.", "tags": ["Audit", "Cryptographic"]},
+            {"title": "Add Prometheus metrics endpoint for task queue latency", "category": "Infrastructure", "priority": "LOW", "status": "OPEN", "description": "Expose histogram buckets for task scheduler dispatch duration.", "tags": ["Telemetry", "Metrics"]},
+        ]
+
+    elif is_notes:
+        entity_name = "KnowledgeDocument"
+        entity_singular = "Knowledge Document"
+        entity_plural = "Knowledge Documents"
+        table_name = "knowledge_documents"
+        fields = [
+            {"name": "title", "type": "str", "label": "Document Title", "default": "System Architecture Decisions"},
+            {"name": "category", "type": "str", "label": "Topic Section", "default": "Engineering"},
+            {"name": "status", "type": "str", "label": "State", "default": "PUBLISHED"},
+            {"name": "priority", "type": "str", "label": "Review Status", "default": "HIGH"},
+            {"name": "description", "type": "str", "label": "Summary", "default": "Documenting ADR 001 for SQLite backend."},
+        ]
+        status_options = ["PUBLISHED", "IN_REVIEW", "DRAFT", "ARCHIVED"]
+        category_options = prompt_cats if prompt_cats else [
+            "Architecture ADRs", "Engineering Specs", "Runbooks", "Security Policies", "Research", "Team Guides"
+        ]
+        seed_items = prompt_items if prompt_items else [
+            {"title": "RFC: SQLite Persistence Model with WAL Mode", "category": "Architecture ADRs", "status": "PUBLISHED", "priority": "HIGH", "description": "Adopting SQLite with Write-Ahead Logging for ultra-fast local read-write throughput.", "tags": ["RFC", "Database", "Performance"]},
+            {"title": "FastAPI Dependency Injection Patterns", "category": "Engineering Specs", "status": "PUBLISHED", "priority": "HIGH", "description": "Best practices for scoping unit of work sessions and authentication token validation.", "tags": ["FastAPI", "Python", "CleanCode"]},
+            {"title": "Deployment Runbook for Microservices", "category": "Runbooks", "status": "IN_REVIEW", "priority": "MEDIUM", "description": "Step-by-step procedures for zero-downtime rolling upgrades and schema migrations.", "tags": ["DevOps", "Runbook", "Release"]},
+            {"title": "Security Invariant Review: Level-4 Human Gate", "category": "Security Policies", "status": "PUBLISHED", "priority": "CRITICAL", "description": "All external code pushes and deployment mutations strictly require cryptographic HMAC signatures.", "tags": ["Security", "Gate", "HMAC"]},
+            {"title": "Autonomous Multi-Agent Scheduler DAG Invariants", "category": "Research", "status": "PUBLISHED", "priority": "HIGH", "description": "Mathematical proof of cycle-free topological dispatch with token budget reservations.", "tags": ["Agents", "DAG", "Scheduler"]},
+        ]
+
     else:
-        # General Entity tailored to prompt
-        clean_name = re.sub(r"[^a-zA-Z0-9]+", " ", objective).strip().split()
-        cand = clean_name[0] if clean_name else "Entity"
-        entity_name = cand.capitalize() if cand.isalpha() else "ProjectRecord"
+        # Universal Clean Noun Fallback - Strictly Banning Verbs & Stop Words
+        words = re.sub(r"[^a-zA-Z]+", " ", objective).strip().split()
+        candidate_noun = None
+        for w in words:
+            lw = w.lower()
+            if lw not in STOP_WORDS and len(lw) >= 3:
+                # singularize common plurals
+                if lw.endswith("ies") and len(lw) > 4:
+                    candidate_noun = lw[:-3].capitalize() + "y"
+                elif lw.endswith("s") and not lw.endswith("ss") and len(lw) > 3:
+                    candidate_noun = lw[:-1].capitalize()
+                else:
+                    candidate_noun = w.capitalize()
+                break
+
+        entity_name = candidate_noun or "SystemAsset"
         entity_singular = entity_name
         entity_plural = f"{entity_name}s"
         table_name = _slugify(entity_plural)
         fields = [
-            {"name": "title", "type": "str", "label": "Title / Identifier", "default": "Production Asset Alpha"},
-            {"name": "category", "type": "str", "label": "Category", "default": "Operations"},
+            {"name": "title", "type": "str", "label": "Title / Identifier", "default": f"{entity_name} Primary Unit"},
+            {"name": "category", "type": "str", "label": "Category", "default": "Core Operations"},
             {"name": "status", "type": "str", "label": "Status", "default": "ACTIVE"},
             {"name": "priority", "type": "str", "label": "Priority", "default": "HIGH"},
-            {
-                "name": "description",
-                "type": "str",
-                "label": "Description",
-                "default": "Core operational component initialized and monitored.",
-            },
+            {"name": "description", "type": "str", "label": "Description", "default": f"Operational {entity_name} resource."},
         ]
-        status_options = ["ACTIVE", "PENDING", "COMPLETED", "ARCHIVED"]
-        category_options = ["Operations", "Core", "Services", "Integrations", "Analytics"]
-        seed_items = [
-            {
-                "title": f"{entity_name} Core Module - Primary Controller",
-                "category": "Core",
-                "status": "ACTIVE",
-                "priority": "CRITICAL",
-                "description": "Autonomous state machine controller with cycle-free dependency resolution.",
-                "tags": ["Core", "Controller"],
-            },
-            {
-                "title": f"{entity_name} High-Throughput Ingestion Pipeline",
-                "category": "Services",
-                "status": "ACTIVE",
-                "priority": "HIGH",
-                "description": "Streaming ingestion worker with backpressure flow control.",
-                "tags": ["Pipeline", "Ingest"],
-            },
-            {
-                "title": f"{entity_name} Cryptographic Audit & Verification Service",
-                "category": "Operations",
-                "status": "ACTIVE",
-                "priority": "HIGH",
-                "description": "SHA-256 digest hashing and HMAC tamper verification.",
-                "tags": ["Security", "Audit"],
-            },
-            {
-                "title": f"{entity_name} Real-Time Metrics & Telemetry Aggregator",
-                "category": "Analytics",
-                "status": "COMPLETED",
-                "priority": "MEDIUM",
-                "description": "Live time-series calculation for latency and error distribution.",
-                "tags": ["Metrics", "Telemetry"],
-            },
-            {
-                "title": f"{entity_name} Automated Delivery Gate Dispatcher",
-                "category": "Integrations",
-                "status": "PENDING",
-                "priority": "MEDIUM",
-                "description": "Human gate webhook integration and staging environment deployment.",
-                "tags": ["Delivery", "Gate"],
-            },
+        status_options = ["ACTIVE", "PENDING", "IN_REVIEW", "COMPLETED", "ARCHIVED"]
+        category_options = prompt_cats if prompt_cats else [
+            "Core Operations", "High-Priority Assets", "Infrastructure", "Integration Services", "Analytics & Telemetry"
         ]
+
+        if prompt_items:
+            seed_items = prompt_items
+        else:
+            seed_items = [
+                {
+                    "title": f"{entity_name} Core Module - Primary Controller",
+                    "category": category_options[0],
+                    "status": "ACTIVE",
+                    "priority": "CRITICAL",
+                    "description": f"Autonomous controller for {entity_name} operations with cycle-free dependency resolution.",
+                    "tags": ["Core", "Controller"],
+                },
+                {
+                    "title": f"{entity_name} High-Throughput Processing Pipeline",
+                    "category": category_options[1] if len(category_options) > 1 else category_options[0],
+                    "status": "ACTIVE",
+                    "priority": "HIGH",
+                    "description": f"Streaming ingestion worker managing {entity_name} records with backpressure flow control.",
+                    "tags": ["Pipeline", "Ingest"],
+                },
+                {
+                    "title": f"{entity_name} Cryptographic Audit & Verification Service",
+                    "category": category_options[2] if len(category_options) > 2 else category_options[0],
+                    "status": "ACTIVE",
+                    "priority": "HIGH",
+                    "description": f"SHA-256 digest hashing and HMAC tamper verification for {entity_name} entities.",
+                    "tags": ["Security", "Audit"],
+                },
+                {
+                    "title": f"{entity_name} Real-Time Metrics & Telemetry Aggregator",
+                    "category": category_options[3] if len(category_options) > 3 else category_options[0],
+                    "status": "COMPLETED",
+                    "priority": "MEDIUM",
+                    "description": f"Live statistical aggregation for latency and error distribution across {entity_name} nodes.",
+                    "tags": ["Metrics", "Telemetry"],
+                },
+                {
+                    "title": f"{entity_name} Automated Delivery Gate Dispatcher",
+                    "category": category_options[4] if len(category_options) > 4 else category_options[0],
+                    "status": "PENDING",
+                    "priority": "MEDIUM",
+                    "description": f"Staging and human gate dispatch verification for {entity_name} changes.",
+                    "tags": ["Delivery", "Gate"],
+                },
+            ]
+
+    # Ensure every seed item is normalized with title, category, status, priority, description, tags
+    normalized_seeds: list[dict[str, Any]] = []
+    for i, item in enumerate(seed_items):
+        title = item.get("title") or item.get("name") or f"{entity_name} #{i+1}"
+        cat = item.get("category") or (category_options[0] if category_options else "General")
+        st = item.get("status") or status_options[0]
+        pri = item.get("priority") or "MEDIUM"
+        desc = item.get("description") or f"Configured {title} record."
+        tags = item.get("tags") or [cat.split()[0]]
+
+        normalized = dict(item)
+        normalized.update({
+            "id": item.get("id") or f"{table_name}_{i+1}",
+            "title": title,
+            "category": cat,
+            "status": st,
+            "priority": pri,
+            "description": desc,
+            "tags": tags,
+        })
+        normalized_seeds.append(normalized)
 
     return {
         "entity_name": entity_name,
@@ -828,8 +1093,16 @@ def _extract_domain_profile(objective: str) -> dict[str, Any]:
         "fields": fields,
         "status_options": status_options,
         "category_options": category_options,
-        "seed_items": seed_items,
+        "seed_items": normalized_seeds,
+        "brand_name": brand_name,
+        "is_restaurant": is_restaurant,
     }
+
+
+def _extract_domain_profile(objective: str) -> dict[str, Any]:
+    """Analyze the engineering objective to derive domain entities, attributes, and initial data."""
+    return extract_universal_domain(objective)
+
 
 
 def generate_backend_package(objective: str, criteria: list[str] | None = None) -> dict[str, str]:
@@ -1528,23 +1801,37 @@ def _generate_restaurant_menu_spa(
     objective: str, criteria: list[str] | None = None, domain: dict[str, Any] | None = None
 ) -> str:
     html.escape(objective)
-    dishes_json = json.dumps(INDIAN_DISH_DATA)
-    categories = [
-        "Appetizers & Street Chaat",
-        "Tandoor & Grills",
-        "Rich Curries & Masalas",
-        "Biryanis & Rice Specialties",
-        "Breads & Accompaniments",
+    brand_name = (domain and domain.get("brand_name")) or "Culinary Craft"
+    brand_upper = brand_name.upper()
+    dishes = (domain and domain.get("seed_items")) or INDIAN_DISH_DATA
+    for i, d in enumerate(dishes):
+        d.setdefault("id", f"dish_{i+1}")
+        d.setdefault("name", d.get("title") or f"Dish #{i+1}")
+        d.setdefault("price", 14.50)
+        d.setdefault("spice_level", 1)
+        d.setdefault("dietary_tags", ["Chef Special", "Signature"])
+        d.setdefault("allergens", [])
+        d.setdefault("ingredients", ["Fresh Seasonal Herbs", "Artisanal Seasoning"])
+        d.setdefault("description", d.get("description") or f"Signature preparation of {d['name']}.")
+        d.setdefault("image", "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80")
+    dishes_json = json.dumps(dishes)
+    categories = (domain and domain.get("category_options")) or [
+        "Appetizers & Starters",
+        "Chef Grills & Specialties",
+        "Signature Entrees",
+        "Specialty Rice & Pastas",
+        "Artisanal Breads & Sides",
         "Desserts & Drinks",
     ]
     categories_json = json.dumps(categories)
+    dish_count = len(dishes)
 
     html_code = f"""<!DOCTYPE html>
 <html lang="en" class="dark scroll-smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tandoor &amp; Spice — Modern Indian Culinary Craft</title>
+  <title>{html.escape(brand_name)} — Modern Culinary Craft</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1670,10 +1957,10 @@ def _generate_restaurant_menu_spa(
         </div>
         <div>
           <div class="flex items-center space-x-2">
-            <h1 class="font-serif font-black text-2xl tracking-tight text-white">TANDOOR &amp; SPICE</h1>
+            <h1 class="font-serif font-black text-2xl tracking-tight text-white">{html.escape(brand_upper)}</h1>
             <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">Artisanal</span>
           </div>
-          <p class="text-xs text-amber-200/70 font-serif italic">तन्दूर और मसाले · Modern Indian Culinary Craft</p>
+          <p class="text-xs text-amber-200/70 font-serif italic">Curated Artisanal Dining · Culinary Craft</p>
         </div>
       </div>
 
@@ -1688,7 +1975,7 @@ def _generate_restaurant_menu_spa(
           <input
             id="desktopSearchInput"
             type="text"
-            placeholder="Search 30 dishes, ingredients (e.g., paneer, biryani, saffron)..."
+            placeholder="Search {dish_count} dishes, ingredients, dietary tags..."
             class="w-full pl-10 pr-9 py-2 bg-slate-900/90 border border-slate-700/80 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/40 transition-all"
             oninput="handleSearch(this.value)"
           />
