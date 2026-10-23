@@ -6,6 +6,8 @@ tailored to mission objectives and Given-When-Then PRD acceptance criteria.
 
 import html
 
+from syntra.agents.fullstack_generator import generate_marvelous_frontend_spa
+
 
 def synthesize_application(objective: str, criteria: list[str] | None = None) -> str:
     """Synthesize a complete, runnable HTML5/CSS/JavaScript web application.
@@ -19,12 +21,8 @@ def synthesize_application(objective: str, criteria: list[str] | None = None) ->
 
     if "calculator" in obj_lower or ("keypad" in obj_lower and "math" in obj_lower):
         return _build_futuristic_calculator_app(clean_obj, criteria_list)
-    elif any(k in obj_lower for k in ["task", "todo", "productivity", "kanban", "checkbox", "manager"]):
-        return _build_futuristic_task_manager_app(clean_obj, criteria_list)
-    elif any(k in obj_lower for k in ["dashboard", "analytics", "metrics", "monitor", "telemetry"]):
-        return _build_analytics_dashboard_app(clean_obj, criteria_list)
     else:
-        return _build_general_interactive_app(clean_obj, criteria_list)
+        return generate_marvelous_frontend_spa(clean_obj, criteria_list)
 
 
 def _build_futuristic_calculator_app(objective: str, criteria: list[str]) -> str:

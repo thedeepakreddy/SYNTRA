@@ -476,3 +476,39 @@ async def test_mission_app_endpoint(p14_client):
     assert data["mission_id"] == str(mission_id)
     assert "<!DOCTYPE html>" in data["html"]
     assert "url" in data
+    assert "backend_files" in data
+    assert "main.py" in data["backend_files"]
+
+
+@pytest.mark.asyncio
+async def test_mission_backend_endpoint(p14_client):
+    """Verify GET /v1/missions/{id}/backend returns full-stack Python backend package."""
+    client = p14_client["client"]
+    token = p14_client["dev_token"]
+    session_factory = p14_client["session_factory"]
+    org_id = p14_client["org_id"]
+
+    mission_id = uuid.uuid4()
+    async with SqlAlchemyUnitOfWork(session_factory) as uow:
+        p = await uow.projects.create(uuid.uuid4(), org_id, "Backend Test Project", "backend-test-project")
+        await uow.missions.create(mission_id, org_id, p.id, "Build Inventory Service with SQLite and FastAPI")
+        await uow.commit()
+
+    resp = await client.get(f"/v1/missions/{mission_id}/backend", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["mission_id"] == str(mission_id)
+    assert data["framework"] == "FastAPI + SQLAlchemy 2.0 + SQLite"
+    files = data["files"]
+    assert "main.py" in files
+    assert "models.py" in files
+    assert "schemas.py" in files
+    assert "service.py" in files
+    assert "database.py" in files
+    assert "test_api.py" in files
+    assert "README.md" in files
+    # Verify zero placeholder comments
+    for fname, content in files.items():
+        assert "// TODO" not in content
+        assert "# ... implement here" not in content
+

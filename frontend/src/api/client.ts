@@ -220,8 +220,12 @@ class SyntraApiClient {
     return this.request<{ items: Artifact[]; has_more: boolean }>(`/missions/${missionId}/artifacts?limit=${limit}`);
   }
 
-  public async getMissionApp(missionId: string): Promise<{ mission_id: string; title: string; html: string; url: string }> {
-    return this.request<{ mission_id: string; title: string; html: string; url: string }>(`/missions/${missionId}/app`);
+  public async getMissionApp(missionId: string): Promise<{ mission_id: string; title: string; html: string; url: string; backend_files?: Record<string, string> }> {
+    return this.request<{ mission_id: string; title: string; html: string; url: string; backend_files?: Record<string, string> }>(`/missions/${missionId}/app`);
+  }
+
+  public async getMissionBackend(missionId: string): Promise<{ mission_id: string; title: string; framework: string; files: Record<string, string> }> {
+    return this.request<{ mission_id: string; title: string; framework: string; files: Record<string, string> }>(`/missions/${missionId}/backend`);
   }
 
   public async getMissionUsage(missionId: string): Promise<MissionUsageSummary> {

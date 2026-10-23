@@ -30,7 +30,6 @@ import {
   CheckCircle2,
   Eye,
   ExternalLink,
-  Code,
   Copy,
   Check,
   Sparkles,
@@ -41,6 +40,8 @@ import {
   Smartphone,
   Lock,
   RefreshCcw,
+  Server,
+  FileCode,
 } from 'lucide-react';
 import { ArtifactViewerModal } from '../components/ArtifactViewerModal';
 
@@ -61,11 +62,20 @@ export const MissionsPage: React.FC = () => {
   const [events, setEvents] = useState<MissionEvent[]>([]);
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [usage, setUsage] = useState<MissionUsageSummary | null>(null);
-  const [appData, setAppData] = useState<{ mission_id: string; title: string; html: string; url: string } | null>(null);
-  const [showSourceCode, setShowSourceCode] = useState(false);
+  const [appData, setAppData] = useState<{ mission_id: string; title: string; html: string; url: string; backend_files?: Record<string, string> } | null>(null);
+  const [deliverableMode, setDeliverableMode] = useState<'app' | 'backend' | 'frontend'>('app');
+  const [selectedBackendFile, setSelectedBackendFile] = useState<string>('main.py');
   const [copiedSource, setCopiedSource] = useState(false);
+  const [copiedBackend, setCopiedBackend] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [viewingArtifact, setViewingArtifact] = useState<Artifact | null>(null);
+
+  const handleCopyBackend = (code: string) => {
+    if (!code) return;
+    navigator.clipboard.writeText(code);
+    setCopiedBackend(true);
+    setTimeout(() => setCopiedBackend(false), 2000);
+  };
 
   // Live App Viewport & Frame state
   const [viewportMode, setViewportMode] = useState<'desktop' | 'mobile'>('desktop');
@@ -776,79 +786,156 @@ export const MissionsPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Viewport & Action Controls */}
+                    {/* Deliverable Mode Switcher & Action Controls */}
                     <div className="flex items-center space-x-2 flex-wrap">
-                      {/* Device Mode Switcher */}
-                      <div className="flex items-center rounded-xl bg-slate-900/90 border border-white/[0.08] p-1">
+                      {/* 3-Mode Switcher: App / Backend / Frontend */}
+                      <div className="flex items-center rounded-xl bg-slate-900/90 border border-white/[0.08] p-1 space-x-1">
                         <button
                           type="button"
-                          onClick={() => setViewportMode('desktop')}
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            viewportMode === 'desktop'
+                          onClick={() => setDeliverableMode('app')}
+                          className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-colors ${
+                            deliverableMode === 'app'
                               ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 shadow-[0_0_10px_rgba(0,240,255,0.2)]'
                               : 'text-slate-400 hover:text-white'
                           }`}
-                          title="Desktop Viewport (100%)"
                         >
-                          <Monitor className="h-4 w-4" />
+                          <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+                          <span>Live App</span>
                         </button>
+
                         <button
                           type="button"
-                          onClick={() => setViewportMode('mobile')}
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            viewportMode === 'mobile'
-                              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 shadow-[0_0_10px_rgba(0,240,255,0.2)]'
+                          onClick={() => setDeliverableMode('backend')}
+                          className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-colors ${
+                            deliverableMode === 'backend'
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 shadow-[0_0_10px_rgba(0,255,157,0.2)]'
                               : 'text-slate-400 hover:text-white'
                           }`}
-                          title="Mobile Viewport (iPhone 390px)"
                         >
-                          <Smartphone className="h-4 w-4" />
+                          <Server className="h-3.5 w-3.5 text-emerald-400" />
+                          <span>Python Backend</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setDeliverableMode('frontend')}
+                          className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-colors ${
+                            deliverableMode === 'frontend'
+                              ? 'bg-purple-500/20 text-purple-300 border border-purple-400/40 shadow-[0_0_10px_rgba(176,38,255,0.2)]'
+                              : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          <FileCode className="h-3.5 w-3.5 text-purple-400" />
+                          <span>HTML Source</span>
                         </button>
                       </div>
 
-                      {/* Source Code Toggle */}
-                      <button
-                        type="button"
-                        onClick={() => setShowSourceCode(!showSourceCode)}
-                        className={`inline-flex items-center space-x-1.5 rounded-xl px-3 py-1.5 text-xs font-mono font-medium transition-colors border ${
-                          showSourceCode
-                            ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400/40 shadow-[0_0_10px_rgba(0,240,255,0.2)]'
-                            : 'bg-slate-900/90 text-slate-300 border-white/[0.08] hover:bg-slate-800'
-                        }`}
-                      >
-                        <Code className="h-3.5 w-3.5" />
-                        <span>{showSourceCode ? 'Live Frame' : 'Source'}</span>
-                      </button>
+                      {deliverableMode === 'app' && (
+                        <>
+                          {/* Device Mode Switcher */}
+                          <div className="flex items-center rounded-xl bg-slate-900/90 border border-white/[0.08] p-1">
+                            <button
+                              type="button"
+                              onClick={() => setViewportMode('desktop')}
+                              className={`p-1.5 rounded-lg transition-colors ${
+                                viewportMode === 'desktop'
+                                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 shadow-[0_0_10px_rgba(0,240,255,0.2)]'
+                                  : 'text-slate-400 hover:text-white'
+                              }`}
+                              title="Desktop Viewport (100%)"
+                            >
+                              <Monitor className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setViewportMode('mobile')}
+                              className={`p-1.5 rounded-lg transition-colors ${
+                                viewportMode === 'mobile'
+                                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 shadow-[0_0_10px_rgba(0,240,255,0.2)]'
+                                  : 'text-slate-400 hover:text-white'
+                              }`}
+                              title="Mobile Viewport (iPhone 390px)"
+                            >
+                              <Smartphone className="h-4 w-4" />
+                            </button>
+                          </div>
 
-                      {/* Refresh Frame */}
-                      <button
-                        type="button"
-                        onClick={() => setIframeKey((k) => k + 1)}
-                        className="p-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-white/[0.08] transition-colors active:scale-[0.95]"
-                        title="Reload App Sandbox Frame"
-                      >
-                        <RefreshCcw className="h-4 w-4 text-cyan-400" />
-                      </button>
+                          {/* Refresh Frame */}
+                          <button
+                            type="button"
+                            onClick={() => setIframeKey((k) => k + 1)}
+                            className="p-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-white/[0.08] transition-colors active:scale-[0.95]"
+                            title="Reload App Sandbox Frame"
+                          >
+                            <RefreshCcw className="h-4 w-4 text-cyan-400" />
+                          </button>
 
-                      {/* Open Fullscreen Tab */}
-                      <a
-                        href={appData?.url || `/generated_apps/${selectedMission.id}/index.html`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center space-x-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-slate-950 px-3.5 py-1.5 text-xs font-mono font-bold shadow-[0_0_14px_rgba(0,255,157,0.3)] hover:brightness-110 active:scale-[0.97] transition-all"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5 stroke-[2.5]" />
-                        <span>Popout ↗</span>
-                      </a>
+                          {/* Open Fullscreen Tab */}
+                          <a
+                            href={appData?.url || `/generated_apps/${selectedMission.id}/index.html`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center space-x-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-slate-950 px-3.5 py-1.5 text-xs font-mono font-bold shadow-[0_0_14px_rgba(0,255,157,0.3)] hover:brightness-110 active:scale-[0.97] transition-all"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5 stroke-[2.5]" />
+                            <span>Popout ↗</span>
+                          </a>
+                        </>
+                      )}
                     </div>
                   </div>
 
                   {/* Surface Display Area */}
-                  {showSourceCode ? (
-                    <div className="relative rounded-2xl border border-white/[0.1] bg-slate-950 p-4 max-h-[540px] overflow-auto">
-                      <div className="flex items-center justify-between pb-3 border-b border-white/[0.08] mb-3">
+                  {deliverableMode === 'backend' ? (
+                    <div className="relative rounded-2xl border border-white/[0.1] bg-slate-950 p-4 space-y-3">
+                      {/* Backend Files Navigation Bar */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-white/[0.08]">
+                        <div className="flex items-center space-x-1 flex-wrap gap-y-1">
+                          {['main.py', 'models.py', 'schemas.py', 'service.py', 'database.py', 'test_api.py', 'README.md'].map((fname) => (
+                            <button
+                              key={fname}
+                              type="button"
+                              onClick={() => setSelectedBackendFile(fname)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-colors ${
+                                selectedBackendFile === fname
+                                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/50 font-bold'
+                                  : 'bg-slate-900/80 text-slate-400 hover:text-white border border-white/5'
+                              }`}
+                            >
+                              {fname}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950/80 text-emerald-400 border border-emerald-800">
+                            FastAPI • SQLAlchemy 2.0 • SQLite
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const code = (appData?.backend_files && appData.backend_files[selectedBackendFile]) || '';
+                              handleCopyBackend(code);
+                            }}
+                            className="inline-flex items-center space-x-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-1 text-xs font-bold font-mono transition-colors shadow"
+                          >
+                            {copiedBackend ? <Check className="h-3.5 w-3.5 text-slate-950" /> : <Copy className="h-3.5 w-3.5" />}
+                            <span>{copiedBackend ? 'Copied!' : 'Copy Code'}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Code Editor Window */}
+                      <div className="max-h-[500px] overflow-auto rounded-xl bg-black/90 p-4 border border-white/5 font-mono text-[11px] leading-relaxed text-emerald-300 whitespace-pre-wrap select-all">
+                        {(appData?.backend_files && appData.backend_files[selectedBackendFile]) ||
+                          `// Loading ${selectedBackendFile} from backend package...`}
+                      </div>
+                    </div>
+                  ) : deliverableMode === 'frontend' ? (
+                    <div className="relative rounded-2xl border border-white/[0.1] bg-slate-950 p-4 max-h-[540px] overflow-auto space-y-3">
+                      <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
                         <span className="text-xs font-mono text-cyan-400 font-bold uppercase tracking-wider">
-                          Deliverable Source Code (HTML5 / JS)
+                          Deliverable Source Code (HTML5 / Tailwind / ES6)
                         </span>
                         {appData?.html && (
                           <button
@@ -861,7 +948,7 @@ export const MissionsPage: React.FC = () => {
                           </button>
                         )}
                       </div>
-                      <pre className="font-mono text-[11px] text-emerald-300 leading-relaxed whitespace-pre-wrap select-all">
+                      <pre className="font-mono text-[11px] text-cyan-300 leading-relaxed whitespace-pre-wrap select-all">
                         {appData?.html || '// Application source code is assembling...'}
                       </pre>
                     </div>
@@ -899,9 +986,9 @@ export const MissionsPage: React.FC = () => {
                   <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 px-2 pt-1 border-t border-white/[0.04]">
                     <span className="flex items-center space-x-2">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                      <span>{appData?.title || 'Synthesized Application Deliverable'}</span>
+                      <span>{appData?.title || 'Synthesized Full-Stack Solution'}</span>
                     </span>
-                    <span className="text-cyan-400/80">Interactive Hermetic Sandbox</span>
+                    <span className="text-cyan-400/80">FastAPI Backend + Hermetic Client Sandbox</span>
                   </div>
                 </div>
               </div>
