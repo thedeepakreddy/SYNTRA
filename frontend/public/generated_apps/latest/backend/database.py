@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from .models import Base, AutonomousModel
+from .models import Base, SystemModel
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///app.db")
 engine = create_async_engine(DATABASE_URL, echo=False)
@@ -16,7 +16,7 @@ AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=As
 
 SEEDED_ITEMS = [
     {
-        "title": "Autonomous Core Module - Primary Controller",
+        "title": "System Core Module - Primary Controller",
         "category": "Core",
         "status": "ACTIVE",
         "priority": "CRITICAL",
@@ -27,7 +27,7 @@ SEEDED_ITEMS = [
         ]
     },
     {
-        "title": "Autonomous High-Throughput Ingestion Pipeline",
+        "title": "System High-Throughput Ingestion Pipeline",
         "category": "Services",
         "status": "ACTIVE",
         "priority": "HIGH",
@@ -38,7 +38,7 @@ SEEDED_ITEMS = [
         ]
     },
     {
-        "title": "Autonomous Cryptographic Audit & Verification Service",
+        "title": "System Cryptographic Audit & Verification Service",
         "category": "Operations",
         "status": "ACTIVE",
         "priority": "HIGH",
@@ -49,7 +49,7 @@ SEEDED_ITEMS = [
         ]
     },
     {
-        "title": "Autonomous Real-Time Metrics & Telemetry Aggregator",
+        "title": "System Real-Time Metrics & Telemetry Aggregator",
         "category": "Analytics",
         "status": "COMPLETED",
         "priority": "MEDIUM",
@@ -60,7 +60,7 @@ SEEDED_ITEMS = [
         ]
     },
     {
-        "title": "Autonomous Automated Delivery Gate Dispatcher",
+        "title": "System Automated Delivery Gate Dispatcher",
         "category": "Integrations",
         "status": "PENDING",
         "priority": "MEDIUM",
@@ -80,13 +80,13 @@ async def init_db() -> None:
 
     async with AsyncSessionLocal() as session:
         from sqlalchemy import select, func
-        count_query = select(func.count(AutonomousModel.id))
+        count_query = select(func.count(SystemModel.id))
         count = (await session.execute(count_query)).scalar() or 0
         if count == 0:
             for item in SEEDED_ITEMS:
                 title = item.get("name") or item.get("title") or "Item"
                 tags = item.get("tags", [])
-                record = AutonomousModel(
+                record = SystemModel(
                     title=title,
                     category=item.get("category", "General"),
                     status=item.get("status", "ACTIVE"),

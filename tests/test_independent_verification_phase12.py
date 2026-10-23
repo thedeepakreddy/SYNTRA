@@ -1,6 +1,7 @@
 """Independent Verification Service and VerificationRecord Tests (Phase 12 Milestone 12.1)."""
 
 import hashlib
+import sys
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -285,7 +286,7 @@ diff --git a/test_calc.py b/test_calc.py
             uow=memory_uow,
             request=request,
             repo_root=clean_git_repo,
-            test_command=["python", "-m", "pytest", "test_calc.py", "-v"],
+            test_command=[sys.executable, "-m", "pytest", "test_calc.py", "-v"],
         )
         await memory_uow.commit()
 
@@ -338,7 +339,7 @@ async def test_false_success_rejection(clean_git_repo: Path, memory_uow: SqlAlch
             uow=memory_uow,
             request=request,
             repo_root=clean_git_repo,
-            test_command=["python", "-m", "pytest", "test_calc.py", "-v"],
+            test_command=[sys.executable, "-m", "pytest", "test_calc.py", "-v"],
         )
         await memory_uow.commit()
 

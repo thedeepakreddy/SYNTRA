@@ -41,12 +41,72 @@ def _extract_domain_profile(objective: str) -> dict[str, Any]:
         status_options = ["IN_STOCK", "LOW_STOCK", "REORDER_PLACED", "OUT_OF_STOCK"]
         category_options = ["Electronics", "Hardware", "Packaging", "Accessories", "Components"]
         seed_items = [
-            {"name": "High-Precision Stepper Motor", "sku": "MOT-440-X", "category": "Hardware", "stock_quantity": 84, "min_threshold": 15, "unit_price": 42.50, "status": "IN_STOCK", "location": "Rack-A1", "tags": ["Motor", "Robotics"]},
-            {"name": "Anodized Aluminum Frame 4040", "sku": "FRM-4040-BLK", "category": "Hardware", "stock_quantity": 8, "min_threshold": 12, "unit_price": 28.00, "status": "LOW_STOCK", "location": "Rack-A3", "tags": ["Chassis", "Aluminum"]},
-            {"name": "Optical Rotary Encoder 1024PPR", "sku": "ENC-1024-OPT", "category": "Electronics", "stock_quantity": 0, "min_threshold": 5, "unit_price": 75.90, "status": "OUT_OF_STOCK", "location": "Bin-C9", "tags": ["Sensor", "Electronics"]},
-            {"name": "Antistatic ESD Packaging Bag 50pk", "sku": "PKG-ESD-50", "category": "Packaging", "stock_quantity": 120, "min_threshold": 20, "unit_price": 14.25, "status": "IN_STOCK", "location": "Bay-P2", "tags": ["Packaging", "ESD"]},
-            {"name": "Microcontroller Core Board v3", "sku": "MCU-CORE-V3", "category": "Electronics", "stock_quantity": 32, "min_threshold": 10, "unit_price": 19.50, "status": "IN_STOCK", "location": "Bin-E2", "tags": ["MCU", "Embedded"]},
-            {"name": "Braided Silicone Ribbon Cable 1m", "sku": "CBL-SIL-1M", "category": "Components", "stock_quantity": 5, "min_threshold": 15, "unit_price": 8.75, "status": "LOW_STOCK", "location": "Bin-E7", "tags": ["Cables", "Wiring"]},
+            {
+                "name": "High-Precision Stepper Motor",
+                "sku": "MOT-440-X",
+                "category": "Hardware",
+                "stock_quantity": 84,
+                "min_threshold": 15,
+                "unit_price": 42.50,
+                "status": "IN_STOCK",
+                "location": "Rack-A1",
+                "tags": ["Motor", "Robotics"],
+            },
+            {
+                "name": "Anodized Aluminum Frame 4040",
+                "sku": "FRM-4040-BLK",
+                "category": "Hardware",
+                "stock_quantity": 8,
+                "min_threshold": 12,
+                "unit_price": 28.00,
+                "status": "LOW_STOCK",
+                "location": "Rack-A3",
+                "tags": ["Chassis", "Aluminum"],
+            },
+            {
+                "name": "Optical Rotary Encoder 1024PPR",
+                "sku": "ENC-1024-OPT",
+                "category": "Electronics",
+                "stock_quantity": 0,
+                "min_threshold": 5,
+                "unit_price": 75.90,
+                "status": "OUT_OF_STOCK",
+                "location": "Bin-C9",
+                "tags": ["Sensor", "Electronics"],
+            },
+            {
+                "name": "Antistatic ESD Packaging Bag 50pk",
+                "sku": "PKG-ESD-50",
+                "category": "Packaging",
+                "stock_quantity": 120,
+                "min_threshold": 20,
+                "unit_price": 14.25,
+                "status": "IN_STOCK",
+                "location": "Bay-P2",
+                "tags": ["Packaging", "ESD"],
+            },
+            {
+                "name": "Microcontroller Core Board v3",
+                "sku": "MCU-CORE-V3",
+                "category": "Electronics",
+                "stock_quantity": 32,
+                "min_threshold": 10,
+                "unit_price": 19.50,
+                "status": "IN_STOCK",
+                "location": "Bin-E2",
+                "tags": ["MCU", "Embedded"],
+            },
+            {
+                "name": "Braided Silicone Ribbon Cable 1m",
+                "sku": "CBL-SIL-1M",
+                "category": "Components",
+                "stock_quantity": 5,
+                "min_threshold": 15,
+                "unit_price": 8.75,
+                "status": "LOW_STOCK",
+                "location": "Bin-E7",
+                "tags": ["Cables", "Wiring"],
+            },
         ]
     elif any(k in obj_lower for k in ["note", "memo", "journal", "docs", "document", "knowledge"]):
         entity_name = "Note"
@@ -55,7 +115,12 @@ def _extract_domain_profile(objective: str) -> dict[str, Any]:
         table_name = "notes"
         fields = [
             {"name": "title", "type": "str", "label": "Note Title", "default": "System Architecture Decisions"},
-            {"name": "content", "type": "str", "label": "Content", "default": "Documenting ADR 001 for SQLite backend."},
+            {
+                "name": "content",
+                "type": "str",
+                "label": "Content",
+                "default": "Documenting ADR 001 for SQLite backend.",
+            },
             {"name": "category", "type": "str", "label": "Notebook", "default": "Engineering"},
             {"name": "status", "type": "str", "label": "State", "default": "PUBLISHED"},
             {"name": "is_pinned", "type": "bool", "label": "Pinned Note", "default": False},
@@ -63,11 +128,46 @@ def _extract_domain_profile(objective: str) -> dict[str, Any]:
         status_options = ["DRAFT", "IN_REVIEW", "PUBLISHED", "ARCHIVED"]
         category_options = ["Engineering", "Architecture", "Operations", "Product", "Personal"]
         seed_items = [
-            {"title": "RFC: SQLite Persistence Model with WAL Mode", "content": "Adopting SQLite with Write-Ahead Logging for ultra-fast local read-write throughput and hermetic test isolation.", "category": "Engineering", "status": "PUBLISHED", "is_pinned": True, "tags": ["RFC", "Database", "Performance"]},
-            {"title": "FastAPI Dependency Injection Patterns", "content": "Best practices for scoping unit of work sessions and authentication token validation across router endpoints.", "category": "Architecture", "status": "PUBLISHED", "is_pinned": True, "tags": ["FastAPI", "Python", "CleanCode"]},
-            {"title": "Deployment Runbook for Microservices", "content": "Step-by-step procedures for zero-downtime rolling upgrades and database schema migration verification.", "category": "Operations", "status": "IN_REVIEW", "is_pinned": False, "tags": ["DevOps", "Runbook", "Release"]},
-            {"title": "Q3 Roadmap: Autonomous Multi-Agent Scheduling", "content": "Design specification for cycle-free Directed Acyclic Graph scheduler with token reservations and budget limits.", "category": "Product", "status": "PUBLISHED", "is_pinned": False, "tags": ["Roadmap", "Agents", "EM"]},
-            {"title": "Security Invariant Review: Level-4 Human Gate", "content": "All external code pushes and deployment mutations strictly require cryptographic HMAC-SHA256 signatures.", "category": "Architecture", "status": "PUBLISHED", "is_pinned": True, "tags": ["Security", "Gate", "HMAC"]},
+            {
+                "title": "RFC: SQLite Persistence Model with WAL Mode",
+                "content": "Adopting SQLite with Write-Ahead Logging for ultra-fast local read-write throughput and hermetic test isolation.",
+                "category": "Engineering",
+                "status": "PUBLISHED",
+                "is_pinned": True,
+                "tags": ["RFC", "Database", "Performance"],
+            },
+            {
+                "title": "FastAPI Dependency Injection Patterns",
+                "content": "Best practices for scoping unit of work sessions and authentication token validation across router endpoints.",
+                "category": "Architecture",
+                "status": "PUBLISHED",
+                "is_pinned": True,
+                "tags": ["FastAPI", "Python", "CleanCode"],
+            },
+            {
+                "title": "Deployment Runbook for Microservices",
+                "content": "Step-by-step procedures for zero-downtime rolling upgrades and database schema migration verification.",
+                "category": "Operations",
+                "status": "IN_REVIEW",
+                "is_pinned": False,
+                "tags": ["DevOps", "Runbook", "Release"],
+            },
+            {
+                "title": "Q3 Roadmap: Autonomous Multi-Agent Scheduling",
+                "content": "Design specification for cycle-free Directed Acyclic Graph scheduler with token reservations and budget limits.",
+                "category": "Product",
+                "status": "PUBLISHED",
+                "is_pinned": False,
+                "tags": ["Roadmap", "Agents", "EM"],
+            },
+            {
+                "title": "Security Invariant Review: Level-4 Human Gate",
+                "content": "All external code pushes and deployment mutations strictly require cryptographic HMAC-SHA256 signatures.",
+                "category": "Architecture",
+                "status": "PUBLISHED",
+                "is_pinned": True,
+                "tags": ["Security", "Gate", "HMAC"],
+            },
         ]
     elif any(k in obj_lower for k in ["ticket", "support", "issue", "bug", "incident", "request"]):
         entity_name = "Ticket"
@@ -80,16 +180,61 @@ def _extract_domain_profile(objective: str) -> dict[str, Any]:
             {"name": "priority", "type": "str", "label": "Priority", "default": "HIGH"},
             {"name": "status", "type": "str", "label": "Status", "default": "OPEN"},
             {"name": "assignee", "type": "str", "label": "Assignee", "default": "DevOps Lead"},
-            {"name": "description", "type": "str", "label": "Description", "default": "Spike in connection pool latency during peak traffic."},
+            {
+                "name": "description",
+                "type": "str",
+                "label": "Description",
+                "default": "Spike in connection pool latency during peak traffic.",
+            },
         ]
         status_options = ["OPEN", "INVESTIGATING", "IN_PROGRESS", "RESOLVED", "CLOSED"]
         category_options = ["Infrastructure", "Backend", "Frontend", "Security", "Billing"]
         seed_items = [
-            {"title": "Intermittent 504 Gateway Timeout during Batch Export", "category": "Infrastructure", "priority": "CRITICAL", "status": "INVESTIGATING", "assignee": "DevOps Engineer", "description": "Worker threads exhausting async semaphore queue during large CSV downloads.", "tags": ["Gateway", "Performance"]},
-            {"title": "CORS preflight validation failure on staging endpoint", "category": "Backend", "priority": "HIGH", "status": "OPEN", "assignee": "Backend Engineer", "description": "Allowed origins list missing the new control center preview domain.", "tags": ["CORS", "API"]},
-            {"title": "Subtle layout shift in mobile simulator navigation bar", "category": "Frontend", "priority": "MEDIUM", "status": "IN_PROGRESS", "assignee": "Frontend Engineer", "description": "Dynamic island notch causing 2px shift on initial viewport hydration.", "tags": ["UI", "Mobile"]},
-            {"title": "Audit log HMAC verification failure on modified digest", "category": "Security", "priority": "HIGH", "status": "RESOLVED", "assignee": "Security Reviewer", "description": "Tamper detection correctly triggered when audit log content altered.", "tags": ["Audit", "Cryptographic"]},
-            {"title": "Add Prometheus metrics endpoint for task queue latency", "category": "Infrastructure", "priority": "LOW", "status": "OPEN", "assignee": "Backend Engineer", "description": "Expose histogram buckets for task scheduler dispatch duration.", "tags": ["Telemetry", "Metrics"]},
+            {
+                "title": "Intermittent 504 Gateway Timeout during Batch Export",
+                "category": "Infrastructure",
+                "priority": "CRITICAL",
+                "status": "INVESTIGATING",
+                "assignee": "DevOps Engineer",
+                "description": "Worker threads exhausting async semaphore queue during large CSV downloads.",
+                "tags": ["Gateway", "Performance"],
+            },
+            {
+                "title": "CORS preflight validation failure on staging endpoint",
+                "category": "Backend",
+                "priority": "HIGH",
+                "status": "OPEN",
+                "assignee": "Backend Engineer",
+                "description": "Allowed origins list missing the new control center preview domain.",
+                "tags": ["CORS", "API"],
+            },
+            {
+                "title": "Subtle layout shift in mobile simulator navigation bar",
+                "category": "Frontend",
+                "priority": "MEDIUM",
+                "status": "IN_PROGRESS",
+                "assignee": "Frontend Engineer",
+                "description": "Dynamic island notch causing 2px shift on initial viewport hydration.",
+                "tags": ["UI", "Mobile"],
+            },
+            {
+                "title": "Audit log HMAC verification failure on modified digest",
+                "category": "Security",
+                "priority": "HIGH",
+                "status": "RESOLVED",
+                "assignee": "Security Reviewer",
+                "description": "Tamper detection correctly triggered when audit log content altered.",
+                "tags": ["Audit", "Cryptographic"],
+            },
+            {
+                "title": "Add Prometheus metrics endpoint for task queue latency",
+                "category": "Infrastructure",
+                "priority": "LOW",
+                "status": "OPEN",
+                "assignee": "Backend Engineer",
+                "description": "Expose histogram buckets for task scheduler dispatch duration.",
+                "tags": ["Telemetry", "Metrics"],
+            },
         ]
     else:
         # General Entity tailored to prompt
@@ -104,16 +249,56 @@ def _extract_domain_profile(objective: str) -> dict[str, Any]:
             {"name": "category", "type": "str", "label": "Category", "default": "Operations"},
             {"name": "status", "type": "str", "label": "Status", "default": "ACTIVE"},
             {"name": "priority", "type": "str", "label": "Priority", "default": "HIGH"},
-            {"name": "description", "type": "str", "label": "Description", "default": "Core operational component initialized and monitored."},
+            {
+                "name": "description",
+                "type": "str",
+                "label": "Description",
+                "default": "Core operational component initialized and monitored.",
+            },
         ]
         status_options = ["ACTIVE", "PENDING", "COMPLETED", "ARCHIVED"]
         category_options = ["Operations", "Core", "Services", "Integrations", "Analytics"]
         seed_items = [
-            {"title": f"{entity_name} Core Module - Primary Controller", "category": "Core", "status": "ACTIVE", "priority": "CRITICAL", "description": "Autonomous state machine controller with cycle-free dependency resolution.", "tags": ["Core", "Controller"]},
-            {"title": f"{entity_name} High-Throughput Ingestion Pipeline", "category": "Services", "status": "ACTIVE", "priority": "HIGH", "description": "Streaming ingestion worker with backpressure flow control.", "tags": ["Pipeline", "Ingest"]},
-            {"title": f"{entity_name} Cryptographic Audit & Verification Service", "category": "Operations", "status": "ACTIVE", "priority": "HIGH", "description": "SHA-256 digest hashing and HMAC tamper verification.", "tags": ["Security", "Audit"]},
-            {"title": f"{entity_name} Real-Time Metrics & Telemetry Aggregator", "category": "Analytics", "status": "COMPLETED", "priority": "MEDIUM", "description": "Live time-series calculation for latency and error distribution.", "tags": ["Metrics", "Telemetry"]},
-            {"title": f"{entity_name} Automated Delivery Gate Dispatcher", "category": "Integrations", "status": "PENDING", "priority": "MEDIUM", "description": "Human gate webhook integration and staging environment deployment.", "tags": ["Delivery", "Gate"]},
+            {
+                "title": f"{entity_name} Core Module - Primary Controller",
+                "category": "Core",
+                "status": "ACTIVE",
+                "priority": "CRITICAL",
+                "description": "Autonomous state machine controller with cycle-free dependency resolution.",
+                "tags": ["Core", "Controller"],
+            },
+            {
+                "title": f"{entity_name} High-Throughput Ingestion Pipeline",
+                "category": "Services",
+                "status": "ACTIVE",
+                "priority": "HIGH",
+                "description": "Streaming ingestion worker with backpressure flow control.",
+                "tags": ["Pipeline", "Ingest"],
+            },
+            {
+                "title": f"{entity_name} Cryptographic Audit & Verification Service",
+                "category": "Operations",
+                "status": "ACTIVE",
+                "priority": "HIGH",
+                "description": "SHA-256 digest hashing and HMAC tamper verification.",
+                "tags": ["Security", "Audit"],
+            },
+            {
+                "title": f"{entity_name} Real-Time Metrics & Telemetry Aggregator",
+                "category": "Analytics",
+                "status": "COMPLETED",
+                "priority": "MEDIUM",
+                "description": "Live time-series calculation for latency and error distribution.",
+                "tags": ["Metrics", "Telemetry"],
+            },
+            {
+                "title": f"{entity_name} Automated Delivery Gate Dispatcher",
+                "category": "Integrations",
+                "status": "PENDING",
+                "priority": "MEDIUM",
+                "description": "Human gate webhook integration and staging environment deployment.",
+                "tags": ["Delivery", "Gate"],
+            },
         ]
 
     return {
@@ -259,8 +444,18 @@ Configures SQLite / SQLAlchemy async session factory and initializes pre-seeded 
 from __future__ import annotations
 
 import os
+import sys
+from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from .models import Base, {ent}Model
+
+pkg_dir = str(Path(__file__).resolve().parent)
+if pkg_dir not in sys.path:
+    sys.path.insert(0, pkg_dir)
+
+try:
+    from models import Base, {ent}Model
+except ImportError:
+    from .models import Base, {ent}Model
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///app.db")
 engine = create_async_engine(DATABASE_URL, echo=False)
@@ -313,12 +508,22 @@ Encapsulates all database operations, filters, validations, and statistical aggr
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from typing import Sequence
 from sqlalchemy import delete, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .models import {ent}Model
-from .schemas import {ent}Create, {ent}Update, FilterParams
+pkg_dir = str(Path(__file__).resolve().parent)
+if pkg_dir not in sys.path:
+    sys.path.insert(0, pkg_dir)
+
+try:
+    from models import {ent}Model
+    from schemas import {ent}Create, {ent}Update, FilterParams
+except ImportError:
+    from .models import {ent}Model
+    from .schemas import {ent}Create, {ent}Update, FilterParams
 
 
 class {ent}Service:
@@ -432,20 +637,37 @@ Complete CRUD endpoints, OpenAPI 3.1 documentation, CORS configuration, and tele
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .database import get_db, init_db
-from .schemas import (
-    {ent}Create,
-    {ent}Response,
-    {ent}Update,
-    FilterParams,
-    StatsSummaryResponse,
-)
-from .service import {ent}Service
+pkg_dir = str(Path(__file__).resolve().parent)
+if pkg_dir not in sys.path:
+    sys.path.insert(0, pkg_dir)
+
+try:
+    from database import get_db, init_db
+    from schemas import (
+        {ent}Create,
+        {ent}Response,
+        {ent}Update,
+        FilterParams,
+        StatsSummaryResponse,
+    )
+    from service import {ent}Service
+except ImportError:
+    from .database import get_db, init_db
+    from .schemas import (
+        {ent}Create,
+        {ent}Response,
+        {ent}Update,
+        FilterParams,
+        StatsSummaryResponse,
+    )
+    from .service import {ent}Service
 
 
 @asynccontextmanager
@@ -589,14 +811,26 @@ Authored by SYNTRA QA & Backend Engineer Agents.
 Follows TDD principles, testing CRUD operations, validation rules, 404 boundaries, and search filters.
 """
 
+import sys
+from pathlib import Path
+
+pkg_dir = str(Path(__file__).resolve().parent)
+if pkg_dir not in sys.path:
+    sys.path.insert(0, pkg_dir)
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from .database import get_db
-from .main import app
-from .models import Base
+try:
+    from database import get_db
+    from main import app
+    from models import Base
+except ImportError:
+    from .database import get_db
+    from .main import app
+    from .models import Base
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 
@@ -1052,7 +1286,7 @@ def generate_marvelous_frontend_spa(objective: str, criteria: list[str] | None =
           <!-- Filter & Search Toolbar -->
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-4 border-b border-white/5">
             <div class="relative flex-1 max-w-md">
-              <input id="search-input" type="text" placeholder="Search {domain['entity_plural']} by title, category, tags..."
+              <input id="search-input" type="text" placeholder="Search {domain["entity_plural"]} by title, category, tags..."
                 oninput="handleSearch(this.value)"
                 class="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-900 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-colors">
               <span class="absolute left-3 top-2.5 text-slate-500 text-xs">🔍</span>
@@ -1747,7 +1981,7 @@ def generate_marvelous_frontend_spa(objective: str, criteria: list[str] | None =
 
       let responsePayload = {{}};
       if (endpoint === '/health') {{
-        responsePayload = {{ status: "HEALTHY", service: "{domain['entity_name']} API", version: "1.0.0" }};
+        responsePayload = {{ status: "HEALTHY", service: "{domain["entity_name"]} API", version: "1.0.0" }};
       }} else if (endpoint.endsWith('/stats')) {{
         const byCat = {{}};
         items.forEach(it => byCat[it.category] = (byCat[it.category] || 0) + 1);

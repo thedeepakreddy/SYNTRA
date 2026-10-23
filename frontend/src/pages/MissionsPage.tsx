@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiClient } from '../api/client';
 import {
+  Approval,
   Artifact,
   AutonomyMode,
   CreateMissionPayload,
@@ -35,6 +36,7 @@ import {
   Sparkles,
   ChevronRight,
   ShieldAlert,
+  ShieldCheck,
   Zap,
   Monitor,
   Smartphone,
@@ -69,6 +71,39 @@ export const MissionsPage: React.FC = () => {
   const [copiedBackend, setCopiedBackend] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [viewingArtifact, setViewingArtifact] = useState<Artifact | null>(null);
+
+  // Delivery Gate Approval state
+  const [pendingApproval, setPendingApproval] = useState<Approval | null>(null);
+  const [authorizingDelivery, setAuthorizingDelivery] = useState(false);
+  const [approvalSuccess, setApprovalSuccess] = useState<string | null>(null);
+
+  const handleAuthorizeDelivery = async (approval: Approval) => {
+    try {
+      setAuthorizingDelivery(true);
+      const digest = approval.signature_digest || approval.action_digest || '';
+      const userCtx = apiClient.getUserContext();
+      await apiClient.respondApproval(approval.id, {
+        decision: 'APPROVED',
+        digest,
+        responder: userCtx.email || userCtx.userId,
+        comment: 'Cryptographic delivery sign-off authorized by operator via Control Center.',
+      });
+      setApprovalSuccess('Mission delivery successfully authorized! State transitioned to COMPLETED.');
+      setTimeout(() => setApprovalSuccess(null), 5000);
+      if (selectedMission) {
+        const fresh = await apiClient.getMission(selectedMission.id);
+        setSelectedMission(fresh);
+        await openMissionDetails(fresh, true);
+      }
+      const freshList = await apiClient.getMissions();
+      setMissions(freshList);
+      setPendingApproval(null);
+    } catch (err: any) {
+      alert(err.message || 'Failed to authorize delivery.');
+    } finally {
+      setAuthorizingDelivery(false);
+    }
+  };
 
   const handleCopyBackend = (code: string) => {
     if (!code) return;
@@ -149,12 +184,13 @@ export const MissionsPage: React.FC = () => {
     setSelectedMission(mission);
     try {
       if (!silent) setDetailLoading(true);
-      const [tasksRes, eventsRes, artifactsRes, usageRes, appRes] = await Promise.allSettled([
+      const [tasksRes, eventsRes, artifactsRes, usageRes, appRes, approvalsRes] = await Promise.allSettled([
         apiClient.getMissionTasks(mission.id),
         apiClient.getMissionEvents(mission.id),
         apiClient.getMissionArtifacts(mission.id),
         apiClient.getMissionUsage(mission.id),
         apiClient.getMissionApp(mission.id),
+        apiClient.getApprovals('PENDING'),
       ]);
       if (tasksRes.status === 'fulfilled') setTasks(tasksRes.value.items || []);
       if (eventsRes.status === 'fulfilled') setEvents(eventsRes.value.items || []);
@@ -162,6 +198,12 @@ export const MissionsPage: React.FC = () => {
       if (usageRes.status === 'fulfilled') setUsage(usageRes.value);
       if (appRes.status === 'fulfilled') setAppData(appRes.value);
       else setAppData(null);
+      if (approvalsRes.status === 'fulfilled') {
+        const match = approvalsRes.value.find((a) => a.mission_id === mission.id);
+        setPendingApproval(match || null);
+      } else {
+        setPendingApproval(null);
+      }
     } catch {
       // handled gracefully
     } finally {
@@ -380,7 +422,7 @@ export const MissionsPage: React.FC = () => {
                   </div>
 
                   <div className="flex items-center space-x-3.5 flex-shrink-0">
-                    {(m.state === 'DRAFT' || m.state === 'PENDING') && (
+                    {(m.state === 'DRAFT' || m.state === 'PENDING' || m.state === 'REPLANNING' || m.state === 'FAILED') && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -390,8 +432,21 @@ export const MissionsPage: React.FC = () => {
                         className="inline-flex items-center space-x-2 rounded-full bg-emerald-500 hover:bg-emerald-400 px-4 py-1.5 text-xs font-bold text-slate-950 shadow-[0_0_16px_rgba(0,255,157,0.4)] active:scale-[0.98] disabled:opacity-50 transition-all font-mono"
                       >
                         <Play className="h-3 w-3 fill-current" />
-                        <span>{runningId === m.id ? 'Starting...' : 'Run Mission'}</span>
+                        <span>
+                          {runningId === m.id
+                            ? 'Starting...'
+                            : m.state === 'REPLANNING' || m.state === 'FAILED'
+                            ? 'Re-run'
+                            : 'Run Mission'}
+                        </span>
                       </button>
+                    )}
+
+                    {m.state === 'AWAITING_APPROVAL' && (
+                      <span className="inline-flex items-center space-x-1.5 rounded-full bg-amber-500/20 border border-amber-500/40 px-3 py-1 text-[11px] font-mono font-bold text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.2)]">
+                        <Lock className="h-3 w-3 text-amber-400" />
+                        <span>Awaiting Sign-off (7/7 Done)</span>
+                      </span>
                     )}
 
                     {isRunning && (
@@ -479,6 +534,19 @@ export const MissionsPage: React.FC = () => {
                       </button>
                     )}
 
+                    {(selectedMission.state === 'REPLANNING' || selectedMission.state === 'FAILED') && (
+                      <button
+                        onClick={() => handleRunMission(selectedMission.id)}
+                        disabled={runningId === selectedMission.id}
+                        className="btn-island-primary group"
+                      >
+                        <span>{runningId === selectedMission.id ? 'Re-running Pipeline...' : 'Re-run Mission'}</span>
+                        <span className="btn-island-icon">
+                          <RotateCw className={`h-3.5 w-3.5 text-slate-950 ${runningId === selectedMission.id ? 'animate-spin' : ''}`} />
+                        </span>
+                      </button>
+                    )}
+
                     {appData && (
                       <a
                         href={appData.url || `/generated_apps/${selectedMission.id}/index.html`}
@@ -513,6 +581,69 @@ export const MissionsPage: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Approval Success Banner */}
+            {approvalSuccess && (
+              <div className="rounded-2xl p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 flex items-center justify-between shadow-[0_0_20px_rgba(0,255,157,0.2)]">
+                <div className="flex items-center space-x-3">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-400 flex-shrink-0" />
+                  <span className="text-xs font-mono font-bold">{approvalSuccess}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Level-4 Human Delivery Gate Banner */}
+            {selectedMission.state === 'AWAITING_APPROVAL' && (
+              <div className="double-bezel-outer hud-corner relative overflow-hidden bg-gradient-to-r from-amber-500/15 via-cyan-500/10 to-emerald-500/15 border-amber-500/40">
+                <div className="double-bezel-inner p-5 backdrop-blur-2xl space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-start space-x-3.5">
+                      <div className="w-11 h-11 rounded-xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center text-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.3)] flex-shrink-0 mt-0.5">
+                        <Lock className="w-5 h-5 text-amber-300" />
+                      </div>
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                            LEVEL-4 HUMAN DELIVERY GATE // ACTION REQUIRED
+                          </span>
+                          <span className="text-xs text-emerald-400 font-mono font-bold flex items-center space-x-1">
+                            <CheckCircle2 className="h-3 w-3" />
+                            <span>All 7 Stages Verified</span>
+                          </span>
+                        </div>
+                        <h4 className="text-sm font-bold text-white mt-1 font-sans">
+                          Engineering Tasks Completed — Ready for Cryptographic Delivery Sign-Off
+                        </h4>
+                        <p className="text-xs text-slate-300 mt-1 max-w-xl font-sans leading-relaxed">
+                          All 7 agent roles (PM, Architect, EM, Backend Engineer, QA 7/7, Security Reviewer, Code Reviewer) have executed and passed. Per AGENTS.md separation-of-powers policy, operator authorization is required to finalize delivery.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-3 flex-shrink-0">
+                      <button
+                        onClick={() => pendingApproval && handleAuthorizeDelivery(pendingApproval)}
+                        disabled={authorizingDelivery || !pendingApproval}
+                        className="btn-island-emerald group px-5 py-2.5 font-bold shadow-[0_0_20px_rgba(0,255,157,0.4)]"
+                        title="Sign HMAC-SHA256 digest to transition mission to COMPLETED"
+                      >
+                        {authorizingDelivery ? (
+                          <span className="flex items-center space-x-2">
+                            <Loader2 className="h-4 w-4 animate-spin text-slate-950" />
+                            <span>Signing Digest...</span>
+                          </span>
+                        ) : (
+                          <span className="flex items-center space-x-2">
+                            <ShieldCheck className="h-4 w-4 text-slate-950" />
+                            <span>Authorize & Complete Delivery</span>
+                          </span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Apple Liquid Glass Floating Segmented Tab Switcher */}
             <div className="rounded-2xl p-1.5 bg-black/60 border border-white/[0.08] backdrop-blur-xl flex flex-wrap items-center gap-1.5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">

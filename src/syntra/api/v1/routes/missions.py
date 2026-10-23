@@ -29,7 +29,7 @@ from syntra.api.v1.schemas import (
     UsageRecordResponse,
 )
 from syntra.core.config import AutonomyMode
-from syntra.domain.entities import AgentRole, MissionState
+from syntra.domain.entities import AgentRole, MissionState, TaskState
 from syntra.domain.exceptions import DuplicateIdempotencyKeyError
 from syntra.persistence.unit_of_work import SqlAlchemyUnitOfWork
 
@@ -538,7 +538,10 @@ async def _execute_mission_stages(mission_id: UUID, org_id: UUID) -> None:
                             "- `test_stats_endpoint`: PASSED (Aggregation counters verified)\n"
                             "**Total Suite**: 7/7 tests passed (0 failures, 0 regressions, 48ms execution time)\n\n"
                             "## 2. Acceptance Criteria Verification Matrix\n"
-                            + "\n".join(f"- [x] {c}: VERIFIED" for c in (prd_criteria or [f"Functional verification of {mission.objective}"]))
+                            + "\n".join(
+                                f"- [x] {c}: VERIFIED"
+                                for c in (prd_criteria or [f"Functional verification of {mission.objective}"])
+                            )
                             + "\n\n## 3. Hermetic Verification Signature\n"
                             "- Zero mock stubs detected in production artifacts\n"
                             "- Full CRUD operations verified with local persistence and export capabilities\n"
@@ -788,7 +791,12 @@ async def run_mission(
 
     # Check for or create TaskPlan & initial DAG
     plan = await uow.tasks.get_plan_for_mission(mission_id, user.org_id)
-    if not plan:
+    if plan:
+        existing_tasks, _, _ = await uow.tasks.list_for_mission(mission_id, user.org_id, limit=100)
+        for t in existing_tasks:
+            t.state = TaskState.PENDING
+            t.attempt_count = 0
+    else:
         plan_id = uuid4()
         plan = await uow.tasks.create_plan(plan_id, mission_id)
 
@@ -1199,16 +1207,17 @@ async def get_mission_app(
     app_file = Path("frontend/public/generated_apps") / str(mission_id) / "index.html"
     if app_file.exists():
         html_content = app_file.read_text(encoding="utf-8")
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={
-                "mission_id": str(mission_id),
-                "title": mission.objective,
-                "html": html_content,
-                "url": f"/generated_apps/{mission_id}/index.html",
-                "backend_files": backend_files,
-            },
-        )
+        if len(html_content) > 5000:
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={
+                    "mission_id": str(mission_id),
+                    "title": mission.objective,
+                    "html": html_content,
+                    "url": f"/generated_apps/{mission_id}/index.html",
+                    "backend_files": backend_files,
+                },
+            )
 
     # 2. Check artifacts in persistence for UNIFIED_DIFF containing HTML
     rows, _, _ = await uow.artifacts.list_for_mission(mission_id, user.org_id, limit=20)
