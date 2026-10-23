@@ -19,11 +19,528 @@ def _slugify(text: str) -> str:
     return slug or "item"
 
 
+INDIAN_DISH_DATA: list[dict[str, Any]] = [
+    # 1. Appetizers & Street Chaat (5 items)
+    {
+        "id": "samosa_chaat",
+        "name": "Samosa Chaat (समोसा चाट)",
+        "category": "Appetizers & Street Chaat",
+        "description": "Crispy golden spiced potato samosas crushed over slow-cooked chickpeas, bathed in sweet-tangy tamarind, mint-coriander chutney, chilled yoghurt, and crisp nylon sev.",
+        "price": 11.50,
+        "spice_level": 2,
+        "dietary_tags": ["Vegetarian", "Street Food", "Popular"],
+        "allergens": ["Gluten", "Dairy"],
+        "ingredients": [
+            "Handmade Samosa",
+            "Chole Chickpeas",
+            "Mint Chutney",
+            "Saunth Tamarind",
+            "Nylon Sev",
+            "Pomegranate",
+        ],
+        "image": "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "pani_puri",
+        "name": "Pani Puri Shots (पानी पूरी)",
+        "category": "Appetizers & Street Chaat",
+        "description": "Eight delicate semolina crisps filled with spiced potato-sprout filling, served with chilled spicy mint-coriander and sweet tamarind waters.",
+        "price": 9.95,
+        "spice_level": 1,
+        "dietary_tags": ["Vegetarian", "Vegan-friendly", "Interactive Experience"],
+        "allergens": ["Gluten"],
+        "ingredients": ["Semolina Puris", "Spiced Potatoes", "Sprouted Moong", "Teekha Jaljeera", "Meetha Imli Pani"],
+        "image": "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "palak_chaat",
+        "name": "Palak Chaat (पालक चाट)",
+        "category": "Appetizers & Street Chaat",
+        "description": "Flash-fried baby spinach tempura tossed in whipped spiced yoghurt, date-tamarind reduction, and fresh ruby pomegranate arils.",
+        "price": 12.50,
+        "spice_level": 1,
+        "dietary_tags": ["Vegetarian", "Chef's Special", "Crispy"],
+        "allergens": ["Dairy"],
+        "ingredients": [
+            "Baby Spinach Leaves",
+            "Chickpea Flour Batter",
+            "Whisked Sweet Dahi",
+            "Date-Tamarind Sauce",
+            "Chaat Masala",
+        ],
+        "image": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "veg_pakora",
+        "name": "Vegetable Pakora (सब्जी पकोड़ा)",
+        "category": "Appetizers & Street Chaat",
+        "description": "Garden medley of spinach, cauliflower, and onions enrobed in carom-scented chickpea batter, fried crisp with green mango mint chutney.",
+        "price": 8.95,
+        "spice_level": 1,
+        "dietary_tags": ["Vegetarian", "Vegan-friendly", "Gluten-Free"],
+        "allergens": ["None"],
+        "ingredients": ["Spinach", "Cauliflower", "Red Onion", "Ajwain Carom Seeds", "Gram Flour", "Green Mango Dip"],
+        "image": "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "dahi_bhalla",
+        "name": "Dahi Bhalla (दही भल्ला)",
+        "category": "Appetizers & Street Chaat",
+        "description": "Melt-in-mouth lentil dumplings immersed in velvety chilled sweetened yoghurt, topped with roasted cumin and sweet-tart chutneys.",
+        "price": 10.50,
+        "spice_level": 0,
+        "dietary_tags": ["Vegetarian", "Gluten-Free", "Cooling"],
+        "allergens": ["Dairy"],
+        "ingredients": [
+            "Urad Dal Dumplings",
+            "Chilled Cultured Curd",
+            "Roasted Jeera",
+            "Red Chili Flakes",
+            "Saunth Chutney",
+        ],
+        "image": "https://images.unsplash.com/photo-1626777553632-47e24b4249a1?auto=format&fit=crop&w=800&q=80",
+    },
+    # 2. Tandoor & Grills (5 items)
+    {
+        "id": "tandoori_chicken",
+        "name": "Tandoori Chicken (तंदूरी चिकन)",
+        "category": "Tandoor & Grills",
+        "description": "Free-range chicken steeped for 24 hours in smoked Kashmiri chilies, mustard oil, and hung curd, roasted in clay oven with charred lime.",
+        "price": 19.95,
+        "spice_level": 2,
+        "dietary_tags": ["Gluten-Free", "High-Protein", "Clay Oven"],
+        "allergens": ["Dairy"],
+        "ingredients": [
+            "Bone-in Chicken",
+            "Deghi Mirch",
+            "Kachri",
+            "Hung Curd",
+            "Cold-Pressed Mustard Oil",
+            "Charred Lime",
+        ],
+        "image": "https://images.unsplash.com/photo-1610057099443-fde8c4d50f91?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "paneer_tikka",
+        "name": "Paneer Tikka (पनीर टिक्का)",
+        "category": "Tandoor & Grills",
+        "description": "Handcrafted cottage cheese cubes, bell peppers, and shallots marinated in carom seeds, ginger-garlic paste, and tandoori spices.",
+        "price": 16.50,
+        "spice_level": 2,
+        "dietary_tags": ["Vegetarian", "Gluten-Free", "House Favorite"],
+        "allergens": ["Dairy"],
+        "ingredients": [
+            "Artisanal Paneer",
+            "Three-Color Peppers",
+            "Pickled Shallots",
+            "Ajwain",
+            "Turmeric Yogurt Marinade",
+        ],
+        "image": "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "murgh_malai",
+        "name": "Murgh Malai Kebab (मुर्ग मलाई कबाब)",
+        "category": "Tandoor & Grills",
+        "description": "Tender boneless chicken morsels infused with green cardamom, royal mace, melted white cheddar, and clotted cream.",
+        "price": 18.50,
+        "spice_level": 0,
+        "dietary_tags": ["Gluten-Free", "Mild & Creamy", "Royal Recipe"],
+        "allergens": ["Dairy", "Nuts"],
+        "ingredients": [
+            "Chicken Supreme",
+            "Green Cardamom",
+            "Javitri Mace",
+            "Malai Cream",
+            "Cashew Paste",
+            "White Pepper",
+        ],
+        "image": "https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "lamb_chops",
+        "name": "Tandoori Lamb Chops (तंदूरी लैम्ब चॉप्स)",
+        "category": "Tandoor & Grills",
+        "description": "Prime Australian lamb cutlets massaged with raw papaya, toasted royal cumin, and crushed peppercorns, char-grilled over acacia charcoal.",
+        "price": 26.95,
+        "spice_level": 3,
+        "dietary_tags": ["Gluten-Free", "Chef's Special", "Prime Cut"],
+        "allergens": ["Dairy"],
+        "ingredients": [
+            "Lamb Chops",
+            "Raw Papaya",
+            "Black Peppercorn",
+            "Royal Cumin",
+            "Garlic Emulsion",
+            "Smoked Ghee",
+        ],
+        "image": "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "tandoori_prawns",
+        "name": "Tandoori Prawns (तंदूरी झींगा)",
+        "category": "Tandoor & Grills",
+        "description": "Jumbo wild-caught tiger prawns skewered with lime zest, crushed coriander seeds, and yellow chili powder, seared to smoky perfection.",
+        "price": 24.50,
+        "spice_level": 2,
+        "dietary_tags": ["Gluten-Free", "Seafood", "Wild Caught"],
+        "allergens": ["Crustacean", "Dairy"],
+        "ingredients": [
+            "Jumbo Tiger Prawns",
+            "Yellow Chili",
+            "Coriander Seeds",
+            "Lemon Grass Infusion",
+            "Garam Masala",
+        ],
+        "image": "https://images.unsplash.com/photo-1559742811-822873691df8?auto=format&fit=crop&w=800&q=80",
+    },
+    # 3. Rich Curries & Masalas (5 items)
+    {
+        "id": "butter_chicken",
+        "name": "Butter Chicken (Murgh Makhani) (मुर्ग मखनी)",
+        "category": "Rich Curries & Masalas",
+        "description": "Char-roasted chicken tikka simmered in a velvet silk tomato gravy, finished with churned makhana butter, honey, and dried fenugreek.",
+        "price": 19.50,
+        "spice_level": 1,
+        "dietary_tags": ["Gluten-Free", "Signature Classic", "Popular"],
+        "allergens": ["Dairy", "Nuts"],
+        "ingredients": [
+            "Tandoori Chicken Tikka",
+            "San Marzano Tomatoes",
+            "Kasuri Methi",
+            "White Butter",
+            "Cashew Silk Gravy",
+        ],
+        "image": "https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "palak_paneer",
+        "name": "Palak Paneer (पालक पनीर)",
+        "category": "Rich Curries & Masalas",
+        "description": "Tender fresh cheese cubes enveloped in slow-simmered organic spinach puree, seasoned with roasted garlic, cumin, and light cream.",
+        "price": 17.50,
+        "spice_level": 1,
+        "dietary_tags": ["Vegetarian", "Gluten-Free", "Comfort Classic"],
+        "allergens": ["Dairy"],
+        "ingredients": ["Blanched Baby Spinach", "Farm Cottage Cheese", "Crisp Burnt Garlic", "Cumin", "Single Cream"],
+        "image": "https://images.unsplash.com/photo-1601050690117-94f5f6fa8bd7?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "lamb_rogan_josh",
+        "name": "Lamb Rogan Josh (रोगन जोश)",
+        "category": "Rich Curries & Masalas",
+        "description": "Heritage Kashmiri lamb braised low and slow with Ratan Jot alkanet root, fennel powder, ginger essence, and whole aromatic spices.",
+        "price": 22.50,
+        "spice_level": 2,
+        "dietary_tags": ["Gluten-Free", "Kashmiri Heritage", "Slow-Braised"],
+        "allergens": ["None"],
+        "ingredients": [
+            "Grass-Fed Lamb Shoulder",
+            "Kashmiri Mirch",
+            "Saunf Fennel",
+            "Dry Ginger Powder",
+            "Mustard Oil Broth",
+        ],
+        "image": "https://images.unsplash.com/photo-1545247181-516773cae754?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "chana_masala",
+        "name": "Chana Masala (चना मसाला)",
+        "category": "Rich Curries & Masalas",
+        "description": "Heritage chickpeas stewed with roasted pomegranate seeds, dry mango, caramelized onions, and stone-ground Punjabi garam masala.",
+        "price": 15.50,
+        "spice_level": 2,
+        "dietary_tags": ["Vegetarian", "Vegan-friendly", "Gluten-Free"],
+        "allergens": ["None"],
+        "ingredients": [
+            "Kabuli Chana",
+            "Anardana Seeds",
+            "Amchoor",
+            "Caramelized Onion Gravy",
+            "Fresh Ginger Matchsticks",
+        ],
+        "image": "https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "chicken_tikka_masala",
+        "name": "Chicken Tikka Masala (चिकन टिक्का मसाला)",
+        "category": "Rich Curries & Masalas",
+        "description": "Tandoori grilled chicken morsels tossed in a robust, spiced onion-tomato masala enriched with bell peppers and fresh cilantro.",
+        "price": 19.95,
+        "spice_level": 2,
+        "dietary_tags": ["Gluten-Free", "House Special", "Popular"],
+        "allergens": ["Dairy"],
+        "ingredients": [
+            "Smoked Chicken Thighs",
+            "Fire-Roasted Peppers",
+            "Onion-Tomato Masala",
+            "Coriander Roots",
+            "Fenugreek",
+        ],
+        "image": "https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=800&q=80",
+    },
+    # 4. Biryanis & Rice Specialties (5 items)
+    {
+        "id": "chicken_biryani",
+        "name": "Hyderabadi Chicken Dum Biryani (हैदराबादी बिरयानी)",
+        "category": "Biryanis & Rice Specialties",
+        "description": "Aged long-grain basmati rice and marinated chicken sealed with dough in a heavy handi, steam-dum cooked with saffron and fried onions.",
+        "price": 20.50,
+        "spice_level": 2,
+        "dietary_tags": ["Gluten-Free", "Chef's Masterpiece", "Slow-Cooked"],
+        "allergens": ["Dairy"],
+        "ingredients": [
+            "Dehradun Basmati Rice",
+            "Bone-in Chicken",
+            "Pure Saffron Milk",
+            "Birista Crisp Onions",
+            "Mint & Coriander",
+        ],
+        "image": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "lamb_biryani",
+        "name": "Lucknowi Lamb Biryani (लखनवी बिरयानी)",
+        "category": "Biryanis & Rice Specialties",
+        "description": "Awadhi royal recipe of fragrant yakhni mutton broth infused into basmati pearls, layered with tender lamb, kewra water, and rose petals.",
+        "price": 23.50,
+        "spice_level": 1,
+        "dietary_tags": ["Gluten-Free", "Awadhi Royal", "Aromatic"],
+        "allergens": ["Dairy", "Nuts"],
+        "ingredients": ["Lamb Shanks Yakhni", "Kewra Essence", "Rose Petals", "Green Cardamom Pods", "Shahi Zeera"],
+        "image": "https://images.unsplash.com/photo-1633945274405-b6c8069047b0?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "subz_biryani",
+        "name": "Subz Biryani (Vegetable) (सब्ज बिरयानी)",
+        "category": "Biryanis & Rice Specialties",
+        "description": "Seasonal florets, French beans, baby potatoes, and paneer gems cooked with saffron-infused basmati and warm spices.",
+        "price": 16.50,
+        "spice_level": 1,
+        "dietary_tags": ["Vegetarian", "Vegan-friendly", "Gluten-Free"],
+        "allergens": ["Dairy (Optional)"],
+        "ingredients": ["Seasonal Vegetables", "Aged Basmati", "Green Peas", "Brown Onions", "Star Anise & Mace"],
+        "image": "https://images.unsplash.com/photo-1645177628172-a94c1f96e6db?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "jeera_rice",
+        "name": "Jeera Rice (जीरा राइस)",
+        "category": "Biryanis & Rice Specialties",
+        "description": "Fluffy steamed long-grain basmati rice tempered with golden roasted cumin seeds, bay leaves, and clarified desi ghee.",
+        "price": 6.50,
+        "spice_level": 0,
+        "dietary_tags": ["Vegetarian", "Gluten-Free", "Comfort Side"],
+        "allergens": ["None"],
+        "ingredients": ["Steamed Basmati", "Toasted Cumin Seeds", "Desi Ghee", "Bay Leaves", "Fresh Cilantro"],
+        "image": "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "saffron_pulao",
+        "name": "Saffron Pulao (केसर पुलाव)",
+        "category": "Biryanis & Rice Specialties",
+        "description": "Delicate royal basmati pilaf steeped in Kashmiri saffron, tossed with roasted cashews, golden raisins, and green cardamom.",
+        "price": 8.50,
+        "spice_level": 0,
+        "dietary_tags": ["Vegetarian", "Gluten-Free", "Fragrant"],
+        "allergens": ["Dairy", "Nuts"],
+        "ingredients": ["Basmati Rice", "Kashmiri Mongra Saffron", "Cashew Nuts", "Kishmish Raisins", "Cloves"],
+        "image": "https://images.unsplash.com/photo-1626777553258-293674686b24?auto=format&fit=crop&w=800&q=80",
+    },
+    # 5. Breads & Accompaniments (5 items)
+    {
+        "id": "garlic_naan",
+        "name": "Garlic Butter Naan (गार्लिक नान)",
+        "category": "Breads & Accompaniments",
+        "description": "Hand-stretched leavened flatbread slapped onto tandoor clay walls, brushed with clarified butter, garlic confit, and fresh coriander.",
+        "price": 4.95,
+        "spice_level": 0,
+        "dietary_tags": ["Vegetarian", "Tandoor Baked", "Popular"],
+        "allergens": ["Gluten", "Dairy"],
+        "ingredients": ["Enriched Flour", "Cultured Buttermilk", "Minced Garlic", "Amul Butter", "Nigella Seeds"],
+        "image": "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "tandoori_roti",
+        "name": "Tandoori Roti (तंदूरी रोटी)",
+        "category": "Breads & Accompaniments",
+        "description": "Traditional stone-ground whole wheat flatbread blistered crisp and golden in the charcoal tandoor.",
+        "price": 3.95,
+        "spice_level": 0,
+        "dietary_tags": ["Vegetarian", "Vegan-friendly", "Whole Wheat"],
+        "allergens": ["Gluten"],
+        "ingredients": ["Whole Wheat Chakki Atta", "Water", "Pinch of Sea Salt", "Light Ghee (Optional)"],
+        "image": "https://images.unsplash.com/photo-1505253758473-96b3015f27eb?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "laccha_paratha",
+        "name": "Laccha Paratha (लच्छा परांठा)",
+        "category": "Breads & Accompaniments",
+        "description": "Multi-layered flaky whole wheat bread pleated by hand, brushed with desi ghee, and baked crisp with tender interior layers.",
+        "price": 5.50,
+        "spice_level": 0,
+        "dietary_tags": ["Vegetarian", "Layered Craft"],
+        "allergens": ["Gluten", "Dairy"],
+        "ingredients": ["Whole Wheat Flour", "Clarified Butter Ghee", "Ajwain Carom Seeds", "Sea Salt"],
+        "image": "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "onion_kulcha",
+        "name": "Onion Kulcha (प्याज कुलचा)",
+        "category": "Breads & Accompaniments",
+        "description": "Tandoor-baked flatbread stuffed with finely diced red onions, pomegranate powder, green chilies, and crushed coriander seeds.",
+        "price": 5.95,
+        "spice_level": 1,
+        "dietary_tags": ["Vegetarian", "Stuffed Specialty"],
+        "allergens": ["Gluten", "Dairy"],
+        "ingredients": ["Refined Wheat Dough", "Spiced Red Onions", "Anardana", "Green Chilies", "Butter Glaze"],
+        "image": "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "cucumber_raita",
+        "name": "Cucumber Raita (खीरा रायता)",
+        "category": "Breads & Accompaniments",
+        "description": "Whisked artisanal yoghurt folded with grated English cucumbers, roasted cumin powder, black Himalayan salt, and fresh mint.",
+        "price": 4.50,
+        "spice_level": 0,
+        "dietary_tags": ["Vegetarian", "Gluten-Free", "Cooling"],
+        "allergens": ["Dairy"],
+        "ingredients": ["Cultured Yoghurt", "Fresh Cucumbers", "Bhuna Jeera", "Kala Namak", "Garden Mint"],
+        "image": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80",
+    },
+    # 6. Desserts & Drinks (5 items)
+    {
+        "id": "gulab_jamun",
+        "name": "Gulab Jamun (गुलाब जामुन)",
+        "category": "Desserts & Drinks",
+        "description": "Deep-fried artisanal khoya milk dumplings soaked warm in green cardamom and saffron rose-scented syrup.",
+        "price": 7.50,
+        "spice_level": 0,
+        "dietary_tags": ["Vegetarian", "Warm Dessert", "Classic"],
+        "allergens": ["Dairy", "Gluten"],
+        "ingredients": ["Khoya Mawa", "Chhena", "Saffron Sugar Syrup", "Rose Water", "Silver Leaf Chandi Vark"],
+        "image": "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "rasmalai",
+        "name": "Rasmalai (रसमलाई)",
+        "category": "Desserts & Drinks",
+        "description": "Spongy, delicate cottage cheese disks immersed in chilled, thickened saffron-pistachio clotted milk infusion.",
+        "price": 8.50,
+        "spice_level": 0,
+        "dietary_tags": ["Vegetarian", "Gluten-Free", "Royal Heritage"],
+        "allergens": ["Dairy", "Nuts"],
+        "ingredients": [
+            "Soft Chhena Discs",
+            "Rabdi Clotted Milk",
+            "Kashmiri Saffron",
+            "Iranian Pistachios",
+            "Cardamom",
+        ],
+        "image": "https://images.unsplash.com/photo-1579954115545-a95591f28bfc?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "mango_lassi",
+        "name": "Mango Lassi (मैंगो लस्सी)",
+        "category": "Desserts & Drinks",
+        "description": "Velvety chilled shake of Alphonso mango pulp, cultured sweet yoghurt, cardamom spice, and crushed pistachios.",
+        "price": 6.00,
+        "spice_level": 0,
+        "dietary_tags": ["Vegetarian", "Gluten-Free", "Beverage Favorite"],
+        "allergens": ["Dairy", "Nuts"],
+        "ingredients": ["Alphonso Mango Puree", "Creamy Dahi", "Cardamom", "Pistachio Slivers", "Honey Drop"],
+        "image": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "masala_chai",
+        "name": "Masala Chai (मसाला चाय)",
+        "category": "Desserts & Drinks",
+        "description": "Slow-brewed Assam black tea infused with whole crushed ginger, green cardamom, cinnamon quill, cloves, and whole buffalo milk.",
+        "price": 4.50,
+        "spice_level": 1,
+        "dietary_tags": ["Vegetarian", "Gluten-Free", "Comfort Beverage"],
+        "allergens": ["Dairy"],
+        "ingredients": ["Assam CTC Tea", "Adrak Ginger", "Elaichi Cardamom", "Dalchini Cinnamon", "Steamed Whole Milk"],
+        "image": "https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        "id": "kulfi_pistachio",
+        "name": "Kulfi (Pistachio) (पिस्ता कुल्फी)",
+        "category": "Desserts & Drinks",
+        "description": "Traditional slow-reduced dense Indian ice cream scented with kewra, loaded with slivered pistachios and almonds on a wooden stick.",
+        "price": 7.00,
+        "spice_level": 0,
+        "dietary_tags": ["Vegetarian", "Gluten-Free", "Frozen Delicacy"],
+        "allergens": ["Dairy", "Nuts"],
+        "ingredients": ["Slow-Reduced Full Cream", "Pistachio Nuts", "Almonds", "Kewra Water", "Green Cardamom"],
+        "image": "https://images.unsplash.com/photo-1501443762994-82bd5dace89a?auto=format&fit=crop&w=800&q=80",
+    },
+]
+
+
 def _extract_domain_profile(objective: str) -> dict[str, Any]:
     """Analyze the engineering objective to derive domain entities, attributes, and initial data."""
     obj_lower = objective.lower()
 
-    if any(k in obj_lower for k in ["inventory", "warehouse", "stock", "catalog", "supply"]):
+    is_restaurant = bool(
+        re.search(
+            r"\b(menu|restaurant|food|dining|dishes|dish|cuisine|tandoor|chaat|biryani|curry|cafe|bakery|eatery|culinary)\b",
+            obj_lower,
+        )
+    )
+
+    if is_restaurant:
+        entity_name = "MenuItem"
+        entity_singular = "Menu Item"
+        entity_plural = "Menu Items"
+        table_name = "menu_items"
+        fields = [
+            {"name": "name", "type": "str", "label": "Dish Name", "default": "Butter Chicken (Murgh Makhani)"},
+            {"name": "category", "type": "str", "label": "Category", "default": "Rich Curries & Masalas"},
+            {"name": "price", "type": "float", "label": "Price ($)", "default": 19.50},
+            {"name": "spice_level", "type": "int", "label": "Spice Level", "default": 1},
+            {"name": "status", "type": "str", "label": "Status", "default": "AVAILABLE"},
+            {"name": "priority", "type": "str", "label": "Priority", "default": "RECOMMENDED"},
+            {"name": "description", "type": "str", "label": "Description", "default": "Slow-simmered rich curry."},
+        ]
+        status_options = ["AVAILABLE", "SOLD_OUT", "CHEF_RECOMMENDED"]
+        category_options = [
+            "Appetizers & Street Chaat",
+            "Tandoor & Grills",
+            "Rich Curries & Masalas",
+            "Biryanis & Rice Specialties",
+            "Breads & Accompaniments",
+            "Desserts & Drinks",
+        ]
+        seed_items = [
+            {
+                "title": d["name"],
+                "name": d["name"],
+                "category": d["category"],
+                "status": "AVAILABLE",
+                "priority": f"Spice {d['spice_level']}",
+                "description": d["description"],
+                "tags": d["dietary_tags"],
+                "price": d["price"],
+                "spice_level": d["spice_level"],
+                "allergens": d["allergens"],
+                "ingredients": d.get("ingredients", []),
+                "image": d["image"],
+            }
+            for d in INDIAN_DISH_DATA
+        ]
+        return {
+            "entity_name": entity_name,
+            "entity_singular": entity_singular,
+            "entity_plural": entity_plural,
+            "table_name": table_name,
+            "fields": fields,
+            "status_options": status_options,
+            "category_options": category_options,
+            "seed_items": seed_items,
+            "is_restaurant": True,
+            "restaurant_name": "Tandoor & Spice",
+        }
+    elif any(k in obj_lower for k in ["inventory", "warehouse", "stock", "catalog", "supply"]):
         entity_name = "InventoryItem"
         entity_singular = "Inventory Item"
         entity_plural = "Inventory Items"
@@ -108,7 +625,9 @@ def _extract_domain_profile(objective: str) -> dict[str, Any]:
                 "tags": ["Cables", "Wiring"],
             },
         ]
-    elif any(k in obj_lower for k in ["note", "memo", "journal", "docs", "document", "knowledge"]):
+    elif re.search(r"\b(notes?|memo|journal|docs?|knowledge\s*base)\b", obj_lower) and not re.search(
+        r"\b(cook(ing)?|recipe|taste|flavor)\b", obj_lower
+    ):
         entity_name = "Note"
         entity_singular = "Note"
         entity_plural = "Notes"
@@ -443,6 +962,7 @@ Configures SQLite / SQLAlchemy async session factory and initializes pre-seeded 
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from pathlib import Path
@@ -461,7 +981,7 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///app.db")
 engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
-SEEDED_ITEMS = {seeds_json}
+SEEDED_ITEMS = json.loads({json.dumps(seeds_json)})
 
 
 async def init_db() -> None:
@@ -484,6 +1004,7 @@ async def init_db() -> None:
                     priority=item.get("priority", "MEDIUM"),
                     description=item.get("description") or item.get("content") or "",
                     tags_csv=",".join(tags),
+                    metadata_json=json.dumps(item),
                 )
                 session.add(record)
             await session.commit()
@@ -680,7 +1201,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="{ent} Service API",
     version="1.0.0",
-    description="Full-Stack Backend REST API tailored for: {objective[:100]}",
+    description={json.dumps(f"Full-Stack Backend REST API tailored for: {objective[:100]}")},
     lifespan=lifespan,
 )
 
@@ -1003,6 +1524,1124 @@ pytest test_api.py -v
     }
 
 
+def _generate_restaurant_menu_spa(
+    objective: str, criteria: list[str] | None = None, domain: dict[str, Any] | None = None
+) -> str:
+    html.escape(objective)
+    dishes_json = json.dumps(INDIAN_DISH_DATA)
+    categories = [
+        "Appetizers & Street Chaat",
+        "Tandoor & Grills",
+        "Rich Curries & Masalas",
+        "Biryanis & Rice Specialties",
+        "Breads & Accompaniments",
+        "Desserts & Drinks",
+    ]
+    categories_json = json.dumps(categories)
+
+    html_code = f"""<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tandoor &amp; Spice — Modern Indian Culinary Craft</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,600;1,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {{
+      darkMode: 'class',
+      theme: {{
+        extend: {{
+          fontFamily: {{
+            serif: ['"Playfair Display"', 'Georgia', 'serif'],
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }},
+          colors: {{
+            saffron: {{
+              50: '#fffbeb',
+              100: '#fef3c7',
+              200: '#fde68a',
+              300: '#fcd34d',
+              400: '#fbbf24',
+              500: '#f59e0b',
+              600: '#d97706',
+              700: '#b45309',
+              800: '#92400e',
+              900: '#78350f',
+            }},
+            terracotta: {{
+              500: '#e05638',
+              600: '#c2410c',
+            }},
+            charcoal: {{
+              900: '#0f1117',
+              950: '#090a0f',
+            }}
+          }}
+        }}
+      }}
+    }}
+  </script>
+  <style>
+    body {{
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      background: #090a0f;
+      color: #f1f5f9;
+      overflow-x: hidden;
+    }}
+    .font-serif {{
+      font-family: 'Playfair Display', Georgia, serif;
+    }}
+    .font-mono {{
+      font-family: 'JetBrains Mono', monospace;
+    }}
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {{
+      width: 8px;
+      height: 8px;
+    }}
+    ::-webkit-scrollbar-track {{
+      background: #090a0f;
+    }}
+    ::-webkit-scrollbar-thumb {{
+      background: #27272a;
+      border-radius: 9999px;
+    }}
+    ::-webkit-scrollbar-thumb:hover {{
+      background: #d97706;
+    }}
+    .glass-panel {{
+      background: rgba(18, 21, 31, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(245, 158, 11, 0.18);
+    }}
+    .glass-card {{
+      background: rgba(22, 26, 38, 0.65);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }}
+    .glass-card:hover {{
+      border-color: rgba(245, 158, 11, 0.45);
+      transform: translateY(-3px);
+      box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.6), 0 0 24px -4px rgba(245, 158, 11, 0.15);
+    }}
+  </style>
+</head>
+<body class="min-h-screen selection:bg-amber-500/30 selection:text-amber-200">
+
+  <!-- TOP BANNER & OPERATIONAL STATUS -->
+  <div class="bg-gradient-to-r from-amber-950/80 via-slate-900 to-amber-950/80 border-b border-amber-500/20 text-xs py-2 px-4">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center space-x-2">
+        <span class="relative flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        </span>
+        <span class="font-medium text-emerald-400">Kitchen Live &amp; Accepting Orders</span>
+        <span class="text-slate-500">·</span>
+        <span class="text-slate-300">Open 12:00 PM – 11:00 PM</span>
+        <span class="text-slate-500">·</span>
+        <span class="text-amber-400 font-serif italic">Artisanal Clay-Oven &amp; Heritage Spices</span>
+      </div>
+      <div class="flex items-center space-x-4 text-slate-400">
+        <span>📍 442 Saffron Boulevard, Heritage District</span>
+        <span class="text-slate-600">|</span>
+        <span class="text-amber-300">Dine-In &amp; Express Takeaway</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN NAVIGATION HEADER -->
+  <header class="glass-panel sticky top-0 z-40 border-b border-amber-500/20 px-4 lg:px-8 py-3.5">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+
+      <!-- Brand & Subtitle -->
+      <div class="flex items-center space-x-3.5 cursor-pointer" onclick="window.scrollTo({{ top: 0, behavior: 'smooth' }})">
+        <div class="h-11 w-11 rounded-xl bg-gradient-to-br from-amber-400 via-amber-600 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20 border border-amber-300/40">
+          <svg class="w-6 h-6 text-slate-950" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C10.5 4.5 9 6.5 9 9c0 2 1 3.5 3 4.5 1.5-1 2-2 2-3.5 0-1-.5-2-1-3 2 1.5 4 4 4 7 0 3.3-2.7 6-6 6s-6-2.7-6-6c0-3.5 2.5-6.5 5-8zm0 18c2.2 0 4-1.8 4-4 0-1.8-1-3-2.5-4-.5 1-1.5 1.5-2.5 1.5s-1.5-.5-1.5-1.5c-1 1-1.5 2.2-1.5 4 0 2.2 1.8 4 4 4z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="font-serif font-black text-2xl tracking-tight text-white">TANDOOR &amp; SPICE</h1>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">Artisanal</span>
+          </div>
+          <p class="text-xs text-amber-200/70 font-serif italic">तन्दूर और मसाले · Modern Indian Culinary Craft</p>
+        </div>
+      </div>
+
+      <!-- Center Search (Desktop) -->
+      <div class="hidden md:flex flex-1 max-w-md mx-4">
+        <div class="relative w-full">
+          <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </div>
+          <input
+            id="desktopSearchInput"
+            type="text"
+            placeholder="Search 30 dishes, ingredients (e.g., paneer, biryani, saffron)..."
+            class="w-full pl-10 pr-9 py-2 bg-slate-900/90 border border-slate-700/80 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/40 transition-all"
+            oninput="handleSearch(this.value)"
+          />
+          <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Right Actions: Table Selector & Tray Cart -->
+      <div class="flex items-center space-x-3">
+        <!-- Dining Mode & Table -->
+        <div class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-700/60 text-xs">
+          <span class="text-amber-400">🍽️</span>
+          <span class="text-slate-300 font-medium" id="headerDiningModeText">Dine-In</span>
+          <span class="text-slate-500">·</span>
+          <span class="text-amber-300 font-mono font-bold" id="headerTableText">Table 04</span>
+        </div>
+
+        <!-- Your Tray Cart Button -->
+        <button
+          onclick="toggleTrayDrawer()"
+          class="relative flex items-center space-x-2.5 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+          </svg>
+          <span>Your Tray</span>
+          <span id="headerTrayCount" class="px-1.5 py-0.5 rounded-full bg-slate-950 text-amber-300 text-xs font-mono font-extrabold">0</span>
+          <span id="headerTrayTotal" class="hidden md:inline font-mono text-xs text-slate-900 font-black border-l border-slate-900/30 pl-2">$0.00</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Mobile Search Row -->
+    <div class="md:hidden mt-3 pt-2 border-t border-slate-800">
+      <div class="relative w-full">
+        <input
+          id="mobileSearchInput"
+          type="text"
+          placeholder="Search 30 dishes or ingredients..."
+          class="w-full pl-9 pr-8 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400"
+          oninput="handleSearch(this.value)"
+        />
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- STICKY CATEGORY NAVIGATION TABS -->
+  <nav class="sticky top-[73px] z-30 bg-slate-950/95 backdrop-blur-xl border-b border-amber-500/20 py-2.5 px-4">
+    <div class="max-w-7xl mx-auto flex items-center space-x-2 overflow-x-auto no-scrollbar scroll-smooth">
+      <button
+        onclick="selectCategory('All')"
+        id="cat-tab-All"
+        class="category-tab whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20"
+      >
+        <span>All Dishes</span>
+        <span class="cat-pill px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-950/30 text-slate-950 font-black">30</span>
+      </button>
+
+      <!-- 6 Categories injected dynamically or static -->
+      <button onclick="selectCategory('Appetizers & Street Chaat')" id="cat-tab-Appetizers" class="category-tab whitespace-nowrap px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 transition-all flex items-center space-x-1.5">
+        <span>Appetizers &amp; Street Chaat</span>
+        <span class="cat-pill px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-800 text-slate-400">5</span>
+      </button>
+
+      <button onclick="selectCategory('Tandoor & Grills')" id="cat-tab-Tandoor" class="category-tab whitespace-nowrap px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 transition-all flex items-center space-x-1.5">
+        <span>Tandoor &amp; Grills</span>
+        <span class="cat-pill px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-800 text-slate-400">5</span>
+      </button>
+
+      <button onclick="selectCategory('Rich Curries & Masalas')" id="cat-tab-Curries" class="category-tab whitespace-nowrap px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 transition-all flex items-center space-x-1.5">
+        <span>Rich Curries &amp; Masalas</span>
+        <span class="cat-pill px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-800 text-slate-400">5</span>
+      </button>
+
+      <button onclick="selectCategory('Biryanis & Rice Specialties')" id="cat-tab-Biryanis" class="category-tab whitespace-nowrap px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 transition-all flex items-center space-x-1.5">
+        <span>Biryanis &amp; Rice</span>
+        <span class="cat-pill px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-800 text-slate-400">5</span>
+      </button>
+
+      <button onclick="selectCategory('Breads & Accompaniments')" id="cat-tab-Breads" class="category-tab whitespace-nowrap px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 transition-all flex items-center space-x-1.5">
+        <span>Breads &amp; Raita</span>
+        <span class="cat-pill px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-800 text-slate-400">5</span>
+      </button>
+
+      <button onclick="selectCategory('Desserts & Drinks')" id="cat-tab-Desserts" class="category-tab whitespace-nowrap px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 transition-all flex items-center space-x-1.5">
+        <span>Desserts &amp; Drinks</span>
+        <span class="cat-pill px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-800 text-slate-400">5</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- HERO BANNER -->
+  <section class="relative px-4 py-8 lg:py-12 overflow-hidden bg-gradient-to-b from-amber-950/20 via-slate-950 to-slate-950 border-b border-slate-800/60">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(245,158,11,0.08),transparent_50%)] pointer-events-none"></div>
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative">
+      <div class="space-y-2 max-w-2xl">
+        <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold">
+          <span>✨</span>
+          <span>Chef Sanjeev Kapur's Autumn Tasting Collection</span>
+        </div>
+        <h2 class="font-serif text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
+          Where Ancient Spices Meet <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-200 to-orange-400">Modern Gastronomy</span>
+        </h2>
+        <p class="text-sm sm:text-base text-slate-300/80 leading-relaxed font-light">
+          Experience 30 authentic dishes crafted with single-origin Indian spices, 24-hour slow marinades, and charcoal tandoor roasting. Built for table dining and express digital ordering.
+        </p>
+      </div>
+
+      <!-- Quick Metrics Pill Group -->
+      <div class="grid grid-cols-3 gap-3 w-full md:w-auto">
+        <div class="p-3.5 rounded-2xl bg-slate-900/80 border border-amber-500/20 text-center">
+          <div class="font-mono text-xl sm:text-2xl font-black text-amber-400">30</div>
+          <div class="text-[11px] text-slate-400 font-medium">Curated Dishes</div>
+        </div>
+        <div class="p-3.5 rounded-2xl bg-slate-900/80 border border-amber-500/20 text-center">
+          <div class="font-mono text-xl sm:text-2xl font-black text-emerald-400">6</div>
+          <div class="text-[11px] text-slate-400 font-medium">Categories</div>
+        </div>
+        <div class="p-3.5 rounded-2xl bg-slate-900/80 border border-amber-500/20 text-center">
+          <div class="font-mono text-xl sm:text-2xl font-black text-orange-400">4.9 ★</div>
+          <div class="text-[11px] text-slate-400 font-medium">1,240 Reviews</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MULTI-FILTER TOOLBAR (DIETARY & SPICE LEVEL & SORT) -->
+  <section class="max-w-7xl mx-auto px-4 py-5">
+    <div class="p-4 rounded-2xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-md space-y-4">
+      <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+
+        <!-- Dietary Filters -->
+        <div class="flex items-center flex-wrap gap-2 text-xs">
+          <span class="text-slate-400 font-semibold uppercase tracking-wider text-[11px] mr-1">Dietary:</span>
+          <button onclick="setDietaryFilter('All')" id="diet-All" class="diet-btn px-3 py-1.5 rounded-xl font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">All</button>
+          <button onclick="setDietaryFilter('Vegetarian')" id="diet-Vegetarian" class="diet-btn px-3 py-1.5 rounded-xl text-slate-300 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60">🥬 Vegetarian</button>
+          <button onclick="setDietaryFilter('Vegan-friendly')" id="diet-Vegan" class="diet-btn px-3 py-1.5 rounded-xl text-slate-300 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60">🌱 Vegan-friendly</button>
+          <button onclick="setDietaryFilter('Gluten-Free')" id="diet-GlutenFree" class="diet-btn px-3 py-1.5 rounded-xl text-slate-300 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60">🌾 Gluten-Free</button>
+          <button onclick="setDietaryFilter('Chef')" id="diet-Chef" class="diet-btn px-3 py-1.5 rounded-xl text-slate-300 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60">⭐ Chef's Special</button>
+        </div>
+
+        <!-- Spice Level Filters -->
+        <div class="flex items-center flex-wrap gap-1.5 text-xs">
+          <span class="text-slate-400 font-semibold uppercase tracking-wider text-[11px] mr-1">Spice:</span>
+          <button onclick="setSpiceFilter('All')" id="spice-All" class="spice-btn px-2.5 py-1 rounded-lg font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">All</button>
+          <button onclick="setSpiceFilter('0')" id="spice-0" class="spice-btn px-2.5 py-1 rounded-lg text-slate-300 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60">Mild (0)</button>
+          <button onclick="setSpiceFilter('1')" id="spice-1" class="spice-btn px-2.5 py-1 rounded-lg text-slate-300 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60">🌶️ Med (1)</button>
+          <button onclick="setSpiceFilter('2')" id="spice-2" class="spice-btn px-2.5 py-1 rounded-lg text-slate-300 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60">🌶️🌶️ Hot (2)</button>
+          <button onclick="setSpiceFilter('3')" id="spice-3" class="spice-btn px-2.5 py-1 rounded-lg text-slate-300 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60">🌶️🌶️🌶️ Indian Hot (3)</button>
+        </div>
+
+      </div>
+
+      <!-- Result Counter & Sort Controls -->
+      <div class="pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between text-xs gap-3">
+        <div class="text-slate-400">
+          Showing <span id="dishCountDisplay" class="font-mono font-bold text-amber-400">30</span> of <span class="font-mono font-bold text-white">30</span> authentic Indian dishes
+          <span id="activeFilterTags" class="ml-2 text-slate-500 font-medium"></span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <span class="text-slate-400">Sort By:</span>
+          <select id="sortSelect" onchange="handleSortChange(this.value)" class="bg-slate-800/80 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1 focus:outline-none focus:border-amber-400 text-xs">
+            <option value="recommended">Chef's Recommendation</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+            <option value="spice-asc">Spice: Mild First</option>
+            <option value="spice-desc">Spice: Hot First</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MENU DISHES GRID -->
+  <main class="max-w-7xl mx-auto px-4 pb-24">
+    <div id="dishGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- 30 Cards will be injected by JavaScript -->
+    </div>
+
+    <!-- Empty State if filters yield 0 results -->
+    <div id="emptyState" class="hidden text-center py-20 px-4">
+      <div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-slate-800/80 text-amber-400 text-2xl mb-4">
+        🔍
+      </div>
+      <h3 class="font-serif text-2xl font-bold text-white mb-2">No dishes match your filters</h3>
+      <p class="text-sm text-slate-400 max-w-md mx-auto mb-6">Try clearing your search terms or relaxing dietary/spice constraints to view the rest of the 30 dishes.</p>
+      <button onclick="resetAllFilters()" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider">
+        Reset All Filters
+      </button>
+    </div>
+  </main>
+
+  <!-- ITEM DETAIL POPUP MODAL -->
+  <div id="itemDetailModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl border border-amber-500/30 animate-in fade-in zoom-in-95 duration-200">
+
+      <!-- Modal Header Image -->
+      <div class="relative h-64 sm:h-72 w-full bg-slate-900 overflow-hidden">
+        <img id="modalDishImage" src="" alt="Dish Preview" class="w-full h-full object-cover">
+        <button onclick="closeDetailModal()" class="absolute top-4 right-4 h-9 w-9 rounded-full bg-slate-950/80 text-white hover:text-amber-300 flex items-center justify-center border border-white/20 transition-all">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+        <div class="absolute bottom-4 left-4 flex flex-wrap gap-2" id="modalDietaryBadges"></div>
+      </div>
+
+      <!-- Modal Content Body -->
+      <div class="p-6 sm:p-8 space-y-6">
+        <div>
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <div id="modalDishCategory" class="text-xs uppercase tracking-widest font-bold text-amber-400 mb-1"></div>
+              <h3 id="modalDishName" class="font-serif text-2xl sm:text-3xl font-bold text-white"></h3>
+              <p id="modalHindiName" class="text-sm text-amber-200/80 font-serif italic mt-0.5"></p>
+            </div>
+            <div class="text-right">
+              <div id="modalDishPrice" class="font-mono text-2xl sm:text-3xl font-black text-amber-400"></div>
+              <div id="modalSpiceLevelBadge" class="text-xs font-semibold text-slate-300 mt-1"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sensory Description -->
+        <p id="modalDishDesc" class="text-sm text-slate-300 leading-relaxed font-light"></p>
+
+        <!-- Key Ingredients -->
+        <div>
+          <h4 class="text-xs uppercase tracking-wider font-bold text-slate-400 mb-2">Authentic Ingredients</h4>
+          <div id="modalIngredientsList" class="flex flex-wrap gap-1.5 text-xs"></div>
+        </div>
+
+        <!-- Allergen Warnings -->
+        <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start space-x-2.5 text-xs">
+          <span class="text-amber-400 font-bold">⚠️</span>
+          <div>
+            <span class="font-bold text-amber-200">Allergen Notice: </span>
+            <span id="modalAllergensText" class="text-slate-300"></span>
+          </div>
+        </div>
+
+        <!-- Special Cooking Notes Input -->
+        <div class="space-y-1.5">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Special Cooking Notes / Instructions:</label>
+          <input
+            id="modalSpecialNotesInput"
+            type="text"
+            placeholder="e.g., Extra crispy, mild spice, sauce on side, no dairy..."
+            class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400"
+          />
+        </div>
+
+        <!-- Quantity & Add to Tray Action -->
+        <div class="pt-4 border-t border-slate-800 flex items-center justify-between gap-4">
+          <div class="flex items-center space-x-3 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-700">
+            <button onclick="decrementModalQty()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center">-</button>
+            <span id="modalQtyDisplay" class="font-mono text-base font-bold text-white w-6 text-center">1</span>
+            <button onclick="incrementModalQty()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center">+</button>
+          </div>
+
+          <button
+            onclick="addModalItemToTray()"
+            class="flex-1 py-3 px-6 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-sm shadow-xl shadow-amber-500/20 active:scale-95 transition-all flex items-center justify-center space-x-2"
+          >
+            <span>Add to Order Tray</span>
+            <span class="text-slate-900/60">·</span>
+            <span id="modalAddTotalDisplay" class="font-mono font-black">$0.00</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE-OUT "YOUR TRAY" CART DRAWER -->
+  <div id="trayBackdrop" onclick="toggleTrayDrawer()" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm transition-opacity"></div>
+
+  <aside id="trayDrawer" class="fixed top-0 right-0 bottom-0 w-full sm:w-[440px] z-50 bg-slate-950/95 border-l border-amber-500/20 backdrop-blur-2xl shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+
+    <!-- Drawer Header -->
+    <div class="p-5 border-b border-slate-800/80 flex items-center justify-between bg-slate-900/40">
+      <div class="flex items-center space-x-3">
+        <div class="h-9 w-9 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center font-bold">
+          🛒
+        </div>
+        <div>
+          <h3 class="font-serif font-bold text-lg text-white">Your Order Tray</h3>
+          <p class="text-xs text-slate-400" id="drawerItemCount">0 items ready</p>
+        </div>
+      </div>
+      <button onclick="toggleTrayDrawer()" class="h-8 w-8 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- Dining Mode Toggle & Table Selection -->
+    <div class="px-5 py-3 border-b border-slate-800/80 bg-slate-900/20 flex items-center justify-between text-xs">
+      <div class="flex items-center space-x-1.5 p-1 rounded-xl bg-slate-900 border border-slate-800">
+        <button onclick="setDiningMode('Dine-In')" id="modeDineInBtn" class="px-3 py-1 rounded-lg font-bold bg-amber-500 text-slate-950">🍽️ Dine-In</button>
+        <button onclick="setDiningMode('Takeaway')" id="modeTakeawayBtn" class="px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-white">🛍️ Takeaway</button>
+      </div>
+      <div class="flex items-center space-x-1 text-slate-400">
+        <span>Table:</span>
+        <input id="drawerTableInput" type="text" value="04" class="w-12 px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-center font-mono font-bold text-amber-400 focus:outline-none focus:border-amber-400" onchange="updateTableNumber(this.value)" />
+      </div>
+    </div>
+
+    <!-- Tray Items List -->
+    <div id="trayItemsContainer" class="flex-1 overflow-y-auto p-5 space-y-3.5">
+      <!-- Injected items or empty state -->
+    </div>
+
+    <!-- Drawer Footer Calculation & Checkout -->
+    <div class="p-5 border-t border-slate-800/80 bg-slate-900/60 space-y-3">
+      <div class="space-y-1.5 text-xs text-slate-300">
+        <div class="flex justify-between">
+          <span class="text-slate-400">Subtotal:</span>
+          <span id="traySubtotal" class="font-mono font-bold">$0.00</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Estimated Tax (8.5%):</span>
+          <span id="trayTax" class="font-mono font-bold">$0.00</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Eco Packaging &amp; Service Fee:</span>
+          <span id="trayFee" class="font-mono font-bold">$2.00</span>
+        </div>
+        <div class="pt-2 border-t border-slate-800 flex justify-between text-sm font-bold text-white">
+          <span class="font-serif">Total Due:</span>
+          <span id="trayTotal" class="font-mono text-base font-black text-amber-400">$0.00</span>
+        </div>
+      </div>
+
+      <button
+        id="submitOrderBtn"
+        onclick="submitOrder()"
+        class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-sm uppercase tracking-wider shadow-xl shadow-amber-500/20 active:scale-95 transition-all flex items-center justify-center space-x-2"
+      >
+        <span>Submit Order &amp; Generate QR</span>
+        <span>→</span>
+      </button>
+    </div>
+
+  </aside>
+
+  <!-- ORDER RECEIPT & QR CODE MODAL -->
+  <div id="orderSuccessModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-lg rounded-3xl p-6 sm:p-8 space-y-6 text-center border border-emerald-500/40 shadow-2xl">
+
+      <!-- Checkmark -->
+      <div class="mx-auto h-16 w-16 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center text-3xl">
+        ✓
+      </div>
+
+      <div>
+        <span class="px-3 py-1 rounded-full text-[11px] font-mono font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">Order Sent to Kitchen</span>
+        <h3 class="font-serif text-2xl sm:text-3xl font-black text-white mt-2">Order Confirmed!</h3>
+        <p class="text-xs text-slate-400 mt-1">Thank you for dining at Tandoor &amp; Spice. Your dishes are being prepared.</p>
+      </div>
+
+      <!-- QR Code Display Box (Pure Inline SVG) -->
+      <div class="p-4 rounded-2xl bg-white mx-auto inline-block shadow-lg">
+        <div id="qrCodeContainer" class="w-44 h-44 flex items-center justify-center"></div>
+      </div>
+      <p class="text-xs text-slate-400 max-w-xs mx-auto">
+        Scan this QR code at your table terminal or present it to your server to track preparation status.
+      </p>
+
+      <!-- Order Details Summary -->
+      <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 text-left space-y-2 text-xs">
+        <div class="flex justify-between pb-2 border-b border-slate-800">
+          <span class="text-slate-400">Order Reference:</span>
+          <span id="receiptOrderId" class="font-mono font-bold text-amber-400">#TS-99214</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Dining Option:</span>
+          <span id="receiptDiningMode" class="font-medium text-white">Dine-In (Table 04)</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Timestamp:</span>
+          <span id="receiptTimestamp" class="font-mono text-slate-300">Oct 23, 2026 · 12:45 PM</span>
+        </div>
+        <div class="flex justify-between pt-2 border-t border-slate-800 font-bold text-white">
+          <span>Amount Paid:</span>
+          <span id="receiptTotal" class="font-mono text-sm text-emerald-400">$0.00</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center space-x-3">
+        <button onclick="closeSuccessModal()" class="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-wider">
+          Close
+        </button>
+        <button onclick="window.print()" class="py-3 px-5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider">
+          Print Receipt
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toastNotification" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none transition-all duration-300 opacity-0 translate-y-4">
+    <div class="px-4 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs shadow-2xl flex items-center space-x-2">
+      <span id="toastIcon">✓</span>
+      <span id="toastText">Item added to your tray!</span>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT STATE & LOGIC -->
+  <script>
+    // Authentic catalog of 30 items
+    const DISHES = {dishes_json};
+    const CATEGORIES = {categories_json};
+
+    // Application Reactive State
+    let currentCategory = 'All';
+    let searchQuery = '';
+    let dietaryFilter = 'All';
+    let spiceFilter = 'All';
+    let sortMode = 'recommended';
+    let tray = [];
+    let modalDish = null;
+    let modalQty = 1;
+    let diningMode = 'Dine-In';
+    let tableNumber = '04';
+
+    // Initialize application
+    document.addEventListener('DOMContentLoaded', () => {{
+      renderDishes();
+      updateTrayUI();
+    }});
+
+    // Filter and Sort Pipeline
+    function getFilteredDishes() {{
+      return DISHES.filter(d => {{
+        // Category check
+        if (currentCategory !== 'All' && d.category !== currentCategory) return false;
+
+        // Dietary check
+        if (dietaryFilter !== 'All') {{
+          if (dietaryFilter === 'Chef') {{
+            if (!d.dietary_tags.some(t => t.toLowerCase().includes('chef'))) return false;
+          }} else {{
+            if (!d.dietary_tags.some(t => t.toLowerCase().includes(dietaryFilter.toLowerCase()))) return false;
+          }}
+        }}
+
+        // Spice check
+        if (spiceFilter !== 'All') {{
+          if (parseInt(d.spice_level) !== parseInt(spiceFilter)) return false;
+        }}
+
+        // Search Query check (name, hindi subtitle, description, ingredients, tags)
+        if (searchQuery.trim() !== '') {{
+          const q = searchQuery.toLowerCase();
+          const matchName = d.name.toLowerCase().includes(q);
+          const matchDesc = d.description.toLowerCase().includes(q);
+          const matchCat = d.category.toLowerCase().includes(q);
+          const matchIng = d.ingredients.some(i => i.toLowerCase().includes(q));
+          const matchTags = d.dietary_tags.some(t => t.toLowerCase().includes(q));
+          if (!matchName && !matchDesc && !matchCat && !matchIng && !matchTags) return false;
+        }}
+
+        return true;
+      }}).sort((a, b) => {{
+        if (sortMode === 'price-asc') return a.price - b.price;
+        if (sortMode === 'price-desc') return b.price - a.price;
+        if (sortMode === 'spice-asc') return a.spice_level - b.spice_level;
+        if (sortMode === 'spice-desc') return b.spice_level - a.spice_level;
+        return 0; // recommended preserves original authentic sequence
+      }});
+    }}
+
+    function renderDishes() {{
+      const grid = document.getElementById('dishGrid');
+      const empty = document.getElementById('emptyState');
+      const counter = document.getElementById('dishCountDisplay');
+      const filtered = getFilteredDishes();
+
+      counter.textContent = filtered.length;
+
+      if (filtered.length === 0) {{
+        grid.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }}
+
+      empty.classList.add('hidden');
+
+      grid.innerHTML = filtered.map(dish => {{
+        const spiceChilis = '🌶️'.repeat(dish.spice_level) || '🟢 Mild';
+        const spiceLabel = dish.spice_level === 0 ? 'Mild (0)' : dish.spice_level === 1 ? 'Medium (1)' : dish.spice_level === 2 ? 'Hot (2)' : 'Indian Hot (3)';
+
+        // Dietary badge chips
+        const dietChips = dish.dietary_tags.slice(0, 2).map(tag => {{
+          const isVeg = tag.toLowerCase().includes('veg');
+          const isChef = tag.toLowerCase().includes('chef');
+          const colorClass = isChef ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : isVeg ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-slate-800 text-slate-300 border-slate-700';
+          return `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${{colorClass}}">${{tag}}</span>`;
+        }}).join('');
+
+        // Key ingredients
+        const ingPreview = dish.ingredients.slice(0, 3).join(', ');
+
+        return `
+          <div class="glass-card rounded-2xl overflow-hidden flex flex-col justify-between group">
+            <!-- Image Thumbnail with fallback and overlays -->
+            <div class="relative h-48 w-full bg-slate-900 overflow-hidden cursor-pointer" onclick="openDetailModal('${{dish.id}}')">
+              <img
+                src="${{dish.image}}"
+                alt="${{dish.name}}"
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=800&q=80';"
+              />
+              <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent"></div>
+
+              <!-- Badges over image -->
+              <div class="absolute top-3 left-3 flex flex-wrap gap-1.5">
+                ${{dietChips}}
+              </div>
+
+              <div class="absolute top-3 right-3 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-950/80 border border-slate-700 text-amber-400">
+                ${{spiceChilis}}
+              </div>
+
+              <!-- Category Badge Bottom Left -->
+              <div class="absolute bottom-2 left-3 text-[10px] uppercase font-bold tracking-wider text-amber-400 font-mono">
+                ${{dish.category}}
+              </div>
+            </div>
+
+            <!-- Card Body -->
+            <div class="p-5 flex-1 flex flex-col justify-between space-y-3">
+              <div>
+                <h4 class="font-serif font-bold text-lg text-white group-hover:text-amber-300 transition-colors cursor-pointer" onclick="openDetailModal('${{dish.id}}')">
+                  ${{dish.name}}
+                </h4>
+                <p class="text-xs text-slate-300/80 line-clamp-2 mt-1 leading-relaxed">
+                  ${{dish.description}}
+                </p>
+                <div class="text-[11px] text-slate-400 mt-2">
+                  <span class="text-slate-500">Key:</span> ${{ingPreview}}...
+                </div>
+              </div>
+
+              <!-- Price & Action Buttons -->
+              <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                <div class="font-mono font-black text-xl text-amber-400">
+                  $${{dish.price.toFixed(2)}}
+                </div>
+                <div class="flex items-center space-x-2">
+                  <button
+                    onclick="openDetailModal('${{dish.id}}')"
+                    class="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700 transition-all"
+                  >
+                    Quick View
+                  </button>
+                  <button
+                    onclick="quickAddToCart('${{dish.id}}')"
+                    class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/10 active:scale-95 transition-all flex items-center space-x-1"
+                  >
+                    <span>+ Add</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }}).join('');
+    }}
+
+    // Navigation & Filtering handlers
+    function selectCategory(categoryName) {{
+      currentCategory = categoryName;
+      document.querySelectorAll('.category-tab').forEach(tab => {{
+        tab.className = "category-tab whitespace-nowrap px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 transition-all flex items-center space-x-1.5";
+      }});
+
+      const tabId = categoryName === 'All' ? 'cat-tab-All' :
+                    categoryName.includes('Appetizers') ? 'cat-tab-Appetizers' :
+                    categoryName.includes('Tandoor') ? 'cat-tab-Tandoor' :
+                    categoryName.includes('Curries') ? 'cat-tab-Curries' :
+                    categoryName.includes('Biryanis') ? 'cat-tab-Biryanis' :
+                    categoryName.includes('Breads') ? 'cat-tab-Breads' : 'cat-tab-Desserts';
+
+      const activeEl = document.getElementById(tabId);
+      if (activeEl) {{
+        activeEl.className = "category-tab whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20";
+      }}
+      renderDishes();
+    }}
+
+    function handleSearch(val) {{
+      searchQuery = val;
+      const clearBtn = document.getElementById('clearSearchBtn');
+      if (val.trim() !== '') {{
+        clearBtn.classList.remove('hidden');
+      }} else {{
+        clearBtn.classList.add('hidden');
+      }}
+      // Sync mobile and desktop inputs
+      const desk = document.getElementById('desktopSearchInput');
+      const mob = document.getElementById('mobileSearchInput');
+      if (desk && desk.value !== val) desk.value = val;
+      if (mob && mob.value !== val) mob.value = val;
+
+      renderDishes();
+    }}
+
+    function clearSearch() {{
+      handleSearch('');
+      const desk = document.getElementById('desktopSearchInput');
+      const mob = document.getElementById('mobileSearchInput');
+      if (desk) desk.value = '';
+      if (mob) mob.value = '';
+    }}
+
+    function setDietaryFilter(tag) {{
+      dietaryFilter = tag;
+      document.querySelectorAll('.diet-btn').forEach(btn => {{
+        btn.className = "diet-btn px-3 py-1.5 rounded-xl text-slate-300 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60";
+      }});
+      const el = document.getElementById('diet-' + (tag === 'All' ? 'All' : tag === 'Vegan-friendly' ? 'Vegan' : tag === 'Gluten-Free' ? 'GlutenFree' : tag));
+      if (el) el.className = "diet-btn px-3 py-1.5 rounded-xl font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40";
+      renderDishes();
+    }}
+
+    function setSpiceFilter(level) {{
+      spiceFilter = level;
+      document.querySelectorAll('.spice-btn').forEach(btn => {{
+        btn.className = "spice-btn px-2.5 py-1 rounded-lg text-slate-300 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60";
+      }});
+      const el = document.getElementById('spice-' + level);
+      if (el) el.className = "spice-btn px-2.5 py-1 rounded-lg font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40";
+      renderDishes();
+    }}
+
+    function handleSortChange(val) {{
+      sortMode = val;
+      renderDishes();
+    }}
+
+    function resetAllFilters() {{
+      currentCategory = 'All';
+      searchQuery = '';
+      dietaryFilter = 'All';
+      spiceFilter = 'All';
+      sortMode = 'recommended';
+      clearSearch();
+      selectCategory('All');
+      setDietaryFilter('All');
+      setSpiceFilter('All');
+      document.getElementById('sortSelect').value = 'recommended';
+      renderDishes();
+    }}
+
+    // Detail Modal Actions
+    function openDetailModal(dishId) {{
+      const dish = DISHES.find(d => d.id === dishId);
+      if (!dish) return;
+      modalDish = dish;
+      modalQty = 1;
+
+      document.getElementById('modalDishImage').src = dish.image;
+      document.getElementById('modalDishCategory').textContent = dish.category;
+      document.getElementById('modalDishName').textContent = dish.name;
+      document.getElementById('modalHindiName').textContent = dish.name.includes('(') ? dish.name.split('(')[1].replace(')', '') : '';
+      document.getElementById('modalDishPrice').textContent = '$' + dish.price.toFixed(2);
+      document.getElementById('modalDishDesc').textContent = dish.description;
+      document.getElementById('modalAllergensText').textContent = dish.allergens.join(', ');
+      document.getElementById('modalSpecialNotesInput').value = '';
+      document.getElementById('modalQtyDisplay').textContent = '1';
+      document.getElementById('modalAddTotalDisplay').textContent = '$' + dish.price.toFixed(2);
+
+      // Spice badge
+      const spiceGauge = '🌶️'.repeat(dish.spice_level) || '🟢 Mild (0)';
+      document.getElementById('modalSpiceLevelBadge').textContent = 'Spice: ' + spiceGauge;
+
+      // Dietary Badges
+      const badgesContainer = document.getElementById('modalDietaryBadges');
+      badgesContainer.innerHTML = dish.dietary_tags.map(t =>
+        `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-950/80 text-amber-300 border border-amber-500/30">${{t}}</span>`
+      ).join('');
+
+      // Ingredients pills
+      const ingContainer = document.getElementById('modalIngredientsList');
+      ingContainer.innerHTML = dish.ingredients.map(ing =>
+        `<span class="px-2 py-0.5 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300">${{ing}}</span>`
+      ).join('');
+
+      document.getElementById('itemDetailModal').classList.remove('hidden');
+    }}
+
+    function closeDetailModal() {{
+      document.getElementById('itemDetailModal').classList.add('hidden');
+      modalDish = null;
+    }}
+
+    function incrementModalQty() {{
+      modalQty += 1;
+      document.getElementById('modalQtyDisplay').textContent = modalQty;
+      if (modalDish) {{
+        document.getElementById('modalAddTotalDisplay').textContent = '$' + (modalDish.price * modalQty).toFixed(2);
+      }}
+    }}
+
+    function decrementModalQty() {{
+      if (modalQty > 1) {{
+        modalQty -= 1;
+        document.getElementById('modalQtyDisplay').textContent = modalQty;
+        if (modalDish) {{
+          document.getElementById('modalAddTotalDisplay').textContent = '$' + (modalDish.price * modalQty).toFixed(2);
+        }}
+      }}
+    }}
+
+    function addModalItemToTray() {{
+      if (!modalDish) return;
+      const notes = document.getElementById('modalSpecialNotesInput').value.trim();
+      addToTray(modalDish, modalQty, notes);
+      closeDetailModal();
+      showToast(`Added ${{modalQty}}x ${{modalDish.name.split('(')[0].trim()}} to your tray!`);
+    }}
+
+    function quickAddToCart(dishId) {{
+      const dish = DISHES.find(d => d.id === dishId);
+      if (!dish) return;
+      addToTray(dish, 1, '');
+      showToast(`Added ${{dish.name.split('(')[0].trim()}} to your tray!`);
+    }}
+
+    // Cart / Tray Management
+    function addToTray(dish, qty, notes) {{
+      const existing = tray.find(i => i.dishId === dish.id && i.notes === notes);
+      if (existing) {{
+        existing.qty += qty;
+      }} else {{
+        tray.push({{
+          dishId: dish.id,
+          name: dish.name,
+          price: dish.price,
+          qty: qty,
+          notes: notes,
+          image: dish.image,
+          category: dish.category,
+        }});
+      }}
+      updateTrayUI();
+    }}
+
+    function updateTrayItemQty(idx, delta) {{
+      if (tray[idx]) {{
+        tray[idx].qty += delta;
+        if (tray[idx].qty <= 0) {{
+          tray.splice(idx, 1);
+        }}
+        updateTrayUI();
+      }}
+    }}
+
+    function removeTrayItem(idx) {{
+      if (tray[idx]) {{
+        tray.splice(idx, 1);
+        updateTrayUI();
+      }}
+    }}
+
+    function updateTrayUI() {{
+      const countEl = document.getElementById('headerTrayCount');
+      const totalEl = document.getElementById('headerTrayTotal');
+      const drawerCountEl = document.getElementById('drawerItemCount');
+      const container = document.getElementById('trayItemsContainer');
+      const subtotalEl = document.getElementById('traySubtotal');
+      const taxEl = document.getElementById('trayTax');
+      const grandTotalEl = document.getElementById('trayTotal');
+
+      const totalItems = tray.reduce((sum, item) => sum + item.qty, 0);
+      const subtotal = tray.reduce((sum, item) => sum + (item.price * item.qty), 0);
+      const tax = subtotal * 0.085;
+      const fee = subtotal > 0 ? 2.00 : 0.00;
+      const grandTotal = subtotal + tax + fee;
+
+      countEl.textContent = totalItems;
+      totalEl.textContent = '$' + subtotal.toFixed(2);
+      drawerCountEl.textContent = `${{totalItems}} items ready in tray`;
+
+      subtotalEl.textContent = '$' + subtotal.toFixed(2);
+      taxEl.textContent = '$' + tax.toFixed(2);
+      grandTotalEl.textContent = '$' + grandTotal.toFixed(2);
+
+      if (tray.length === 0) {{
+        container.innerHTML = `
+          <div class="text-center py-16 px-4">
+            <div class="text-4xl mb-3 text-slate-600">🍲</div>
+            <p class="font-serif text-base font-bold text-slate-300">Your Tray is Empty</p>
+            <p class="text-xs text-slate-400 mt-1 max-w-xs mx-auto">Explore our 30 authentic Indian specialties and add your favorites.</p>
+          </div>
+        `;
+        return;
+      }}
+
+      container.innerHTML = tray.map((item, idx) => `
+        <div class="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 flex items-start space-x-3 group">
+          <img src="${{item.image}}" alt="${{item.name}}" class="w-16 h-16 rounded-xl object-cover bg-slate-800 flex-shrink-0" />
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between">
+              <h5 class="font-bold text-xs text-white truncate">${{item.name}}</h5>
+              <button onclick="removeTrayItem(${{idx}})" class="text-slate-500 hover:text-red-400 text-xs ml-2">✕</button>
+            </div>
+            <div class="font-mono text-xs font-bold text-amber-400 mt-0.5">$${{item.price.toFixed(2)}} each</div>
+            ${{item.notes ? `<div class="text-[11px] text-amber-300/80 bg-amber-500/10 px-2 py-0.5 rounded mt-1.5 italic">"${{item.notes}}"</div>` : ''}}
+
+            <div class="flex items-center justify-between mt-2.5 pt-2 border-t border-slate-800">
+              <div class="flex items-center space-x-2 bg-slate-950 px-2 py-0.5 rounded-lg border border-slate-700/60 text-xs">
+                <button onclick="updateTrayItemQty(${{idx}}, -1)" class="w-5 text-slate-400 hover:text-white font-bold">-</button>
+                <span class="font-mono font-bold text-white px-1">${{item.qty}}</span>
+                <button onclick="updateTrayItemQty(${{idx}}, 1)" class="w-5 text-slate-400 hover:text-white font-bold">+</button>
+              </div>
+              <div class="font-mono font-black text-xs text-white">
+                $${{(item.price * item.qty).toFixed(2)}}
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }}
+
+    function toggleTrayDrawer() {{
+      const drawer = document.getElementById('trayDrawer');
+      const backdrop = document.getElementById('trayBackdrop');
+      const isClosed = drawer.classList.contains('translate-x-full');
+
+      if (isClosed) {{
+        drawer.classList.remove('translate-x-full');
+        backdrop.classList.remove('hidden');
+      }} else {{
+        drawer.classList.add('translate-x-full');
+        backdrop.classList.add('hidden');
+      }}
+    }}
+
+    function setDiningMode(mode) {{
+      diningMode = mode;
+      document.getElementById('headerDiningModeText').textContent = mode;
+      const dineInBtn = document.getElementById('modeDineInBtn');
+      const takeawayBtn = document.getElementById('modeTakeawayBtn');
+      if (mode === 'Dine-In') {{
+        dineInBtn.className = "px-3 py-1 rounded-lg font-bold bg-amber-500 text-slate-950";
+        takeawayBtn.className = "px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-white";
+      }} else {{
+        dineInBtn.className = "px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-white";
+        takeawayBtn.className = "px-3 py-1 rounded-lg font-bold bg-amber-500 text-slate-950";
+      }}
+    }}
+
+    function updateTableNumber(val) {{
+      tableNumber = val || '04';
+      document.getElementById('headerTableText').textContent = 'Table ' + tableNumber;
+    }}
+
+    // SVG QR Code Generator (21x21 matrix render)
+    function generatePureSvgQr(orderText) {{
+      // Deterministic decorative QR code matrix
+      const matrix = [
+        [1,1,1,1,1,1,1,0,1,0,1,0,1,0,1,1,1,1,1,1,1],
+        [1,0,0,0,0,0,1,0,0,1,0,1,0,0,1,0,0,0,0,0,1],
+        [1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,0,1,1,1,0,1],
+        [1,0,1,1,1,0,1,0,0,1,0,1,1,0,1,0,1,1,1,0,1],
+        [1,0,1,1,1,0,1,0,1,0,1,0,0,0,1,0,1,1,1,0,1],
+        [1,0,0,0,0,0,1,0,1,1,0,1,1,0,1,0,0,0,0,0,1],
+        [1,1,1,1,1,1,1,0,1,0,1,0,1,0,1,1,1,1,1,1,1],
+        [0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0],
+        [1,1,0,1,0,1,1,1,0,0,1,0,1,1,1,0,1,0,1,1,0],
+        [0,1,1,0,1,0,0,1,1,1,0,1,0,0,1,1,0,1,0,1,1],
+        [1,0,1,1,0,1,0,0,1,0,1,0,1,1,0,1,1,0,1,0,1],
+        [0,1,0,1,1,0,1,1,0,1,1,1,0,1,0,0,1,1,0,1,0],
+        [1,1,1,0,0,1,0,1,1,0,0,1,1,0,1,1,0,0,1,1,1],
+        [0,0,0,0,0,0,0,0,1,0,1,0,0,1,0,0,1,1,0,1,0],
+        [1,1,1,1,1,1,1,0,1,1,0,1,1,0,1,0,1,0,1,0,1],
+        [1,0,0,0,0,0,1,0,0,1,1,0,0,1,0,1,0,1,1,1,0],
+        [1,0,1,1,1,0,1,0,1,0,1,1,1,0,1,1,0,0,1,0,1],
+        [1,0,1,1,1,0,1,0,0,1,0,0,1,1,0,1,1,0,1,1,0],
+        [1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,0,1,1,0,0,1],
+        [1,0,0,0,0,0,1,0,0,0,1,1,0,1,0,0,1,0,1,1,0],
+        [1,1,1,1,1,1,1,0,1,0,1,0,1,1,1,0,1,0,1,0,1],
+      ];
+
+      const size = 160;
+      const cellSize = size / 21;
+      let rects = '';
+      for (let r = 0; r < 21; r++) {{
+        for (let c = 0; c < 21; c++) {{
+          if (matrix[r][c] === 1) {{
+            rects += `<rect x="${{c * cellSize}}" y="${{r * cellSize}}" width="${{cellSize + 0.5}}" height="${{cellSize + 0.5}}" fill="#090a0f" />`;
+          }}
+        }}
+      }}
+      return `<svg width="${{size}}" height="${{size}}" viewBox="0 0 ${{size}} ${{size}}">${{rects}}</svg>`;
+    }}
+
+    function submitOrder() {{
+      if (tray.length === 0) {{
+        showToast('Your tray is empty! Please add dishes before submitting.');
+        return;
+      }}
+
+      const orderNum = 'TS-' + Math.floor(10000 + Math.random() * 90000);
+      const subtotal = tray.reduce((sum, item) => sum + (item.price * item.qty), 0);
+      const grandTotal = subtotal + (subtotal * 0.085) + 2.00;
+
+      document.getElementById('receiptOrderId').textContent = '#' + orderNum;
+      document.getElementById('receiptDiningMode').textContent = `${{diningMode}} (${{diningMode === 'Dine-In' ? 'Table ' + tableNumber : 'Takeaway Counter'}})`
+      document.getElementById('receiptTotal').textContent = '$' + grandTotal.toFixed(2);
+      document.getElementById('receiptTimestamp').textContent = new Date().toLocaleDateString('en-US', {{ month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }});
+
+      const qrSvg = generatePureSvgQr(`order:${{orderNum}}|mode:${{diningMode}}|total:${{grandTotal.toFixed(2)}}`);
+      document.getElementById('qrCodeContainer').innerHTML = qrSvg;
+
+      // Close tray drawer and open order success modal
+      toggleTrayDrawer();
+      document.getElementById('orderSuccessModal').classList.remove('hidden');
+
+      // Clear tray
+      tray = [];
+      updateTrayUI();
+    }}
+
+    function closeSuccessModal() {{
+      document.getElementById('orderSuccessModal').classList.add('hidden');
+    }}
+
+    function showToast(msg) {{
+      const toast = document.getElementById('toastNotification');
+      const text = document.getElementById('toastText');
+      text.textContent = msg;
+      toast.classList.remove('opacity-0', 'translate-y-4');
+      toast.classList.add('opacity-100', 'translate-y-0');
+      setTimeout(() => {{
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-4');
+      }}, 3000);
+    }}
+  </script>
+</body>
+</html>"""
+    return html_code
+
+
 def generate_marvelous_frontend_spa(objective: str, criteria: list[str] | None = None) -> str:
     """Synthesize a complete, rich, production-grade Single-Page Application (SPA).
 
@@ -1010,6 +2649,8 @@ def generate_marvelous_frontend_spa(objective: str, criteria: list[str] | None =
     and full-output-enforcement (zero placeholders, zero stubs, complete multi-view CRUD).
     """
     domain = _extract_domain_profile(objective)
+    if domain.get("is_restaurant"):
+        return _generate_restaurant_menu_spa(objective, criteria, domain)
     criteria_list = criteria or [
         f"Given {domain['entity_singular']} parameters, When created, Then persist and reflect in dashboard metrics.",
         "Given active records, When filtered by keyword or category, Then update view seamlessly without latency.",

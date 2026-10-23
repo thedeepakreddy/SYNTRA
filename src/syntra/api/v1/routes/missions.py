@@ -3,6 +3,7 @@
 import base64
 import hashlib
 import json
+import re
 from decimal import Decimal
 from typing import Annotated, Any
 from uuid import UUID, uuid4
@@ -175,6 +176,27 @@ async def get_mission(
         created_at=mission.created_at,
         updated_at=mission.updated_at,
     )
+
+
+def _is_complete_html(code: str | None) -> bool:
+    """Validate that generated HTML is complete, well-formed, and untruncated."""
+    if not code or not isinstance(code, str):
+        return False
+    trimmed = code.strip()
+    if len(trimmed) < 1500:
+        return False
+    lower = trimmed.lower()
+    if not (lower.startswith("<!doctype html") or lower.startswith("<html")):
+        return False
+    if not re.search(r"</html>\s*$", lower):
+        return False
+    if "</body>" not in lower:
+        return False
+    if lower.count("<script") != lower.count("</script>"):
+        return False
+    if lower.count("<style") != lower.count("</style>"):
+        return False
+    return True
 
 
 async def _execute_mission_stages(mission_id: UUID, org_id: UUID) -> None:
@@ -424,13 +446,18 @@ async def _execute_mission_stages(mission_id: UUID, org_id: UUID) -> None:
                                 raw_code = raw_code.split("```html", 1)[1].split("```", 1)[0].strip()
                             elif "```" in raw_code:
                                 raw_code = raw_code.split("```", 1)[1].split("```", 1)[0].strip()
-                            if "<!DOCTYPE html>" in raw_code or "<html" in raw_code:
+                            if _is_complete_html(raw_code):
                                 app_html = raw_code
                                 logger.info(
                                     "Live model generated genuine application (%d bytes) for mission %s",
                                     len(app_html),
                                     mission_id,
                                 )
+                            else:
+                                logger.warning(
+                                    "Live model HTML failed completeness verification (truncated or unbalanced). Using deterministic fullstack generator."
+                                )
+                                app_html = None
                             prompt_tokens = (
                                 getattr(resp.usage, "prompt_tokens", 450) if getattr(resp, "usage", None) else 450
                             )
@@ -1176,7 +1203,16 @@ def _load_or_generate_backend_files(mission_id: UUID, objective: str) -> dict[st
             except Exception:
                 pass
 
-    if not files:
+    is_restaurant = bool(
+        re.search(
+            r"\b(menu|restaurant|food|dining|dishes|dish|cuisine|tandoor|chaat|biryani|curry|cafe|bakery|eatery|culinary)\b",
+            objective,
+            re.IGNORECASE,
+        )
+    )
+    is_mismatched = is_restaurant and "models.py" in files and "NoteModel" in files["models.py"]
+
+    if not files or is_mismatched:
         files = generate_backend_package(objective, [])
         try:
             backend_dir.mkdir(parents=True, exist_ok=True)
@@ -1203,11 +1239,11 @@ async def get_mission_app(
     mission = await uow.missions.get_by_id_for_org(mission_id, user.org_id)
     backend_files = _load_or_generate_backend_files(mission_id, mission.objective)
 
-    # 1. Check if on-disk generated file exists
+    # 1. Check if on-disk generated file exists and is complete
     app_file = Path("frontend/public/generated_apps") / str(mission_id) / "index.html"
     if app_file.exists():
         html_content = app_file.read_text(encoding="utf-8")
-        if len(html_content) > 5000:
+        if _is_complete_html(html_content):
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
                 content={
@@ -1219,14 +1255,14 @@ async def get_mission_app(
                 },
             )
 
-    # 2. Check artifacts in persistence for UNIFIED_DIFF containing HTML
+    # 2. Check artifacts in persistence for UNIFIED_DIFF containing complete HTML
     rows, _, _ = await uow.artifacts.list_for_mission(mission_id, user.org_id, limit=20)
     for art, ver in rows:
         if art.type == ArtifactType.UNIFIED_DIFF and ver and ver.storage_path:
             if ver.storage_path.startswith("inline:"):
                 b64 = ver.storage_path.split("inline:", 1)[1]
                 content = base64.b64decode(b64).decode("utf-8")
-                if "<!DOCTYPE html>" in content or "<html" in content:
+                if _is_complete_html(content):
                     # Write to public disk for web serving
                     try:
                         app_file.parent.mkdir(parents=True, exist_ok=True)
@@ -1245,9 +1281,9 @@ async def get_mission_app(
                     )
 
     # 3. On-demand synthesis tailored strictly to this mission's objective
-    from syntra.agents.app_synthesizer import synthesize_application
+    from syntra.agents.fullstack_generator import generate_marvelous_frontend_spa
 
-    fresh_html = synthesize_application(mission.objective, [])
+    fresh_html = generate_marvelous_frontend_spa(mission.objective, [])
     try:
         app_file.parent.mkdir(parents=True, exist_ok=True)
         app_file.write_text(fresh_html, encoding="utf-8")

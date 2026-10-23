@@ -1,52 +1,62 @@
-"""Domain Business Service Layer for System.
+"""Domain Business Service Layer for MenuItem.
 
 Encapsulates all database operations, filters, validations, and statistical aggregations.
 """
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from typing import Sequence
 from sqlalchemy import delete, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .models import SystemModel
-from .schemas import SystemCreate, SystemUpdate, FilterParams
+pkg_dir = str(Path(__file__).resolve().parent)
+if pkg_dir not in sys.path:
+    sys.path.insert(0, pkg_dir)
+
+try:
+    from models import MenuItemModel
+    from schemas import MenuItemCreate, MenuItemUpdate, FilterParams
+except ImportError:
+    from .models import MenuItemModel
+    from .schemas import MenuItemCreate, MenuItemUpdate, FilterParams
 
 
-class SystemService:
+class MenuItemService:
     """Core domain business logic service."""
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def list_items(self, filters: FilterParams) -> Sequence[SystemModel]:
-        stmt = select(SystemModel)
+    async def list_items(self, filters: FilterParams) -> Sequence[MenuItemModel]:
+        stmt = select(MenuItemModel)
         if filters.category:
-            stmt = stmt.where(SystemModel.category == filters.category)
+            stmt = stmt.where(MenuItemModel.category == filters.category)
         if filters.status:
-            stmt = stmt.where(SystemModel.status == filters.status)
+            stmt = stmt.where(MenuItemModel.status == filters.status)
         if filters.priority:
-            stmt = stmt.where(SystemModel.priority == filters.priority)
+            stmt = stmt.where(MenuItemModel.priority == filters.priority)
         if filters.q:
             kw = f"%{filters.q}%"
             stmt = stmt.where(
                 or_(
-                    SystemModel.title.ilike(kw),
-                    SystemModel.description.ilike(kw),
-                    SystemModel.tags_csv.ilike(kw),
+                    MenuItemModel.title.ilike(kw),
+                    MenuItemModel.description.ilike(kw),
+                    MenuItemModel.tags_csv.ilike(kw),
                 )
             )
-        stmt = stmt.order_by(desc(SystemModel.created_at)).offset(filters.offset).limit(filters.limit)
+        stmt = stmt.order_by(desc(MenuItemModel.created_at)).offset(filters.offset).limit(filters.limit)
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
-    async def get_by_id(self, item_id: str) -> SystemModel | None:
-        stmt = select(SystemModel).where(SystemModel.id == item_id)
+    async def get_by_id(self, item_id: str) -> MenuItemModel | None:
+        stmt = select(MenuItemModel).where(MenuItemModel.id == item_id)
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def create_item(self, payload: SystemCreate) -> SystemModel:
-        record = SystemModel(
+    async def create_item(self, payload: MenuItemCreate) -> MenuItemModel:
+        record = MenuItemModel(
             title=payload.title,
             category=payload.category,
             status=payload.status,
@@ -58,7 +68,7 @@ class SystemService:
         await self.session.flush()
         return record
 
-    async def update_item(self, item_id: str, payload: SystemUpdate) -> SystemModel | None:
+    async def update_item(self, item_id: str, payload: MenuItemUpdate) -> MenuItemModel | None:
         item = await self.get_by_id(item_id)
         if not item:
             return None
@@ -86,7 +96,7 @@ class SystemService:
         return True
 
     async def get_stats(self) -> dict:
-        stmt = select(SystemModel)
+        stmt = select(MenuItemModel)
         result = await self.session.execute(stmt)
         items = result.scalars().all()
 
