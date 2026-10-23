@@ -152,11 +152,15 @@ async def submit_approval_decision(
     )
 
     # 5. Synchronize bound Mission lifecycle state
-    from datetime import datetime, UTC
+    from datetime import UTC, datetime
+
     from syntra.domain.entities import MissionState
 
     if resolved.decision == ApprovalDecision.APPROVED:
-        if resolved.action_type in ["DELIVERY_APPROVAL", "deployment"] or mission.state == MissionState.AWAITING_APPROVAL:
+        if (
+            resolved.action_type in ["DELIVERY_APPROVAL", "deployment"]
+            or mission.state == MissionState.AWAITING_APPROVAL
+        ):
             mission.state = MissionState.COMPLETED
         else:
             mission.state = MissionState.READY

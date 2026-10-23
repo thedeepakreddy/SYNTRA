@@ -384,13 +384,12 @@ async def _execute_mission_stages(mission_id: UUID, org_id: UUID) -> None:
                             f"You are the Lead Full-Stack & Frontend Engineer in SYNTRA.\n"
                             f"Build the COMPLETE, working, interactive web application tailored EXACTLY to this mission:\n"
                             f"Objective: {mission.objective}\n"
-                            f"PRD Acceptance Criteria:\n"
-                            + "\n".join(f"- {c}" for c in prd_criteria) + "\n\n"
-                            f"Requirements:\n"
-                            f"1. Produce complete, working, production-grade, self-contained HTML5/CSS/JavaScript single-page application code.\n"
-                            f"2. Ensure all UI components, buttons, inputs, business logic, calculations, animations, and interactivity are 100% implemented.\n"
-                            f"3. Do NOT default to a calculator or generic stub. Build the EXACT interface and functionality requested in the objective.\n"
-                            f"4. Return ONLY the complete HTML5 document starting with <!DOCTYPE html>."
+                            f"PRD Acceptance Criteria:\n" + "\n".join(f"- {c}" for c in prd_criteria) + "\n\n"
+                            "Requirements:\n"
+                            "1. Produce complete, working, production-grade, self-contained HTML5/CSS/JavaScript single-page application code.\n"
+                            "2. Ensure all UI components, buttons, inputs, business logic, calculations, animations, and interactivity are 100% implemented.\n"
+                            "3. Do NOT default to a calculator or generic stub. Build the EXACT interface and functionality requested in the objective.\n"
+                            "4. Return ONLY the complete HTML5 document starting with <!DOCTYPE html>."
                         )
                         try:
                             req = ModelRequest(
@@ -406,7 +405,11 @@ async def _execute_mission_stages(mission_id: UUID, org_id: UUID) -> None:
                                 raw_code = raw_code.split("```", 1)[1].split("```", 1)[0].strip()
                             if "<!DOCTYPE html>" in raw_code or "<html" in raw_code:
                                 app_html = raw_code
-                                logger.info("Live model generated genuine application (%d bytes) for mission %s", len(app_html), mission_id)
+                                logger.info(
+                                    "Live model generated genuine application (%d bytes) for mission %s",
+                                    len(app_html),
+                                    mission_id,
+                                )
                             prompt_tokens = (
                                 getattr(resp.usage, "prompt_tokens", 450) if getattr(resp, "usage", None) else 450
                             )
@@ -414,19 +417,25 @@ async def _execute_mission_stages(mission_id: UUID, org_id: UUID) -> None:
                                 getattr(resp.usage, "completion_tokens", 850) if getattr(resp, "usage", None) else 850
                             )
                         except Exception as llm_err:
-                            logger.warning("LLM generation degraded for app build (%s). Activating synthesizer fallback.", llm_err)
+                            logger.warning(
+                                "LLM generation degraded for app build (%s). Activating synthesizer fallback.", llm_err
+                            )
                             app_html = None
 
                     if not app_html:
                         from syntra.agents.app_synthesizer import synthesize_application
+
                         app_html = synthesize_application(mission.objective, prd_criteria)
-                        logger.info("Synthesizer generated application (%d bytes) for mission %s", len(app_html), mission_id)
+                        logger.info(
+                            "Synthesizer generated application (%d bytes) for mission %s", len(app_html), mission_id
+                        )
                         prompt_tokens = 400
                         comp_tokens = 600
 
                     # Persist the built application file to disk for instant serving
                     try:
                         from pathlib import Path
+
                         apps_dir = Path("frontend/public/generated_apps") / str(mission_id)
                         apps_dir.mkdir(parents=True, exist_ok=True)
                         (apps_dir / "index.html").write_text(app_html, encoding="utf-8")
@@ -1055,8 +1064,9 @@ async def get_mission_app(
     uow: Annotated[SqlAlchemyUnitOfWork, Depends(get_uow)],
 ) -> JSONResponse:
     """Retrieve the synthesized application HTML and web launch URL for a mission."""
-    from pathlib import Path
     import base64
+    from pathlib import Path
+
     from syntra.domain.entities import ArtifactType
 
     # Verify mission access
@@ -1102,6 +1112,7 @@ async def get_mission_app(
 
     # 3. On-demand synthesis tailored strictly to this mission's objective
     from syntra.agents.app_synthesizer import synthesize_application
+
     fresh_html = synthesize_application(mission.objective, [])
     try:
         app_file.parent.mkdir(parents=True, exist_ok=True)

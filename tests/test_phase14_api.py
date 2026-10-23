@@ -337,7 +337,8 @@ async def test_audit_list_endpoint(p14_client):
 @pytest.mark.asyncio
 async def test_human_approval_resolution_and_completion(p14_client):
     """Verify POST /v1/approvals/{id}/respond resolves delivery gate and transitions mission to COMPLETED."""
-    from datetime import datetime, timedelta, UTC
+    from datetime import UTC, datetime, timedelta
+
     from syntra.api.app import app
     from syntra.core.config import get_settings
     from syntra.domain.entities import MissionState
@@ -397,6 +398,7 @@ async def test_human_approval_resolution_and_completion(p14_client):
 async def test_mission_artifacts_content_retrieval(p14_client):
     """Verify GET /v1/missions/{id}/artifacts decodes inline base64 content and provides clean filenames."""
     import base64
+
     from syntra.domain.entities import ArtifactType
 
     client = p14_client["client"]
@@ -439,6 +441,7 @@ async def test_mission_artifacts_content_retrieval(p14_client):
 async def test_mission_app_endpoint(p14_client):
     """Verify GET /v1/missions/{id}/app returns synthesized application HTML and launch URL."""
     import base64
+
     from syntra.domain.entities import ArtifactType
 
     client = p14_client["client"]
@@ -473,5 +476,3 @@ async def test_mission_app_endpoint(p14_client):
     assert data["mission_id"] == str(mission_id)
     assert "<!DOCTYPE html>" in data["html"]
     assert "url" in data
-
-

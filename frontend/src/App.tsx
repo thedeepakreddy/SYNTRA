@@ -111,7 +111,13 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-slate-950 text-slate-100 font-sans">
+    <div className="relative flex h-screen w-full overflow-hidden bg-[#020408] text-slate-100 font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
+      {/* Multilayered Cyberpunk + Liquid Glass Atmosphere */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_900px_at_15%_-10%,rgba(0,240,255,0.12),transparent_60%)] z-0" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_700px_at_85%_20%,rgba(0,255,157,0.07),transparent_60%)] z-0" />
+      <div className="pointer-events-none absolute inset-0 bg-cyber-grid opacity-50 z-0" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(0,240,255,0.015)_1px,transparent_1px)] bg-[size:100%_4px] opacity-40 z-0" />
+
       {/* 13-destination Persistent Navigation */}
       <Navigation
         activeRoute={activeRoute}
@@ -122,7 +128,7 @@ export const App: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="relative flex flex-1 flex-col overflow-hidden z-10">
         {/* TopBar with Role Switcher & System Indicators */}
         <TopBar
           currentRouteTitle={getRouteTitle(activeRoute)}
@@ -133,30 +139,32 @@ export const App: React.FC = () => {
           isRefreshing={isRefreshing}
         />
 
-        {/* Dynamic Page Container */}
+        {/* Dynamic Page Container with subtle inner padding and scroll */}
         <main
-          className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-slate-800"
+          className="flex-1 overflow-y-auto px-6 py-6 scrollbar-thin scrollbar-thumb-white/10"
           id="main-content"
           role="main"
         >
-          {activeRoute === 'overview' && <OverviewPage onNavigate={handleRouteChange} />}
-          {activeRoute === 'projects' && <ProjectsPage />}
-          {activeRoute === 'missions' && <MissionsPage />}
-          {activeRoute === 'agents' && <AgentsPage />}
-          {activeRoute === 'approvals' && <ApprovalsPage />}
-          {activeRoute === 'model-routing' && <ModelRoutingPage />}
-          {activeRoute === 'usage-budgets' && <UsageBudgetsPage />}
-          {activeRoute === 'runs-logs' && <RunsLogsPage />}
-          {activeRoute === 'artifacts' && <ArtifactsPage />}
-          {activeRoute === 'benchmarks' && <BenchmarksPage />}
-          {activeRoute === 'audit-history' && <AuditHistoryPage />}
-          {activeRoute === 'system-health' && <SystemHealthPage />}
-          {activeRoute === 'settings' && (
-            <SettingsPage
-              userContext={userContext}
-              onUserContextChange={(ctx) => setUserContext(ctx)}
-            />
-          )}
+          <div className="max-w-7xl mx-auto space-y-6">
+            {activeRoute === 'overview' && <OverviewPage onNavigate={handleRouteChange} />}
+            {activeRoute === 'projects' && <ProjectsPage />}
+            {activeRoute === 'missions' && <MissionsPage />}
+            {activeRoute === 'agents' && <AgentsPage />}
+            {activeRoute === 'approvals' && <ApprovalsPage />}
+            {activeRoute === 'model-routing' && <ModelRoutingPage />}
+            {activeRoute === 'usage-budgets' && <UsageBudgetsPage />}
+            {activeRoute === 'runs-logs' && <RunsLogsPage />}
+            {activeRoute === 'artifacts' && <ArtifactsPage />}
+            {activeRoute === 'benchmarks' && <BenchmarksPage />}
+            {activeRoute === 'audit-history' && <AuditHistoryPage />}
+            {activeRoute === 'system-health' && <SystemHealthPage />}
+            {activeRoute === 'settings' && (
+              <SettingsPage
+                userContext={userContext}
+                onUserContextChange={(ctx) => setUserContext(ctx)}
+              />
+            )}
+          </div>
         </main>
       </div>
     </div>

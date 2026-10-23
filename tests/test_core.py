@@ -13,7 +13,8 @@ from syntra.core import (
 )
 
 
-def test_settings_defaults():
+def test_settings_defaults(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "")
     reset_settings()
     settings = get_settings()
     assert settings.default_model == "gemini-2.5-flash"

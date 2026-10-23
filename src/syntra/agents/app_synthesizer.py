@@ -5,7 +5,6 @@ tailored to mission objectives and Given-When-Then PRD acceptance criteria.
 """
 
 import html
-import re
 
 
 def synthesize_application(objective: str, criteria: list[str] | None = None) -> str:
@@ -17,7 +16,6 @@ def synthesize_application(objective: str, criteria: list[str] | None = None) ->
     clean_obj = objective.strip()
     obj_lower = clean_obj.lower()
     criteria_list = criteria or []
-    safe_title = html.escape(clean_obj[:60])
 
     if "calculator" in obj_lower or ("keypad" in obj_lower and "math" in obj_lower):
         return _build_futuristic_calculator_app(clean_obj, criteria_list)
@@ -75,7 +73,7 @@ def _build_futuristic_calculator_app(objective: str, criteria: list[str]) -> str
       box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 2px 4px rgba(0,0,0,0.6);
     }
     .carbon-fiber {
-      background: 
+      background:
         radial-gradient(black 15%, transparent 16%) 0 0,
         radial-gradient(black 15%, transparent 16%) 4px 4px,
         radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 0 1px,
@@ -430,7 +428,6 @@ def _build_analytics_dashboard_app(objective: str, criteria: list[str]) -> str:
 
 def _build_futuristic_task_manager_app(objective: str, criteria: list[str]) -> str:
     safe_title = html.escape(objective[:70])
-    safe_obj = html.escape(objective)
     template = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -658,7 +655,7 @@ def _build_futuristic_task_manager_app(objective: str, criteria: list[str]) -> s
       filtered.forEach(task => {
         const item = document.createElement('div');
         item.className = 'task-node p-3 rounded-xl bg-slate-950/80 border ' + (task.completed ? 'border-cyan-900/40 opacity-60' : 'border-cyan-500/30') + ' flex items-center justify-between space-x-3';
-        
+
         let priorityBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded font-mono bg-cyan-950 text-cyan-400 border border-cyan-800">ALPHA</span>';
         if (task.priority === 'teal') priorityBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded font-mono bg-teal-950 text-teal-400 border border-teal-800">OMEGA</span>';
         if (task.priority === 'amber') priorityBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded font-mono bg-amber-950 text-amber-400 border border-amber-800">CRITICAL</span>';
@@ -815,7 +812,10 @@ def _build_futuristic_task_manager_app(objective: str, criteria: list[str]) -> s
 def _build_general_interactive_app(objective: str, criteria: list[str]) -> str:
     safe_title = html.escape(objective[:60])
     safe_obj = html.escape(objective)
-    criteria_items = "".join(f"<li class='text-slate-300'>✓ {html.escape(c)}</li>" for c in criteria) or "<li class='text-slate-400'>All functional acceptance criteria satisfied.</li>"
+    criteria_items = (
+        "".join(f"<li class='text-slate-300'>✓ {html.escape(c)}</li>" for c in criteria)
+        or "<li class='text-slate-400'>All functional acceptance criteria satisfied.</li>"
+    )
     template = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -869,4 +869,8 @@ def _build_general_interactive_app(objective: str, criteria: list[str]) -> str:
 </body>
 </html>
 """
-    return template.replace("__SAFE_TITLE__", safe_title).replace("__SAFE_OBJ__", safe_obj).replace("__CRITERIA_ITEMS__", criteria_items)
+    return (
+        template.replace("__SAFE_TITLE__", safe_title)
+        .replace("__SAFE_OBJ__", safe_obj)
+        .replace("__CRITERIA_ITEMS__", criteria_items)
+    )

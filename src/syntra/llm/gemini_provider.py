@@ -243,24 +243,36 @@ class GeminiModelProvider(ModelProvider):
         start_time = time.perf_counter()
 
         api_model = _resolve_api_model(target_model)
-        candidate_models = [api_model, "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-flash-lite-latest", "gemma-4-26b-a4b-it"]
-        seen = set()
-        unique_candidates = [m for m in candidate_models if not (m in seen or seen.add(m))]
+        candidate_models = [
+            api_model,
+            "gemini-3.5-flash-lite",
+            "gemini-3.5-flash",
+            "gemini-flash-lite-latest",
+            "gemma-4-26b-a4b-it",
+        ]
+        unique_candidates: list[str] = []
+        for m in candidate_models:
+            if m not in unique_candidates:
+                unique_candidates.append(m)
 
         raw_response = None
         last_exc = None
         for candidate in unique_candidates:
+
             async def _call():
                 return await client.aio.models.generate_content(
                     model=candidate,
                     contents=contents,
                     config=config,
                 )
+
             try:
                 raw_response = await self._execute_with_retry(
                     _call,
                     timeout_seconds=timeout_sec,
-                    retries=request.max_provider_retries if request.max_provider_retries is not None else settings.max_retries,
+                    retries=request.max_provider_retries
+                    if request.max_provider_retries is not None
+                    else settings.max_retries,
                     initial_delay=settings.retry_delay_seconds,
                 )
                 break
@@ -268,7 +280,9 @@ class GeminiModelProvider(ModelProvider):
                 last_exc = exc
                 err_msg = str(exc).lower()
                 if "quota" in err_msg or "429" in err_msg or "503" in err_msg or "unavailable" in err_msg:
-                    logger.warning("Model %s failed with %s; failing over to next candidate in pool", candidate, err_msg[:80])
+                    logger.warning(
+                        "Model %s failed with %s; failing over to next candidate in pool", candidate, err_msg[:80]
+                    )
                     continue
                 raise
 
@@ -303,9 +317,7 @@ class GeminiModelProvider(ModelProvider):
         # Token counting and cost calculation
         usage_meta = getattr(raw_response, "usage_metadata", None)
         prompt_tokens = (
-            (getattr(usage_meta, "prompt_token_count", 0) or 0)
-            if usage_meta
-            else len(str(request.messages)) // 4
+            (getattr(usage_meta, "prompt_token_count", 0) or 0) if usage_meta else len(str(request.messages)) // 4
         )
         comp_tokens = (
             (
@@ -389,24 +401,36 @@ class GeminiModelProvider(ModelProvider):
         start_time = time.perf_counter()
 
         api_model = _resolve_api_model(target_model)
-        candidate_models = [api_model, "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-flash-lite-latest", "gemma-4-26b-a4b-it"]
-        seen = set()
-        unique_candidates = [m for m in candidate_models if not (m in seen or seen.add(m))]
+        candidate_models = [
+            api_model,
+            "gemini-3.5-flash-lite",
+            "gemini-3.5-flash",
+            "gemini-flash-lite-latest",
+            "gemma-4-26b-a4b-it",
+        ]
+        unique_candidates: list[str] = []
+        for m in candidate_models:
+            if m not in unique_candidates:
+                unique_candidates.append(m)
 
         raw_response = None
         last_exc = None
         for candidate in unique_candidates:
+
             async def _call():
                 return await client.aio.models.generate_content(
                     model=candidate,
                     contents=contents,
                     config=config,
                 )
+
             try:
                 raw_response = await self._execute_with_retry(
                     _call,
                     timeout_seconds=timeout_sec,
-                    retries=request.max_provider_retries if request.max_provider_retries is not None else settings.max_retries,
+                    retries=request.max_provider_retries
+                    if request.max_provider_retries is not None
+                    else settings.max_retries,
                     initial_delay=settings.retry_delay_seconds,
                 )
                 break
@@ -414,7 +438,9 @@ class GeminiModelProvider(ModelProvider):
                 last_exc = exc
                 err_msg = str(exc).lower()
                 if "quota" in err_msg or "429" in err_msg or "503" in err_msg or "unavailable" in err_msg:
-                    logger.warning("Model %s failed with %s; failing over to next candidate in pool", candidate, err_msg[:80])
+                    logger.warning(
+                        "Model %s failed with %s; failing over to next candidate in pool", candidate, err_msg[:80]
+                    )
                     continue
                 raise
 

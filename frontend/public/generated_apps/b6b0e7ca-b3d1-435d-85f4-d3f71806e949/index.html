@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYNTRA | Multi-Tenant SaaS Platform Suite</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        syntra: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            950: '#052e16',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Alpine.js for Reactive State Management -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="h-full font-sans antialiased flex flex-col selection:bg-emerald-500 selection:text-white" 
+      x-data="syntraApp()" 
+      x-init="init()">
+
+    <!-- TOP SYSTEM NOTIFICATION BANNER -->
+    <div class="bg-gradient-to-r from-emerald-900 via-slate-900 to-emerald-900 text-emerald-300 text-xs py-1.5 px-4 text-center border-b border-emerald-800/50 flex justify-between items-center z-50">
+        <div class="flex items-center gap-2 mx-auto">
+            <span class="flex h-2 w-2 relative">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span class="font-semibold">SYNTRA Engine v2.4 Online</span> 
+            <span class="text-slate-400">| Multi-Tenant Row Level Security (RLS) Active</span>
+            <span class="hidden md:inline bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded border border-emerald-700/50 text-[10px]">Docker Compose: healthy</span>
+        </div>
+        <div class="text-[10px] text-slate-400">
+            Current Tenant: <span class="text-emerald-400 font-mono font-bold" x-text="currentTenant.name"></span> (<span x-text="currentTenant.tier"></span> tier)
+        </div>
+    </div>
+
+    <!-- MAIN APP SHELL -->
+    <div class="flex-1 flex overflow-hidden">
+
+        <!-- ================= SIDEBAR NAVIGATION ================= -->
+        <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between hidden md:flex">
+            <div>
+                <!-- Brand Header -->
+                <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-900/50 text-white font-black text-lg">
+                            S
+                        </div>
+                        <div>
+                            <h1 class="font-bold tracking-tight text-white flex items-center gap-1.5">
+                                SYNTRA <span class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded">SaaS</span>
+                            </h1>
+                            <p class="text-[11px] text-slate-400">Enterprise Control Plane</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tenant Switcher Dropdown Simulator -->
+                <div class="p-3 border-b border-slate-800/60 bg-slate-950/40">
+                    <label class="text-[10px] uppercase font-semibold tracking-wider text-slate-400 block px-2 mb-1">Active Workspace</label>
+                    <div class="relative">
+                        <select x-model="selectedTenantId" @change="switchTenant($event.target.value)" 
+                                class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg p-2.5 appearance-none focus:outline-none focus:border-emerald-500 cursor-pointer">
+                            <template x-for="tenant in tenants" :key="tenant.id">
+                                <option :value="tenant.id" x-text="tenant.name + ' (' + tenant.tier + ')'"></option>
+                            </template>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+                            <i class="fa-solid fa-chevron-down text-xs"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nav Links -->
+                <nav class="p-3 space-y-1">
+                    <button @click="currentTab = 'dashboard'" 
+                            :class="currentTab === 'dashboard' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-medium' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'"
+                            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all border border-transparent">
+                        <i class="fa-solid fa-chart-pie w-5 text-center"></i> Dashboard & Metrics
+                    </button>
+                    <button @click="currentTab = 'resources'" 
+                            :class="currentTab === 'resources' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-medium' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'"
+                            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all border border-transparent">
+                        <i class="fa-solid fa-database w-5 text-center"></i> Tenant Resources <span class="ml-auto text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-300" x-text="resources.length"></span>
+                    </button>
+                    <button @click="currentTab = 'isolation'" 
+                            :class="currentTab === 'isolation' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-medium' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'"
+                            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all border border-transparent">
+                        <i class="fa-solid fa-shield-halved w-5 text-center"></i> RLS & Security Audit
+                    </button>
+                    <button @click="currentTab = 'billing'" 
+                            :class="currentTab === 'billing' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-medium' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'"
+                            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all border border-transparent">
+                        <i class="fa-solid fa-credit-card w-5 text-center"></i> Billing & Quotas
+                    </button>
+                    <button @click="currentTab = 'api'" 
+                            :class="currentTab === 'api' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-medium' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'"
+                            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all border border-transparent">
+                        <i class="fa-solid fa-code w-5 text-center"></i> OpenAPI & Webhooks
+                    </button>
+                </nav>
+            </div>
+
+            <!-- User Profile & Auth Status -->
+            <div class="p-4 border-t border-slate-800 bg-slate-950/60">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-emerald-600/30 border border-emerald-500/40 text-emerald-400 flex items-center font-bold justify-center text-xs">
+                            <span x-text="currentUser.name.charAt(0)"></span>
+                        </div>
+                        <div class="overflow-hidden">
+                            <p class="text-xs font-medium text-white truncate" x-text="currentUser.name"></p>
+                            <p class="text-[10px] text-slate-400 truncate" x-text="currentUser.email"></p>
+                        </div>
+                    </div>
+                    <span class="text-[10px] uppercase bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-mono" x-text="currentUser.role"></span>
+                </div>
+                <div class="flex gap-2">
+                    <button @click="showAuthModal = true" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs py-1.5 rounded transition font-medium">
+                        <i class="fa-solid fa-user-gear mr-1"></i> Switch User
+                    </button>
+                    <button @click="triggerSeedReset()" title="Reset Database Seed" class="bg-slate-800 hover:bg-red-950/50 hover:text-red-400 text-slate-300 text-xs px-2.5 py-1.5 rounded transition">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ================= MAIN CONTENT AREA ================= -->
+        <main class="flex-1 flex flex-col min-w-0 overflow-y-auto bg-slate-950">
+
+            <!-- Mobile Header -->
+            <header class="bg-slate-900 border-b border-slate-800 p-4 flex md:hidden items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-bold">S</div>
+                    <span class="font-bold text-white">SYNTRA</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <select x-model="selectedTenantId" @change="switchTenant($event.target.value)" class="bg-slate-800 text-xs text-slate-200 rounded p-1 border border-slate-700">
+                        <template x-for="tenant in tenants" :key="tenant.id">
+                            <option :value="tenant.id" x-text="tenant.name"></option>
+                        </template>
+                    </select>
+                    <button @click="mobileMenuOpen = !mobileMenuOpen" class="text-slate-300 p-2"><i class="fa-solid fa-bars"></i></button>
+                </div>
+            </header>
+
+            <!-- Mobile Menu Dropdown -->
+            <div x-show="mobileMenuOpen" class="bg-slate-900 border-b border-slate-800 p-3 md:hidden space-y-2">
+                <button @click="currentTab = 'dashboard'; mobileMenuOpen = false" class="block w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded">Dashboard</button>
+                <button @click="currentTab = 'resources'; mobileMenuOpen = false" class="block w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded">Tenant Resources</button>
+                <button @click="currentTab = 'isolation'; mobileMenuOpen = false" class="block w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded">RLS Security Audit</button>
+                <button @click="currentTab = 'billing'; mobileMenuOpen = false" class="block w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded">Billing & Quotas</button>
+                <button @click="currentTab = 'api'; mobileMenuOpen = false" class="block w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded">OpenAPI & Webhooks</button>
+            </div>
+
+            <!-- Toast Notifications Area -->
+            <div class="fixed bottom-5 right-5 z-50 space-y-2 max-w-sm w-full pointer-events-none">
+                <template x-for="toast in toasts" :key="toast.id">
+                    <div class="pointer-events-auto flex items-start gap-3 p-4 rounded-xl shadow-2xl border transition-all transform translate-y-0"
+                         :class="{
+                            'bg-slate-900 border-emerald-500/50 text-slate-100 shadow-emerald-950/50': toast.type === 'success',
+                            'bg-slate-900 border-red-500/50 text-slate-100 shadow-red-950/50': toast.type === 'error',
+                            'bg-slate-900 border-amber-500/50 text-slate-100 shadow-amber-950/50': toast.type === 'warning'
+                         }">
+                        <div class="mt-0.5 text-lg">
+                            <i x-show="toast.type === 'success'" class="fa-solid fa-circle-check text-emerald-400"></i>
+                            <i x-show="toast.type === 'error'" class="fa-solid fa-triangle-exclamation text-red-400"></i>
+                            <i x-show="toast.type === 'warning'" class="fa-solid fa-circle-exclamation text-amber-400"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="text-xs font-bold uppercase tracking-wider" x-text="toast.title"></h4>
+                            <p class="text-xs text-slate-300 mt-0.5" x-text="toast.message"></p>
+                        </div>
+                        <button @click="removeToast(toast.id)" class="text-slate-500 hover:text-slate-300"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                </template>
+            </div>
+
+            <!-- ================= TAB 1: DASHBOARD ================= -->
+            <div x-show="currentTab === 'dashboard'" class="p-6 md:p-8 space-y-6 max-w-7xl mx-auto w-full">
+                <!-- Welcome Banner -->
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/40 p-6 rounded-2xl border border-slate-800">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" x-text="currentTenant.tier + ' Tier'"></span>
+                            <span class="text-xs text-slate-400">• Tenant ID: <code class="text-emerald-400 font-mono" x-text="currentTenant.id"></code></span>
+                        </div>
+                        <h2 class="text-2xl font-extrabold text-white tracking-tight" x-text="currentTenant.name + ' Workspace'"></h2>
+                        <p class="text-sm text-slate-400 mt-1">Real-time telemetry, resource utilization, and isolated database cluster statistics.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button @click="currentTab = 'resources'" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs px-4 py-2.5 rounded-lg shadow-lg shadow-emerald-900/30 transition flex items-center gap-2">
+                            <i class="fa-solid fa-plus"></i> Create Resource
+                        </button>
+                        <button @click="currentTab = 'billing'" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs px-4 py-2.5 rounded-lg border border-slate-700 transition">
+                            Manage Subscription
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPI Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- KPI 1 -->
+                    <div class="bg-slate-900/80 border border-slate-800 p-5 rounded-xl">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Storage Quota</span>
+                            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-sm">
+                                <i class="fa-solid fa-hard-drive"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-baseline justify-between">
+                            <div class="text-2xl font-bold text-white" x-text="currentTenant.storageUsedMB + ' MB'"></div>
+                            <span class="text-xs font-mono text-slate-400" x-text="'/ ' + currentTenant.storageLimitMB + ' MB'"></span>
+                        </div>
+                        <div class="mt-3 w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                            <div class="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" :style="`width: ${Math.min(100, (currentTenant.storageUsedMB / currentTenant.storageLimitMB) * 100)}%`"></div>
+                        </div>
+                    </div>
+
+                    <!-- KPI 2 -->
+                    <div class="bg-slate-900/80 border border-slate-800 p-5 rounded-xl">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">API Invocations</span>
+                            <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center text-sm">
+                                <i class="fa-solid fa-bolt"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-baseline justify-between">
+                            <div class="text-2xl font-bold text-white" x-text="currentTenant.apiCallsUsed.toLocaleString()"></div>
+                            <span class="text-xs font-mono text-slate-400" x-text="'/ ' + currentTenant.apiCallsLimit.toLocaleString()"></span>
+                        </div>
+                        <div class="mt-3 w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                            <div class="bg-blue-500 h-1.5 rounded-full transition-all duration-500" :style="`width: ${Math.min(100, (currentTenant.apiCallsUsed / currentTenant.apiCallsLimit) * 100)}%`"></div>
+                        </div>
+                    </div>
+
+                    <!-- KPI 3 -->
+                    <div class="bg-slate-900/80 border border-slate-800 p-5 rounded-xl">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Active Users</span>
+                            <div class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center text-sm">
+                                <i class="fa-solid fa-users"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-baseline justify-between">
+                            <div class="text-2xl font-bold text-white" x-text="currentTenant.usersCount"></div>
+                            <span class="text-xs font-mono text-emerald-400"><i class="fa-solid fa-arrow-trend-up"></i> +12%</span>
+                        </div>
+                        <div class="mt-3 text-[11px] text-slate-400">
+                            RBAC Enforced: Owner, Admin, Member
+                        </div>
+                    </div>
+
+                    <!-- KPI 4 -->
+                    <div class="bg-slate-900/80 border border-slate-800 p-5 rounded-xl">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Tenant Status</span>
+                            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-sm">
+                                <i class="fa-solid fa-shield-check"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span class="text-xl font-bold text-white" x-text="currentTenant.status"></span>
+                        </div>
+                        <div class="mt-3 text-[11px] text-slate-400">
+                            PostgreSQL 16 RLS: <span class="text-emerald-400">Isolated</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Tenant Activity Log -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-white text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-emerald-400"></i> Tenant Audit Stream (PostgreSQL WAL)
+                        </h3>
+                        <button @click="fetchAuditLogs()" class="text-xs text-slate-400 hover:text-white transition">
+                            <i class="fa-solid fa-rotate-right mr-1"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="space-y-2 font-mono text-xs">
+                        <template x-for="log in tenantLogs" :key="log.id">
+                            <div class="bg-slate-950 p-3 rounded border border-slate-800/80 flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-emerald-500" x-text="'[' + log.timestamp + ']'"></span>
+                                    <span class="text-slate-300 font-semibold" x-text="log.action"></span>
+                                    <span class="text-slate-500 text-[11px]" x-text="'tenant_id: ' + log.tenantId"></span>
+                                </div>
+                                <span class="px-2 py-0.5 rounded text-[10px]" 
+                                      :class="log.status === '200 OK' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'" 
+                                      x-text="log.status"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= TAB 2: TENANT RESOURCES ================= -->
+            <div x-show="currentTab === 'resources'" class="p-6 md:p-8 space-y-6 max-w-7xl mx-auto w-full">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-white tracking-tight">Tenant Resource Records</h2>
+                        <p class="text-sm text-slate-400">Strictly isolated data partitioned by <code class="text-emerald-400">tenant_id</code>. Only accessible by authorized tenant users.</p>
+                    </div>
+                    <button @click="openCreateResourceModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs px-4 py-2.5 rounded-lg shadow-lg shadow-emerald-900/30 transition flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> New Resource Record
+                    </button>
+                </div>
+
+                <!-- Resources Table -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-800 bg-slate-950/60 text-[11px] uppercase font-semibold text-slate-400 tracking-wider">
+                                    <th class="p-4">Resource ID & Name</th>
+                                    <th class="p-4">Tenant Scope</th>
+                                    <th class="p-4">Payload Size</th>
+                                    <th class="p-4">Created At</th>
+                                    <th class="p-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/60 text-xs">
+                                <template x-for="res in filteredResources" :key="res.id">
+                                    <tr class="hover:bg-slate-800/40 transition">
+                                        <td class="p-4">
+                                            <div class="font-bold text-white" x-text="res.name"></div>
+                                            <div class="text-slate-500 font-mono text-[10px]" x-text="res.id"></div>
+                                        </td>
+                                        <td class="p-4">
+                                            <span class="bg-slate-800 text-emerald-400 px-2 py-0.5 rounded font-mono text-[10px] border border-slate-700" x-text="res.tenantId"></span>
+                                        </td>
+                                        <td class="p-4 text-slate-300 font-mono" x-text="res.sizeMB + ' MB'"></td>
+                                        <td class="p-4 text-slate-400" x-text="res.createdAt"></td>
+                                        <td class="p-4 text-right space-x-2">
+                                            <button @click="editResource(res)" class="text-slate-400 hover:text-white p-1.5 bg-slate-800 rounded transition" title="Edit Record">
+                                                <i class="fa-solid fa-pen"></i>
+                                            </button>
+                                            <button @click="deleteResource(res.id)" class="text-red-400 hover:text-red-300 p-1.5 bg-red-950/30 border border-red-900/40 rounded transition" title="Delete Record">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                                <template x-if="filteredResources.length === 0">
+                                    <tr>
+                                        <td colspan="5" class="p-8 text-center text-slate-500">
+                                            <i class="fa-solid fa-folder-open text-3xl mb-2 block"></i>
+                                            No resource records found for this tenant workspace. Click "New Resource Record" to create one.
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= TAB 3: RLS & SECURITY AUDIT ================= -->
+            <div x-show="currentTab === 'isolation'" class="p-6 md:p-8 space-y-6 max-w-7xl mx-auto w-full">
+                <div>
+                    <h2 class="text-2xl font-extrabold text-white tracking-tight">Row Level Security (RLS) & Tenant Isolation Simulator</h2>
+                    <p class="text-sm text-slate-400">Test cross-tenant security boundaries. Attempting to access or mutate records belonging to a different tenant triggers immediate 403 Forbidden enforcement.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Isolation Test Console -->
+                    <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-6 space-y-4">
+                        <h3 class="font-bold text-white text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-shield-halved text-emerald-400"></i> Cross-Tenant Penetration Test
+                        </h3>
+                        <p class="text-xs text-slate-400">Simulate an API request where user from <code class="text-emerald-400" x-text="currentTenant.name"></code> attempts to query resources belonging to another isolated workspace.</p>
+                        
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-xs text-slate-400 block mb-1">Target Tenant ID to Access:</label>
+                                <select x-model="penetrationTargetTenant" class="w-full bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg p-2.5">
+                                    <template x-for="t in tenants" :key="t.id">
+                                        <option :value="t.id" x-text="t.name + ' (' + t.id + ')'"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs text-slate-400 block mb-1">Action Type:</label>
+                                <select x-model="penetrationAction" class="w-full bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg p-2.5">
+                                    <option value="SELECT">SELECT * FROM resources WHERE tenant_id = ?</option>
+                                    <option value="UPDATE">UPDATE resources SET data = ? WHERE tenant_id = ?</option>
+                                    <option value="DELETE">DELETE FROM resources WHERE tenant_id = ?</option>
+                                </select>
+                            </div>
+                            <button @click="runPenetrationTest()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs py-3 rounded-lg shadow-lg shadow-emerald-900/30 transition">
+                                <i class="fa-solid fa-terminal mr-2"></i> Execute Isolated Query
+                            </button>
+                        </div>
+
+                        <!-- Penetration Result Box -->
+                        <div x-show="penetrationResult" class="mt-4 p-4 rounded-lg font-mono text-xs border"
+                             :class="penetrationResult.status === 403 ? 'bg-red-950/40 border-red-900/60 text-red-300' : 'bg-emerald-950/40 border-emerald-900/60 text-emerald-300'">
+                            <div class="flex items-center justify-between font-bold mb-1">
+                                <span x-text="'HTTP Status: ' + penetrationResult.status + ' ' + penetrationResult.statusText"></span>
+                                <span class="text-[10px]" x-text="penetrationResult.timestamp"></span>
+                            </div>
+                            <p class="text-slate-300 text-[11px]" x-text="penetrationResult.message"></p>
+                        </div>
+                    </div>
+
+                    <!-- PostgreSQL RLS Policy Inspector -->
+                    <div class="bg-slate

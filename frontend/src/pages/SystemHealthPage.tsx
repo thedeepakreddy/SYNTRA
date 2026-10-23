@@ -3,8 +3,8 @@ import { apiClient } from '../api/client';
 import { SystemOverview } from '../types';
 import { StatusBadge } from '../components/StatusBadge';
 import {
-  Activity,
   RefreshCw,
+  Server,
 } from 'lucide-react';
 
 interface SubsystemHealth {
@@ -87,99 +87,140 @@ export const SystemHealthPage: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Top Banner */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 shadow">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center space-x-3">
-            <div className="rounded-lg bg-emerald-600/20 p-2 text-emerald-400 border border-emerald-500/30">
-              <Activity className="h-6 w-6" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold tracking-tight text-white">
-                Platform Diagnostic & Infrastructure Health
+    <div className="space-y-8 pb-12">
+      {/* Top Hero: Machined Hardware Double-Bezel Enclosure */}
+      <div className="double-bezel-outer">
+        <div className="double-bezel-inner p-6 sm:p-8 relative overflow-hidden">
+          {/* Ambient Photon Atmosphere */}
+          <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 left-1/3 w-80 h-80 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className="eyebrow-pill text-emerald-400 border-emerald-500/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  DIAGNOSTIC RADAR // SUBSYSTEM PROBE
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full bg-slate-900/80 border border-white/10 text-[10px] font-mono text-slate-400">
+                  CONTINUOUS TELEMETRY
+                </span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white font-sans drop-shadow-[0_0_14px_rgba(0,255,157,0.3)]">
+                Platform Diagnostic &amp; Infrastructure Health
               </h2>
-              <p className="mt-1 text-xs text-slate-400 max-w-2xl">
-                Continuous health verification across the control plane, execution sandboxes,
-                and cryptographic verification pipeline.
+              <p className="text-xs sm:text-sm text-slate-300 max-w-2xl font-sans leading-relaxed">
+                Continuous health verification across the control plane, isolated execution sandboxes,
+                and cryptographic delivery gates with real-time latency probing.
               </p>
             </div>
-          </div>
 
-          <button
-            onClick={testHealth}
-            disabled={loading}
-            className="inline-flex items-center space-x-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-medium text-white shadow hover:bg-indigo-500 disabled:opacity-50"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            <span>Probe Health</span>
-          </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={testHealth}
+                disabled={loading}
+                className="btn-island-primary group"
+              >
+                <span>{loading ? 'Probing...' : 'Probe Subsystems'}</span>
+                <span className="btn-island-icon">
+                  <RefreshCw className={`w-3.5 h-3.5 text-slate-950 ${loading ? 'animate-spin' : ''}`} />
+                </span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       {error && (
-        <div className="rounded-lg border border-rose-800 bg-rose-950/40 p-4 text-xs text-rose-300">
-          <p className="font-semibold">Health Check Failure</p>
-          <p className="mt-1 font-mono">{error}</p>
+        <div className="rounded-2xl border border-rose-500/40 bg-rose-950/40 p-4 text-xs text-rose-300 backdrop-blur-xl shadow-[0_0_20px_rgba(255,0,85,0.2)]">
+          <p className="font-semibold font-sans">Health Check Failure</p>
+          <p className="mt-1 font-mono text-[11px]">{error}</p>
         </div>
       )}
 
       {/* Aggregate Indicators */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 font-mono text-xs shadow">
-          <span className="text-slate-400 text-[11px]">OVERALL SYSTEM STATUS</span>
-          <div className="mt-2">
-            <StatusBadge status={overview?.system_health || 'HEALTHY'} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="double-bezel-outer">
+          <div className="double-bezel-inner p-5 space-y-2">
+            <span className="text-slate-400 text-[10px] font-mono font-bold uppercase tracking-widest block">
+              SYSTEM STATUS
+            </span>
+            <div className="pt-1">
+              <StatusBadge status={overview?.system_health || 'HEALTHY'} />
+            </div>
           </div>
         </div>
 
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 font-mono text-xs shadow">
-          <span className="text-slate-400 text-[11px]">API PROBE LATENCY</span>
-          <div className="mt-2 text-xl font-bold text-slate-100">
-            {latency !== null ? `${latency} ms` : '—'}
+        <div className="double-bezel-outer">
+          <div className="double-bezel-inner p-5 space-y-2">
+            <span className="text-slate-400 text-[10px] font-mono font-bold uppercase tracking-widest block">
+              PROBE LATENCY
+            </span>
+            <div className="text-2xl font-bold font-mono text-cyan-300 drop-shadow-[0_0_8px_rgba(0,240,255,0.4)]">
+              {latency !== null ? `${latency} ms` : '—'}
+            </div>
+            <span className="text-[10px] text-emerald-400 block font-mono">Nominal Response</span>
           </div>
         </div>
 
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 font-mono text-xs shadow">
-          <span className="text-slate-400 text-[11px]">ENVIRONMENT</span>
-          <div className="mt-2 text-sm font-bold text-emerald-400">
-            {overview?.environment?.toUpperCase() || 'DEVELOPMENT'}
+        <div className="double-bezel-outer">
+          <div className="double-bezel-inner p-5 space-y-2">
+            <span className="text-slate-400 text-[10px] font-mono font-bold uppercase tracking-widest block">
+              SANDBOX ISOLATION
+            </span>
+            <div className="text-2xl font-bold font-mono text-emerald-300 drop-shadow-[0_0_8px_rgba(0,255,157,0.4)]">
+              HERMETIC
+            </div>
+            <span className="text-[10px] text-slate-400 block font-mono">Isolated Worktrees</span>
           </div>
         </div>
 
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 font-mono text-xs shadow">
-          <span className="text-slate-400 text-[11px]">MIGRATION HEAD</span>
-          <div className="mt-2 text-xs font-bold text-slate-300 truncate">
-            0005_independent_verification
+        <div className="double-bezel-outer">
+          <div className="double-bezel-inner p-5 space-y-2">
+            <span className="text-slate-400 text-[10px] font-mono font-bold uppercase tracking-widest block">
+              TELEMETRY SINK
+            </span>
+            <div className="text-2xl font-bold font-mono text-cyan-300 drop-shadow-[0_0_8px_rgba(0,240,255,0.4)]">
+              IN_MEMORY
+            </div>
+            <span className="text-[10px] text-slate-400 block font-mono">Zero Net Exfiltration</span>
           </div>
         </div>
       </div>
 
       {/* Subsystem Health Cards */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
-        <h3 className="text-xs font-semibold text-slate-300 pb-3 border-b border-slate-800">
-          Core Subsystems & Architectural Boundaries
-        </h3>
-
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-mono font-bold text-slate-300 uppercase tracking-widest">
+            Core Engine Subsystems ({subsystems.length})
+          </h3>
+          <span className="text-[10px] font-mono text-cyan-400">ALL NOMINAL</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {subsystems.map((sub) => (
-            <div
-              key={sub.name}
-              className="rounded-lg border border-slate-800 bg-slate-950 p-4 space-y-2 text-xs font-mono"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="text-[10px] text-slate-500 uppercase">{sub.category}</span>
-                  <h4 className="font-semibold text-slate-200 mt-0.5">{sub.name}</h4>
+            <div key={sub.name} className="double-bezel-outer group">
+              <div className="double-bezel-inner p-6 space-y-4 flex flex-col justify-between h-full">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+                    <div className="flex items-center space-x-2.5">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10 border border-cyan-400/30 text-cyan-300">
+                        <Server className="h-4 w-4" />
+                      </div>
+                      <span className="font-bold text-white text-sm font-sans tracking-wide">{sub.name}</span>
+                    </div>
+                    <StatusBadge status={sub.status} />
+                  </div>
+                  <p className="text-xs text-slate-300 font-sans leading-relaxed">{sub.details}</p>
                 </div>
-                <StatusBadge status={sub.status} />
-              </div>
-
-              <p className="text-[11px] text-slate-400 font-sans">{sub.details}</p>
-
-              <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500">
-                <span>Verification Probe</span>
-                <span>~{sub.latencyMs} ms</span>
+                <div className="pt-3 border-t border-white/[0.08] flex items-center justify-between text-[11px] font-mono text-slate-400">
+                  <span className="bg-cyan-950/80 text-cyan-300 border border-cyan-400/30 px-2.5 py-0.5 rounded-full text-[10px] font-bold">
+                    {sub.category}
+                  </span>
+                  {sub.latencyMs !== undefined && (
+                    <span className="text-slate-300 font-mono">~{sub.latencyMs} ms internal response</span>
+                  )}
+                </div>
               </div>
             </div>
           ))}

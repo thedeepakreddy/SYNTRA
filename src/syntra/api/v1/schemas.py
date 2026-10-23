@@ -201,7 +201,9 @@ class ApprovalResponse(BaseModel):
 
 class ApprovalDecisionRequest(BaseModel):
     decision: ApprovalDecision
-    action_digest: str | None = Field(None, description="Canonical HMAC-SHA256 digest proving approval of unmodified state")
+    action_digest: str | None = Field(
+        None, description="Canonical HMAC-SHA256 digest proving approval of unmodified state"
+    )
     digest: str | None = Field(None, description="Client alias for action_digest")
     reason: str | None = Field(None, max_length=1000)
     comment: str | None = Field(None, max_length=1000, description="Client alias for reason")

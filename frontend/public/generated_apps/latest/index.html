@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SYNTRA // Budapest Hyper-Local Meteorological & Urban Climate Intelligence Platform</title>
-    
+    <title>SYNTRA | Multi-Tenant SaaS Platform Suite</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -13,441 +12,414 @@
             theme: {
                 extend: {
                     colors: {
-                        obsidian: '#0B0F19',
-                        surface: '#131C2E',
-                        surfaceLight: '#1E293B',
-                        emeraldNeon: '#10B981',
-                        cyanNeon: '#06B6D4',
-                        amberNeon: '#F59E0B',
-                        roseNeon: '#F43F5E',
-                        orangeNeon: '#F97316'
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        mono: ['Roboto Mono', 'monospace']
+                        syntra: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            950: '#052e16',
+                        }
                     }
                 }
             }
         }
     </script>
-    
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Chart.js for Analytics Workspace -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <style>
-        /* Glassmorphism & Custom Scrollbar */
-        .glass-panel {
-            background: rgba(19, 28, 46, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        .glass-panel-glow {
-            background: rgba(19, 28, 46, 0.85);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(6, 182, 212, 0.3);
-            box-shadow: 0 0 25px rgba(6, 182, 212, 0.15);
-        }
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0B0F19;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #1E293B;
-            border-radius: 3px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #06B6D4;
-        }
-        .canvas-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-        }
-    </style>
+    <!-- Alpine.js for Reactive State Management -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body class="bg-obsidian text-slate-100 font-sans min-h-screen flex flex-col overflow-hidden">
+<body class="h-full font-sans antialiased flex flex-col selection:bg-emerald-500 selection:text-white" 
+      x-data="syntraApp()" 
+      x-init="init()">
 
-    <!-- Top Global Navigation Bar -->
-    <header class="h-16 bg-surface/90 border-b border-slate-800 px-6 flex items-center justify-between z-50 shrink-0">
-        <div class="flex items-center space-x-6">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-                    <i class="fa-solid fa-cloud-bolt text-obsidian text-lg font-bold"></i>
-                </div>
-                <div>
-                    <span class="text-lg font-bold tracking-wider bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">SYNTRA</span>
-                    <span class="text-xs font-mono block text-slate-400">BUDAPEST MUNICIPAL CLIMATE ENGINE</span>
-                </div>
-            </div>
-            
-            <nav class="hidden md:flex items-center space-x-1 bg-obsidian/60 p-1 rounded-xl border border-slate-800">
-                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-                    <i class="fa-solid fa-chart-line mr-2"></i>Command Dashboard
-                </button>
-                <button onclick="switchTab('analytics')" id="nav-analytics" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 transition-all">
-                    <i class="fa-solid fa-flask mr-2"></i>Analytics & Simulation
-                </button>
-                <button onclick="switchTab('admin')" id="nav-admin" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 transition-all">
-                    <i class="fa-solid fa-shield-halved mr-2"></i>Admin & Tiers
-                </button>
-                <button onclick="switchTab('specs')" id="nav-specs" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 transition-all">
-                    <i class="fa-solid fa-book-bookmark mr-2"></i>PRD & Specs
-                </button>
-            </nav>
+    <!-- TOP SYSTEM NOTIFICATION BANNER -->
+    <div class="bg-gradient-to-r from-emerald-900 via-slate-900 to-emerald-900 text-emerald-300 text-xs py-1.5 px-4 text-center border-b border-emerald-800/50 flex justify-between items-center z-50">
+        <div class="flex items-center gap-2 mx-auto">
+            <span class="flex h-2 w-2 relative">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span class="font-semibold">SYNTRA Engine v2.4 Online</span> 
+            <span class="text-slate-400">| Multi-Tenant Row Level Security (RLS) Active</span>
+            <span class="hidden md:inline bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded border border-emerald-700/50 text-[10px]">Docker Compose: healthy</span>
         </div>
-
-        <div class="flex items-center space-x-4">
-            <!-- Global Telemetry Status Pill -->
-            <div class="hidden lg:flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-full">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="text-xs font-mono text-emerald-400">512 MQTT NODES ONLINE</span>
-            </div>
-
-            <!-- Subscription Badge Selector -->
-            <div class="relative">
-                <button onclick="toggleTierMenu()" class="flex items-center space-x-2 bg-surfaceLight border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-mono">
-                    <i class="fa-solid fa-crown text-amber-400"></i>
-                    <span id="current-tier-label">Municipality (Sovereign)</span>
-                    <i class="fa-solid fa-chevron-down text-slate-400"></i>
-                </button>
-                <div id="tier-dropdown" class="hidden absolute right-0 mt-2 w-56 glass-panel rounded-xl shadow-2xl z-50 p-2 space-y-1">
-                    <div class="text-[10px] font-mono text-slate-400 px-2 py-1">SIMULATE ACCESS TIER:</div>
-                    <button onclick="setAuthTier('city-pulse')" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 text-xs flex items-center justify-between">
-                        <span>City-Pulse (Basic)</span>
-                        <span id="badge-city-pulse" class="w-2 h-2 rounded-full"></span>
-                    </button>
-                    <button onclick="setAuthTier('transit-pro')" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 text-xs flex items-center justify-between">
-                        <span>Transit-Pro (BKK)</span>
-                        <span id="badge-transit-pro" class="w-2 h-2 rounded-full"></span>
-                    </button>
-                    <button onclick="setAuthTier('municipality')" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 text-xs flex items-center justify-between">
-                        <span>Municipality (Sovereign)</span>
-                        <span id="badge-municipality" class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="h-8 w-px bg-slate-800"></div>
-
-            <div class="flex items-center space-x-3">
-                <div class="text-right hidden sm:block">
-                    <div class="text-xs font-semibold">Dr. Gábor Varga</div>
-                    <div class="text-[10px] font-mono text-cyan-400">CHIEF METEOROLOGIST</div>
-                </div>
-                <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-600 to-blue-700 flex items-center justify-center font-bold text-sm shadow">
-                    GV
-                </div>
-            </div>
+        <div class="text-[10px] text-slate-400">
+            Current Tenant: <span class="text-emerald-400 font-mono font-bold" x-text="currentTenant.name"></span> (<span x-text="currentTenant.tier"></span> tier)
         </div>
-    </header>
+    </div>
 
-    <!-- Main Content Area Container -->
-    <main class="flex-1 overflow-hidden relative">
+    <!-- MAIN APP SHELL -->
+    <div class="flex-1 flex overflow-hidden">
 
-        <!-- ================= PAGE 1: COMMAND DASHBOARD ================= -->
-        <div id="page-dashboard" class="absolute inset-0 grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 overflow-y-auto lg:overflow-hidden">
-            
-            <!-- Column 1: Microclimate Quick-Selector & District Telemetry (Width: 3 Cols) -->
-            <div class="lg:col-span-3 flex flex-col space-y-4 h-full overflow-y-auto pr-1">
-                <div class="glass-panel p-4 rounded-2xl shrink-0">
-                    <div class="flex items-center justify-between mb-3">
-                        <h2 class="text-xs font-mono font-bold tracking-wider text-cyan-400 uppercase">District Microclimate Selector</h2>
-                        <span class="text-[10px] font-mono bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded">23 Districts</span>
-                    </div>
-                    <div class="relative mb-3">
-                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
-                        <input type="text" id="district-search" oninput="filterDistricts(this.value)" placeholder="Search district name or #..." class="w-full bg-obsidian border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500">
-                    </div>
-                    <div id="district-list" class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                        <!-- Populated dynamically via JS -->
+        <!-- ================= SIDEBAR NAVIGATION ================= -->
+        <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between hidden md:flex">
+            <div>
+                <!-- Brand Header -->
+                <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-900/50 text-white font-black text-lg">
+                            S
+                        </div>
+                        <div>
+                            <h1 class="font-bold tracking-tight text-white flex items-center gap-1.5">
+                                SYNTRA <span class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded">SaaS</span>
+                            </h1>
+                            <p class="text-[11px] text-slate-400">Enterprise Control Plane</p>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Active District Detailed Telemetry Card -->
-                <div class="glass-panel p-4 rounded-2xl flex-1 flex flex-col justify-between">
-                    <div>
-                        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-                            <div>
-                                <h3 id="active-district-name" class="text-sm font-bold text-white">District II (Rózsadomb)</h3>
-                                <p id="active-district-zone" class="text-[10px] font-mono text-cyan-400">Elevation: 285m (Buda Hills Sector)</p>
-                            </div>
-                            <div id="active-district-aqi-badge" class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                                AQI 18 (Low)
-                            </div>
+                <!-- Tenant Switcher Dropdown Simulator -->
+                <div class="p-3 border-b border-slate-800/60 bg-slate-950/40">
+                    <label class="text-[10px] uppercase font-semibold tracking-wider text-slate-400 block px-2 mb-1">Active Workspace</label>
+                    <div class="relative">
+                        <select x-model="selectedTenantId" @change="switchTenant($event.target.value)" 
+                                class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg p-2.5 appearance-none focus:outline-none focus:border-emerald-500 cursor-pointer">
+                            <template x-for="tenant in tenants" :key="tenant.id">
+                                <option :value="tenant.id" x-text="tenant.name + ' (' + tenant.tier + ')'"></option>
+                            </template>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+                            <i class="fa-solid fa-chevron-down text-xs"></i>
                         </div>
-
-                        <div class="grid grid-cols-2 gap-3 my-4">
-                            <div class="bg-obsidian/60 p-3 rounded-xl border border-slate-800">
-                                <div class="text-[10px] font-mono text-slate-400">SURFACE TEMP</div>
-                                <div id="active-temp" class="text-lg font-bold font-mono text-amber-400 mt-1">18.4°C</div>
-                                <div class="text-[10px] text-slate-500 mt-0.5">UHI Delta: -1.2°C</div>
-                            </div>
-                            <div class="bg-obsidian/60 p-3 rounded-xl border border-slate-800">
-                                <div class="text-[10px] font-mono text-slate-400">WIND VECTOR</div>
-                                <div id="active-wind" class="text-lg font-bold font-mono text-cyan-400 mt-1">14 km/h</div>
-                                <div id="active-wind-dir" class="text-[10px] text-slate-500 mt-0.5">NW (Danube Corridor)</div>
-                            </div>
-                            <div class="bg-obsidian/60 p-3 rounded-xl border border-slate-800">
-                                <div class="text-[10px] font-mono text-slate-400">PRECIPITATION</div>
-                                <div id="active-precip" class="text-lg font-bold font-mono text-blue-400 mt-1">0.0 mm/h</div>
-                                <div class="text-[10px] text-slate-500 mt-0.5">Prob: 4%</div>
-                            </div>
-                            <div class="bg-obsidian/60 p-3 rounded-xl border border-slate-800">
-                                <div class="text-[10px] font-mono text-slate-400">SOIL ALBEDO</div>
-                                <div id="active-albedo" class="text-lg font-bold font-mono text-emerald-400 mt-1">0.38</div>
-                                <div class="text-[10px] text-slate-500 mt-0.5">Forest Canopy Mix</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-cyan-500/10 border border-cyan-500/30 p-3 rounded-xl">
-                        <div class="flex items-center space-x-2 text-cyan-400 text-xs font-semibold mb-1">
-                            <i class="fa-solid fa-triangle-exclamation"></i>
-                            <span>Microclimate Advisory</span>
-                        </div>
-                        <p id="active-advisory" class="text-[11px] text-slate-300">
-                            Normal thermal dispersion across Buda hillsides. No frost or flash flood warning active.
-                        </p>
                     </div>
                 </div>
+
+                <!-- Nav Links -->
+                <nav class="p-3 space-y-1">
+                    <button @click="currentTab = 'dashboard'" 
+                            :class="currentTab === 'dashboard' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-medium' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'"
+                            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all border border-transparent">
+                        <i class="fa-solid fa-chart-pie w-5 text-center"></i> Dashboard & Metrics
+                    </button>
+                    <button @click="currentTab = 'resources'" 
+                            :class="currentTab === 'resources' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-medium' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'"
+                            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all border border-transparent">
+                        <i class="fa-solid fa-database w-5 text-center"></i> Tenant Resources <span class="ml-auto text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-300" x-text="resources.length"></span>
+                    </button>
+                    <button @click="currentTab = 'isolation'" 
+                            :class="currentTab === 'isolation' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-medium' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'"
+                            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all border border-transparent">
+                        <i class="fa-solid fa-shield-halved w-5 text-center"></i> RLS & Security Audit
+                    </button>
+                    <button @click="currentTab = 'billing'" 
+                            :class="currentTab === 'billing' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-medium' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'"
+                            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all border border-transparent">
+                        <i class="fa-solid fa-credit-card w-5 text-center"></i> Billing & Quotas
+                    </button>
+                    <button @click="currentTab = 'api'" 
+                            :class="currentTab === 'api' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-medium' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'"
+                            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all border border-transparent">
+                        <i class="fa-solid fa-code w-5 text-center"></i> OpenAPI & Webhooks
+                    </button>
+                </nav>
             </div>
 
-            <!-- Column 2: Interactive 3D Spatial Map Centerpiece (Width: 6 Cols) -->
-            <div class="lg:col-span-6 glass-panel-glow rounded-2xl flex flex-col overflow-hidden relative h-[500px] lg:h-full">
-                <!-- Map Overlay Toolbar -->
-                <div class="absolute top-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
-                    <div class="flex items-center space-x-2 pointer-events-auto bg-surface/90 backdrop-blur border border-slate-700 p-1.5 rounded-xl shadow-lg">
-                        <button onclick="setMapLayer('wind')" id="layer-wind" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-cyan-500/20 text-cyan-400 transition-all">Wind Vectors</button>
-                        <button onclick="setMapLayer('heat')" id="layer-heat" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 transition-all">UHI Thermal</button>
-                        <button onclick="setMapLayer('precip')" id="layer-precip" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 transition-all">Precipitation</button>
-                    </div>
-                    <div class="pointer-events-auto bg-surface/90 backdrop-blur border border-slate-700 px-3 py-1.5 rounded-xl text-xs font-mono text-slate-300 flex items-center space-x-2">
-                        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-                        <span id="map-mode-label">500m Grid Simulation Active</span>
-                    </div>
-                </div>
-
-                <!-- Canvas Representation of Budapest 3D Spatial Map -->
-                <div class="canvas-container flex-1 bg-obsidian cursor-crosshair">
-                    <canvas id="spatialMapCanvas" class="w-full h-full"></canvas>
-                </div>
-
-                <!-- Map Footer Legend -->
-                <div class="absolute bottom-4 left-4 right-4 z-20 pointer-events-none flex items-center justify-between bg-surface/90 backdrop-blur border border-slate-700 px-4 py-2 rounded-xl text-[11px] font-mono">
-                    <div class="flex items-center space-x-4">
-                        <span class="text-slate-400">ELEVATION:</span>
-                        <span class="text-emerald-400">Buda Hills (516m max)</span>
-                        <span class="text-cyan-400">Danube Corridor (96m)</span>
-                        <span class="text-amber-400">Pest Plains</span>
-                    </div>
-                    <div class="text-slate-400">Click district nodes to re-center telemetry</div>
-                </div>
-            </div>
-
-            <!-- Column 3: Automated Anomaly Alert Feed (Width: 3 Cols) -->
-            <div class="lg:col-span-3 flex flex-col space-y-4 h-full overflow-y-auto pl-1">
-                <div class="glass-panel p-4 rounded-2xl flex-1 flex flex-col">
-                    <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
-                        <div class="flex items-center space-x-2">
-                            <i class="fa-solid fa-bell text-amber-400"></i>
-                            <h2 class="text-xs font-mono font-bold tracking-wider text-slate-200 uppercase">Kafka Telemetry Stream</h2>
+            <!-- User Profile & Auth Status -->
+            <div class="p-4 border-t border-slate-800 bg-slate-950/60">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-emerald-600/30 border border-emerald-500/40 text-emerald-400 flex items-center font-bold justify-center text-xs">
+                            <span x-text="currentUser.name.charAt(0)"></span>
                         </div>
-                        <span id="alert-counter" class="text-[10px] font-mono bg-rose-500/20 text-rose-400 px-2 py-0.5 rounded border border-rose-500/30">3 Active</span>
+                        <div class="overflow-hidden">
+                            <p class="text-xs font-medium text-white truncate" x-text="currentUser.name"></p>
+                            <p class="text-[10px] text-slate-400 truncate" x-text="currentUser.email"></p>
+                        </div>
                     </div>
-
-                    <div id="anomaly-feed" class="space-y-2.5 overflow-y-auto flex-1 pr-1">
-                        <!-- Dynamically populated via MQTT/Kafka simulation -->
-                    </div>
-
-                    <div class="pt-3 mt-3 border-t border-slate-800 flex items-center justify-between text-[10px] font-mono text-slate-400">
-                        <span>LATENCY: 142ms</span>
-                        <button onclick="triggerSimulatedAnomaly()" class="text-cyan-400 hover:underline">Inject Test Event</button>
-                    </div>
+                    <span class="text-[10px] uppercase bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-mono" x-text="currentUser.role"></span>
+                </div>
+                <div class="flex gap-2">
+                    <button @click="showAuthModal = true" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs py-1.5 rounded transition font-medium">
+                        <i class="fa-solid fa-user-gear mr-1"></i> Switch User
+                    </button>
+                    <button @click="triggerSeedReset()" title="Reset Database Seed" class="bg-slate-800 hover:bg-red-950/50 hover:text-red-400 text-slate-300 text-xs px-2.5 py-1.5 rounded transition">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
                 </div>
             </div>
+        </aside>
 
-        </div>
+        <!-- ================= MAIN CONTENT AREA ================= -->
+        <main class="flex-1 flex flex-col min-w-0 overflow-y-auto bg-slate-950">
 
-
-        <!-- ================= PAGE 2: ANALYTICS & HISTORICAL MODELLING WORKSPACE ================= -->
-        <div id="page-analytics" class="absolute inset-0 hidden flex flex-col p-4 overflow-y-auto space-y-4">
-            <!-- Top Controls Bar -->
-            <div class="glass-panel p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 shrink-0">
-                <div class="flex items-center space-x-4">
-                    <div>
-                        <h2 class="text-sm font-bold text-white flex items-center space-x-2">
-                            <i class="fa-solid fa-flask text-cyan-400"></i>
-                            <span>Climate Simulation & XGBoost Downscaling Workspace</span>
-                        </h2>
-                        <p class="text-xs text-slate-400">Run macro-forecast correction models calibrated against HungaroMet ground stations.</p>
-                    </div>
+            <!-- Mobile Header -->
+            <header class="bg-slate-900 border-b border-slate-800 p-4 flex md:hidden items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-bold">S</div>
+                    <span class="font-bold text-white">SYNTRA</span>
                 </div>
-
-                <div class="flex items-center space-x-3 w-full md:w-auto">
-                    <select id="sim-scenario" class="bg-obsidian border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500">
-                        <option value="flood">Scenario A: Sudden Flash Flood (Buda Hills)</option>
-                        <option value="snow">Scenario B: Heavy Snow & Transit Blockage (BKK)</option>
-                        <option value="heatwave">Scenario C: Urban Heat Island Peak (Pest Districts)</option>
+                <div class="flex items-center gap-2">
+                    <select x-model="selectedTenantId" @change="switchTenant($event.target.value)" class="bg-slate-800 text-xs text-slate-200 rounded p-1 border border-slate-700">
+                        <template x-for="tenant in tenants" :key="tenant.id">
+                            <option :value="tenant.id" x-text="tenant.name"></option>
+                        </template>
                     </select>
-                    <button onclick="runSimulation()" class="bg-gradient-to-r from-cyan-500 to-emerald-500 text-obsidian px-4 py-2 rounded-xl text-xs font-bold shadow-lg hover:opacity-90 transition-all flex items-center space-x-2 shrink-0">
-                        <i class="fa-solid fa-play"></i>
-                        <span>Execute Simulation</span>
+                    <button @click="mobileMenuOpen = !mobileMenuOpen" class="text-slate-300 p-2"><i class="fa-solid fa-bars"></i></button>
+                </div>
+            </header>
+
+            <!-- Mobile Menu Dropdown -->
+            <div x-show="mobileMenuOpen" class="bg-slate-900 border-b border-slate-800 p-3 md:hidden space-y-2">
+                <button @click="currentTab = 'dashboard'; mobileMenuOpen = false" class="block w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded">Dashboard</button>
+                <button @click="currentTab = 'resources'; mobileMenuOpen = false" class="block w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded">Tenant Resources</button>
+                <button @click="currentTab = 'isolation'; mobileMenuOpen = false" class="block w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded">RLS Security Audit</button>
+                <button @click="currentTab = 'billing'; mobileMenuOpen = false" class="block w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded">Billing & Quotas</button>
+                <button @click="currentTab = 'api'; mobileMenuOpen = false" class="block w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded">OpenAPI & Webhooks</button>
+            </div>
+
+            <!-- Toast Notifications Area -->
+            <div class="fixed bottom-5 right-5 z-50 space-y-2 max-w-sm w-full pointer-events-none">
+                <template x-for="toast in toasts" :key="toast.id">
+                    <div class="pointer-events-auto flex items-start gap-3 p-4 rounded-xl shadow-2xl border transition-all transform translate-y-0"
+                         :class="{
+                            'bg-slate-900 border-emerald-500/50 text-slate-100 shadow-emerald-950/50': toast.type === 'success',
+                            'bg-slate-900 border-red-500/50 text-slate-100 shadow-red-950/50': toast.type === 'error',
+                            'bg-slate-900 border-amber-500/50 text-slate-100 shadow-amber-950/50': toast.type === 'warning'
+                         }">
+                        <div class="mt-0.5 text-lg">
+                            <i x-show="toast.type === 'success'" class="fa-solid fa-circle-check text-emerald-400"></i>
+                            <i x-show="toast.type === 'error'" class="fa-solid fa-triangle-exclamation text-red-400"></i>
+                            <i x-show="toast.type === 'warning'" class="fa-solid fa-circle-exclamation text-amber-400"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="text-xs font-bold uppercase tracking-wider" x-text="toast.title"></h4>
+                            <p class="text-xs text-slate-300 mt-0.5" x-text="toast.message"></p>
+                        </div>
+                        <button @click="removeToast(toast.id)" class="text-slate-500 hover:text-slate-300"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                </template>
+            </div>
+
+            <!-- ================= TAB 1: DASHBOARD ================= -->
+            <div x-show="currentTab === 'dashboard'" class="p-6 md:p-8 space-y-6 max-w-7xl mx-auto w-full">
+                <!-- Welcome Banner -->
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/40 p-6 rounded-2xl border border-slate-800">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" x-text="currentTenant.tier + ' Tier'"></span>
+                            <span class="text-xs text-slate-400">• Tenant ID: <code class="text-emerald-400 font-mono" x-text="currentTenant.id"></code></span>
+                        </div>
+                        <h2 class="text-2xl font-extrabold text-white tracking-tight" x-text="currentTenant.name + ' Workspace'"></h2>
+                        <p class="text-sm text-slate-400 mt-1">Real-time telemetry, resource utilization, and isolated database cluster statistics.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button @click="currentTab = 'resources'" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs px-4 py-2.5 rounded-lg shadow-lg shadow-emerald-900/30 transition flex items-center gap-2">
+                            <i class="fa-solid fa-plus"></i> Create Resource
+                        </button>
+                        <button @click="currentTab = 'billing'" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs px-4 py-2.5 rounded-lg border border-slate-700 transition">
+                            Manage Subscription
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPI Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- KPI 1 -->
+                    <div class="bg-slate-900/80 border border-slate-800 p-5 rounded-xl">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Storage Quota</span>
+                            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-sm">
+                                <i class="fa-solid fa-hard-drive"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-baseline justify-between">
+                            <div class="text-2xl font-bold text-white" x-text="currentTenant.storageUsedMB + ' MB'"></div>
+                            <span class="text-xs font-mono text-slate-400" x-text="'/ ' + currentTenant.storageLimitMB + ' MB'"></span>
+                        </div>
+                        <div class="mt-3 w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                            <div class="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" :style="`width: ${Math.min(100, (currentTenant.storageUsedMB / currentTenant.storageLimitMB) * 100)}%`"></div>
+                        </div>
+                    </div>
+
+                    <!-- KPI 2 -->
+                    <div class="bg-slate-900/80 border border-slate-800 p-5 rounded-xl">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">API Invocations</span>
+                            <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center text-sm">
+                                <i class="fa-solid fa-bolt"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-baseline justify-between">
+                            <div class="text-2xl font-bold text-white" x-text="currentTenant.apiCallsUsed.toLocaleString()"></div>
+                            <span class="text-xs font-mono text-slate-400" x-text="'/ ' + currentTenant.apiCallsLimit.toLocaleString()"></span>
+                        </div>
+                        <div class="mt-3 w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                            <div class="bg-blue-500 h-1.5 rounded-full transition-all duration-500" :style="`width: ${Math.min(100, (currentTenant.apiCallsUsed / currentTenant.apiCallsLimit) * 100)}%`"></div>
+                        </div>
+                    </div>
+
+                    <!-- KPI 3 -->
+                    <div class="bg-slate-900/80 border border-slate-800 p-5 rounded-xl">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Active Users</span>
+                            <div class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center text-sm">
+                                <i class="fa-solid fa-users"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-baseline justify-between">
+                            <div class="text-2xl font-bold text-white" x-text="currentTenant.usersCount"></div>
+                            <span class="text-xs font-mono text-emerald-400"><i class="fa-solid fa-arrow-trend-up"></i> +12%</span>
+                        </div>
+                        <div class="mt-3 text-[11px] text-slate-400">
+                            RBAC Enforced: Owner, Admin, Member
+                        </div>
+                    </div>
+
+                    <!-- KPI 4 -->
+                    <div class="bg-slate-900/80 border border-slate-800 p-5 rounded-xl">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Tenant Status</span>
+                            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-sm">
+                                <i class="fa-solid fa-shield-check"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span class="text-xl font-bold text-white" x-text="currentTenant.status"></span>
+                        </div>
+                        <div class="mt-3 text-[11px] text-slate-400">
+                            PostgreSQL 16 RLS: <span class="text-emerald-400">Isolated</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Tenant Activity Log -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-white text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-emerald-400"></i> Tenant Audit Stream (PostgreSQL WAL)
+                        </h3>
+                        <button @click="fetchAuditLogs()" class="text-xs text-slate-400 hover:text-white transition">
+                            <i class="fa-solid fa-rotate-right mr-1"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="space-y-2 font-mono text-xs">
+                        <template x-for="log in tenantLogs" :key="log.id">
+                            <div class="bg-slate-950 p-3 rounded border border-slate-800/80 flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-emerald-500" x-text="'[' + log.timestamp + ']'"></span>
+                                    <span class="text-slate-300 font-semibold" x-text="log.action"></span>
+                                    <span class="text-slate-500 text-[11px]" x-text="'tenant_id: ' + log.tenantId"></span>
+                                </div>
+                                <span class="px-2 py-0.5 rounded text-[10px]" 
+                                      :class="log.status === '200 OK' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'" 
+                                      x-text="log.status"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= TAB 2: TENANT RESOURCES ================= -->
+            <div x-show="currentTab === 'resources'" class="p-6 md:p-8 space-y-6 max-w-7xl mx-auto w-full">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-white tracking-tight">Tenant Resource Records</h2>
+                        <p class="text-sm text-slate-400">Strictly isolated data partitioned by <code class="text-emerald-400">tenant_id</code>. Only accessible by authorized tenant users.</p>
+                    </div>
+                    <button @click="openCreateResourceModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs px-4 py-2.5 rounded-lg shadow-lg shadow-emerald-900/30 transition flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> New Resource Record
                     </button>
                 </div>
-            </div>
 
-            <!-- Charts Grid (Multi-Axis Time-Series & Scatter Plot) -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 min-h-[400px]">
-                <div class="glass-panel p-4 rounded-2xl flex flex-col">
-                    <div class="flex items-center justify-between mb-3">
-                        <h3 class="text-xs font-mono font-bold text-slate-200 uppercase">Multi-Axis Telemetry Projection (Water Level vs. Precipitation)</h3>
-                        <span class="text-[10px] font-mono text-cyan-400">Model: XGBoost-500m v4.2</span>
-                    </div>
-                    <div class="flex-1 relative min-h-[300px]">
-                        <canvas id="timeSeriesChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="glass-panel p-4 rounded-2xl flex flex-col">
-                    <div class="flex items-center justify-between mb-3">
-                        <h3 class="text-xs font-mono font-bold text-slate-200 uppercase">Urban Albedo vs. Surface Temperature Scatter</h3>
-                        <span class="text-[10px] font-mono text-emerald-400">HungaroMet RMSE: 0.14°C</span>
-                    </div>
-                    <div class="flex-1 relative min-h-[300px]">
-                        <canvas id="scatterChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-
-        <!-- ================= PAGE 3: ADMINISTRATION & SUBSCRIPTION TIERING ================= -->
-        <div id="page-admin" class="absolute inset-0 hidden flex flex-col p-4 overflow-y-auto space-y-4">
-            <div class="glass-panel p-6 rounded-2xl shrink-0">
-                <div class="flex items-center justify-between mb-6">
-                    <div>
-                        <h2 class="text-base font-bold text-white flex items-center space-x-2">
-                            <i class="fa-solid fa-shield-halved text-amber-400"></i>
-                            <span>Enterprise RBAC & Subscription Monetization Engine</span>
-                        </h2>
-                        <p class="text-xs text-slate-400 mt-1">Manage tenant access tiers, API rate limits, and sovereign municipal overrides.</p>
-                    </div>
-                    <div id="rbac-status-banner" class="px-3 py-1.5 rounded-xl border text-xs font-mono flex items-center space-x-2">
-                        <i class="fa-solid fa-lock text-amber-400"></i>
-                        <span id="rbac-banner-text">Current Role: Municipality (Sovereign)</span>
-                    </div>
-                </div>
-
-                <!-- Tier Comparison Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <!-- City-Pulse -->
-                    <div class="glass-panel p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
-                        <div>
-                            <div class="flex items-center justify-between mb-3">
-                                <span class="text-xs font-mono text-slate-400">TIER 01</span>
-                                <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300">Basic</span>
-                            </div>
-                            <h3 class="text-lg font-bold text-white mb-1">City-Pulse</h3>
-                            <p class="text-xs text-slate-400 mb-4">Standard public air quality & macro-weather for citizens.</p>
-                            <ul class="space-y-2 text-xs text-slate-300 mb-6">
-                                <li class="flex items-center space-x-2"><i class="fa-solid fa-check text-emerald-400"></i><span>Hourly Macro Forecasts</span></li>
-                                <li class="flex items-center space-x-2"><i class="fa-solid fa-check text-emerald-400"></i><span>Public AQI Heatmaps</span></li>
-                                <li class="flex items-center space-x-2 opacity-40"><i class="fa-solid fa-xmark text-rose-400"></i><span>500m Microclimate Grid</span></li>
-                                <li class="flex items-center space-x-2 opacity-40"><i class="fa-solid fa-xmark text-rose-400"></i><span>BKK Transit Overrides</span></li>
-                            </ul>
-                        </div>
-                        <button onclick="setAuthTier('city-pulse')" class="w-full py-2 rounded-lg bg-surfaceLight border border-slate-700 hover:border-cyan-500 text-xs font-semibold transition-all">Select Tier</button>
-                    </div>
-
-                    <!-- Transit-Pro -->
-                    <div class="glass-panel p-5 rounded-xl border border-slate-700 flex flex-col justify-between relative overflow-hidden">
-                        <div class="absolute top-0 right-0 bg-cyan-500 text-obsidian text-[9px] font-mono font-bold px-3 py-1 rounded-bl-xl">POPULAR</div>
-                        <div>
-                            <div class="flex items-center justify-between mb-3">
-                                <span class="text-xs font-mono text-cyan-400">TIER 02</span>
-                                <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-300">Enterprise / BKK</span>
-                            </div>
-                            <h3 class="text-lg font-bold text-white mb-1">Transit-Pro</h3>
-                            <p class="text-xs text-slate-400 mb-4">Optimized for Budapest Transport (BKK) & logistics fleet managers.</p>
-                            <ul class="space-y-2 text-xs text-slate-300 mb-6">
-                                <li class="flex items-center space-x-2"><i class="fa-solid fa-check text-emerald-400"></i><span>Real-time Wind Shear MQTT</span></li>
-                                <li class="flex items-center space-x-2"><i class="fa-solid fa-check text-emerald-400"></i><span>Buda Hills Slope Ice Warnings</span></li>
-                                <li class="flex items-center space-x-2"><i class="fa-solid fa-check text-emerald-400"></i><span>500m Grid Telemetry</span></li>
-                                <li class="flex items-center space-x-2 opacity-40"><i class="fa-solid fa-xmark text-rose-400"></i><span>Sovereign Municipal Overrides</span></li>
-                            </ul>
-                        </div>
-                        <button onclick="setAuthTier('transit-pro')" class="w-full py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-obsidian text-xs font-bold transition-all">Select Tier</button>
-                    </div>
-
-                    <!-- Municipality -->
-                    <div class="glass-panel p-5 rounded-xl border border-amber-500/30 flex flex-col justify-between">
-                        <div>
-                            <div class="flex items-center justify-between mb-3">
-                                <span class="text-xs font-mono text-amber-400">TIER 03</span>
-                                <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/20 text-amber-300">Sovereign / City Hall</span>
-                            </div>
-                            <h3 class="text-lg font-bold text-white mb-1">Municipality</h3>
-                            <p class="text-xs text-slate-400 mb-4">Complete emergency control, floodgate actuators, and civil defense.</p>
-                            <ul class="space-y-2 text-xs text-slate-300 mb-6">
-                                <li class="flex items-center space-x-2"><i class="fa-solid fa-check text-emerald-400"></i><span>Danube Floodgate Control</span></li>
-                                <li class="flex items-center space-x-2"><i class="fa-solid fa-check text-emerald-400"></i><span>Full API Rate Limit Bypass</span></li>
-                                <li class="flex items-center space-x-2"><i class="fa-solid fa-check text-emerald-400"></i><span>AI Simulation Engine Access</span></li>
-                                <li class="flex items-center space-x-2"><i class="fa-solid fa-check text-emerald-400"></i><span>All 23 Districts Override</span></li>
-                            </ul>
-                        </div>
-                        <button onclick="setAuthTier('municipality')" class="w-full py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-obsidian text-xs font-bold transition-all">Select Tier</button>
-                    </div>
-                </div>
-
-                <!-- Sovereign Restricted Action Test Panel -->
-                <div class="mt-6 p-4 rounded-xl bg-obsidian border border-slate-800">
-                    <h3 class="text-xs font-mono font-bold text-slate-200 uppercase mb-2">Test Sovereign RBAC Enforcement</h3>
-                    <p class="text-xs text-slate-400 mb-3">Attempting to execute municipal emergency floodgate protocols with your current role:</p>
-                    <div class="flex items-center space-x-3">
-                        <button onclick="testSovereignAction()" class="bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all">
-                            Execute Emergency Danube Floodgate Override
-                        </button>
-                        <span id="rbac-test-result" class="text-xs font-mono text-slate-400"></span>
+                <!-- Resources Table -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-800 bg-slate-950/60 text-[11px] uppercase font-semibold text-slate-400 tracking-wider">
+                                    <th class="p-4">Resource ID & Name</th>
+                                    <th class="p-4">Tenant Scope</th>
+                                    <th class="p-4">Payload Size</th>
+                                    <th class="p-4">Created At</th>
+                                    <th class="p-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/60 text-xs">
+                                <template x-for="res in filteredResources" :key="res.id">
+                                    <tr class="hover:bg-slate-800/40 transition">
+                                        <td class="p-4">
+                                            <div class="font-bold text-white" x-text="res.name"></div>
+                                            <div class="text-slate-500 font-mono text-[10px]" x-text="res.id"></div>
+                                        </td>
+                                        <td class="p-4">
+                                            <span class="bg-slate-800 text-emerald-400 px-2 py-0.5 rounded font-mono text-[10px] border border-slate-700" x-text="res.tenantId"></span>
+                                        </td>
+                                        <td class="p-4 text-slate-300 font-mono" x-text="res.sizeMB + ' MB'"></td>
+                                        <td class="p-4 text-slate-400" x-text="res.createdAt"></td>
+                                        <td class="p-4 text-right space-x-2">
+                                            <button @click="editResource(res)" class="text-slate-400 hover:text-white p-1.5 bg-slate-800 rounded transition" title="Edit Record">
+                                                <i class="fa-solid fa-pen"></i>
+                                            </button>
+                                            <button @click="deleteResource(res.id)" class="text-red-400 hover:text-red-300 p-1.5 bg-red-950/30 border border-red-900/40 rounded transition" title="Delete Record">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                                <template x-if="filteredResources.length === 0">
+                                    <tr>
+                                        <td colspan="5" class="p-8 text-center text-slate-500">
+                                            <i class="fa-solid fa-folder-open text-3xl mb-2 block"></i>
+                                            No resource records found for this tenant workspace. Click "New Resource Record" to create one.
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
-        </div>
 
-
-        <!-- ================= PAGE 4: PRD & TECHNICAL SPECS ================= -->
-        <div id="page-specs" class="absolute inset-0 hidden flex flex-col p-4 overflow-y-auto space-y-4 text-slate-300 text-xs">
-            <div class="glass-panel p-6 rounded-2xl space-y-6">
+            <!-- ================= TAB 3: RLS & SECURITY AUDIT ================= -->
+            <div x-show="currentTab === 'isolation'" class="p-6 md:p-8 space-y-6 max-w-7xl mx-auto w-full">
                 <div>
-                    <h2 class="text-base font-bold text-white mb-1 flex items-center space-x-2">
-                        <i class="fa-solid fa-book-bookmark text-cyan-400"></i>
-                        <span>SYNTRA Engineering Specifications & Blueprint Hand-off</span>
-                    </h2>
-                    <p class="text-slate-400">Comprehensive documentation for Product Management, UI/UX Design, Data Science, and Backend Infrastructure teams.</p>
+                    <h2 class="text-2xl font-extrabold text-white tracking-tight">Row Level Security (RLS) & Tenant Isolation Simulator</h2>
+                    <p class="text-sm text-slate-400">Test cross-tenant security boundaries. Attempting to access or mutate records belonging to a different tenant triggers immediate 403 Forbidden enforcement.</p>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-800">
-                    <!-- Domain 1 -->
-                    <div class="space-y-2">
-                        <h3 class="text-sm font-bold text-cyan-400">1. Product Management & Multi-Page Architecture</h3>
-                        <p class="text-slate-300">Engineered specifically for Budapest's topography: Buda Hills elevation gradient (Districts II, XII), Pest flatlands, and Danube thermal corridors across all 23 districts. Features 3-column split command dashboard, real-time spatial particle visualization, and multi-tier RBAC.</p>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Isolation Test Console -->
+                    <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-6 space-y-4">
+                        <h3 class="font-bold text-white text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-shield-halved text-emerald-400"></i> Cross-Tenant Penetration Test
+                        </h3>
+                        <p class="text-xs text-slate-400">Simulate an API request where user from <code class="text-emerald-400" x-text="currentTenant.name"></code> attempts to query resources belonging to another isolated workspace.</p>
+                        
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-xs text-slate-400 block mb-1">Target Tenant ID to Access:</label>
+                                <select x-model="penetrationTargetTenant" class="w-full bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg p-2.5">
+                                    <template x-for="t in tenants" :key="t.id">
+                                        <option :value="t.id" x-text="t.name + ' (' + t.id + ')'"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs text-slate-400 block mb-1">Action Type:</label>
+                                <select x-model="penetrationAction" class="w-full bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg p-2.5">
+                                    <option value="SELECT">SELECT * FROM resources WHERE tenant_id = ?</option>
+                                    <option value="UPDATE">UPDATE resources SET data = ? WHERE tenant_id = ?</option>
+                                    <option value="DELETE">DELETE FROM resources WHERE tenant_id = ?</option>
+                                </select>
+                            </div>
+                            <button @click="runPenetrationTest()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs py-3 rounded-lg shadow-lg shadow-emerald-900/30 transition">
+                                <i class="fa-solid fa-terminal mr-2"></i> Execute Isolated Query
+                            </button>
+                        </div>
+
+                        <!-- Penetration Result Box -->
+                        <div x-show="penetrationResult" class="mt-4 p-4 rounded-lg font-mono text-xs border"
+                             :class="penetrationResult.status === 403 ? 'bg-red-950/40 border-red-900/60 text-red-300' : 'bg-emerald-950/40 border-emerald-900/60 text-emerald-300'">
+                            <div class="flex items-center justify-between font-bold mb-1">
+                                <span x-text="'HTTP Status: ' + penetrationResult.status + ' ' + penetrationResult.statusText"></span>
+                                <span class="text-[10px]" x-text="penetrationResult.timestamp"></span>
+                            </div>
+                            <p class="text-slate-300 text-[11px]" x-text="penetrationResult.message"></p>
+                        </div>
                     </div>
 
-                    <!-- Domain 2 -->
-                    <div class="space-y-2">
-                        <h3 class="text-sm font-bold text-emerald-400">2. UI/UX Design System Specifications</h3>
-                        <p class="text-slate-300">Deep obsidian canvas (<code class="text-cyan-300 font-mono">#0B0F19</code>), glassmorphic panels with backdrop blur, Inter typography, and Roboto Mono telemetry. Color mapping: Emerald for low AQI, Cyan for precipitation, Neon Orange for UHI thermal blobs, Amber/Red for severe warnings.</p>
-                    </div>
-
-                    <!-- Domain 3 -->
-                    <div class="space-y-2">
-                        <h3 class="text-sm font-bold text-amber-400">3. Data
+                    <!-- PostgreSQL RLS Policy Inspector -->
+                    <div class="bg-slate

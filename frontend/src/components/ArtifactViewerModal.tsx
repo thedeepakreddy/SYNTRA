@@ -64,31 +64,31 @@ export const ArtifactViewerModal: React.FC<ArtifactViewerModalProps> = ({ artifa
     >
       <div className="space-y-4">
         {/* Metadata Banner */}
-        <div className="rounded-lg bg-slate-950 p-3.5 border border-slate-800 space-y-2 text-xs font-mono">
+        <div className="rounded-xl bg-slate-950 p-4 border border-white/[0.08] space-y-2.5 text-xs font-mono shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center space-x-2">
-              <span className="px-2 py-0.5 rounded text-[10px] bg-indigo-950/80 text-indigo-300 border border-indigo-700/50">
+              <span className="px-2.5 py-0.5 rounded-md text-[10px] bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 font-semibold">
                 {artifact.artifact_type}
               </span>
               <span className="text-slate-400">
                 {artifact.size_bytes ? `${artifact.size_bytes} bytes` : `${content.length} bytes`}
               </span>
             </div>
-            <span className="text-slate-500">
+            <span className="text-slate-500 text-[11px]">
               {new Date(artifact.created_at).toLocaleString()}
             </span>
           </div>
 
           {artifact.content_hash && (
-            <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800/80">
-              <div className="flex items-center space-x-1.5 truncate max-w-md">
-                <Hash className="h-3.5 w-3.5 text-indigo-400 flex-shrink-0" />
-                <span className="truncate">{artifact.content_hash}</span>
+            <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-white/[0.06]">
+              <div className="flex items-center space-x-2 truncate max-w-md">
+                <Hash className="h-3.5 w-3.5 text-cyan-400 flex-shrink-0" />
+                <span className="truncate text-slate-300">{artifact.content_hash}</span>
               </div>
               <button
                 type="button"
                 onClick={handleCopyHash}
-                className="p-1 rounded text-slate-400 hover:text-slate-100 hover:bg-slate-800"
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
                 title="Copy SHA-256 Digest"
               >
                 {copiedHash ? (
@@ -102,17 +102,17 @@ export const ArtifactViewerModal: React.FC<ArtifactViewerModalProps> = ({ artifa
         </div>
 
         {/* Content Viewer */}
-        <div className="relative rounded-lg border border-slate-800 bg-slate-950/90 p-4">
-          <div className="absolute top-2.5 right-2.5 flex items-center space-x-1.5 z-10">
+        <div className="relative rounded-2xl border border-white/[0.08] bg-slate-950/90 p-4 shadow-layered-sm">
+          <div className="absolute top-3 right-3 flex items-center space-x-2 z-10">
             <button
               type="button"
               onClick={handleCopyContent}
-              className="inline-flex items-center space-x-1 rounded bg-slate-800/90 hover:bg-slate-700 px-2.5 py-1 text-[11px] font-medium text-slate-200 border border-slate-700 shadow"
+              className="inline-flex items-center space-x-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 px-3 py-1.5 text-[11px] font-medium text-slate-200 border border-white/[0.08] shadow transition-colors"
             >
               {copied ? (
                 <>
                   <Check className="h-3.5 w-3.5 text-emerald-400" />
-                  <span className="text-emerald-400">Copied</span>
+                  <span className="text-emerald-400 font-semibold">Copied</span>
                 </>
               ) : (
                 <>
@@ -124,7 +124,7 @@ export const ArtifactViewerModal: React.FC<ArtifactViewerModalProps> = ({ artifa
             <button
               type="button"
               onClick={handleDownload}
-              className="inline-flex items-center space-x-1 rounded bg-slate-800/90 hover:bg-slate-700 px-2.5 py-1 text-[11px] font-medium text-slate-200 border border-slate-700 shadow"
+              className="inline-flex items-center space-x-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 px-3 py-1.5 text-[11px] font-medium text-slate-200 border border-white/[0.08] shadow transition-colors"
               title="Download file"
             >
               <Download className="h-3.5 w-3.5 text-slate-400" />
@@ -132,7 +132,7 @@ export const ArtifactViewerModal: React.FC<ArtifactViewerModalProps> = ({ artifa
             </button>
           </div>
 
-          <div className="max-h-[500px] overflow-y-auto pr-2 mt-6">
+          <div className="max-h-[500px] overflow-y-auto pr-2 mt-7">
             {content ? (
               <pre className="font-mono text-xs text-slate-300 whitespace-pre-wrap leading-relaxed select-text">
                 {content}
@@ -150,7 +150,7 @@ export const ArtifactViewerModal: React.FC<ArtifactViewerModalProps> = ({ artifa
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-slate-700 px-4 py-2 text-xs font-medium text-slate-300 hover:bg-slate-800"
+            className="rounded-xl border border-white/[0.08] px-4 py-2 text-xs font-medium text-slate-300 hover:bg-slate-800 transition-colors"
           >
             Close Viewer
           </button>

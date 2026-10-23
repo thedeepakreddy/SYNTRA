@@ -3,6 +3,7 @@
 import pytest
 from pydantic import BaseModel
 
+from syntra.core.config import reset_settings
 from syntra.core.exceptions import LLMError
 from syntra.llm import (
     GeminiClient,
@@ -88,7 +89,9 @@ async def test_mock_llm_client_structured_generation():
     assert plan.estimated_effort_days == 5
 
 
-def test_gemini_client_unconfigured_error():
+def test_gemini_client_unconfigured_error(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "")
+    reset_settings()
     client = GeminiClient(api_key=None)
     with pytest.raises(LLMError):
         client._ensure_client()
