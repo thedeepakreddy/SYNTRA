@@ -1,4 +1,4 @@
-# MenuItem Full-Stack Backend Service
+# TransferSession Full-Stack Backend Service
 
 Autonomously engineered by the **SYNTRA Multi-Agent Engineering Organization**.
 
@@ -7,77 +7,7 @@ Autonomously engineered by the **SYNTRA Multi-Agent Engineering Organization**.
 - **Database**: SQLite (aiosqlite driver) with SQLAlchemy 2.0 ORM
 - **Validation**: Pydantic v2 schemas
 - **Test Runner**: Pytest + pytest-asyncio + HTTPX ASGITransport
-- **Mission Objective**: Act as a full-stack web developer and UI/UX designer. Build an interactive, mobile-responsive web-based menu for a modern Indian restaurant named "Tandoor & Spice". 
-
-### 1. Structure & Scale (30 Items Total)
-Create 6 distinct categories with exactly 5 items in each category (total of 30 items):
-
-1. Appetizers & Street Chaat (5 items)
-   - Samosa Chaat
-   - Pani Puri Shots
-   - Palak Chaat
-   - Vegetable Pakora
-   - Dahi Bhalla
-
-2. Tandoor & Grills (5 items)
-   - Tandoori Chicken (Half/Full)
-   - Paneer Tikka
-   - Murgh Malai Kebab
-   - Tandoori Lamb Chops
-   - Tandoori Prawns
-
-3. Rich Curries & Masalas (5 items)
-   - Butter Chicken (Murgh Makhani)
-   - Palak Paneer
-   - Lamb Rogan Josh
-   - Chana Masala
-   - Chicken Tikka Masala
-
-4. Biryanis & Rice Specialties (5 items)
-   - Hyderabadi Chicken Dum Biryani
-   - Lucknowi Lamb Biryani
-   - Subz Biryani (Vegetable)
-   - Jeera Rice
-   - Saffron Pulao
-
-5. Breads & Accompaniments (5 items)
-   - Garlic Butter Naan
-   - Tandoori Roti
-   - Laccha Paratha
-   - Onion Kulcha
-   - Cucumber Raita
-
-6. Desserts & Drinks (5 items)
-   - Gulab Jamun
-   - Rasmalai
-   - Mango Lassi
-   - Masala Chai
-   - Kulfi (Pistachio)
-
-### 2. Required Data Schema per Item
-Each of the 30 items must include:
-- id: unique string/number
-- name: Dish name (with Hindi subtitle in parentheses if applicable)
-- category: Category name
-- description: Engaging, sensory 1–2 sentence description
-- price: Realistic USD or EUR price
-- spiceLevel: Scale of 0 to 3 chili icons (0 = Mild, 1 = Medium, 2 = Hot, 3 = Indian Hot)
-- dietaryTags: Array of badges (e.g., "Vegetarian", "Vegan-friendly", "Gluten-Free", "Chef's Special")
-- allergens: Array (e.g., "Dairy", "Nuts", "Gluten")
-- image: High-quality placeholder or real food image URL
-
-### 3. Interactive UI & Features Required
-- Sticky Category Navigation: Quick-filter tabs or a sidebar to jump smoothly between the 6 categories or view "All Items".
-- Live Search & Filter Bar: 
-  - Search input by dish name or ingredient.
-  - Toggle filters for Dietary (Vegetarian, Vegan, Gluten-Free) and Spice Level.
-- Interactive Item Detail Modal: Clicking any dish opens a clean popup showing a larger view, full description, ingredient breakdown, spice rating, and allergen warnings.
-- Interactive Order / "Build Your Tray" Cart:
-  - Users can click "Add to Tray" on any item, adjust quantities (+/-), add special cooking notes, and see a running subtotal.
-  - A slide-out "Your Tray" drawer with a summary list and a mock "Submit Order / Generate QR summary" button.
-- Aesthetic & Theme:
-  - Warm, modern Indian aesthetic (rich saffron/terracotta accents, deep charcoal/cream background, clean typography).
-  - Smooth micro-animations and responsive layout (works seamlessly on mobile phones and desktop browsers).
+- **Mission Objective**: Help me design and architect a secure, end-to-end Peer-to-Peer (P2P) WebRTC Data Transfer Web Application. The core user loop must be incredibly simple: User A generates a unique 6-digit numeric room code, User B enters that code, a direct P2P data channel is established, and they can securely transfer files, text, or stream media directly with zero cloud storage footprint. Please structure your response into the following comprehensive, production-ready modules: ### 1. System Architecture & The Signaling Protocol Detail the underlying infrastructure and connection handshake lifecycle: - **Signaling Server Architecture:** Recommend the best technology stack (e.g., Node.js + WebSockets, Socket.io, or Go) to manage the initial connection without handling actual file payload data. - **6-Digit Code Lifecycle:** Explain the database/memory caching architecture (e.g., Redis) required to generate, validate, expire (e.g., 5-minute TTL), and map 6-digit collision-resistant room codes to specific WebSocket session IDs. - **NAT Traversal Network Strategy:** Outline the STUN/TURN server strategy (including open-source options like Coturn) to handle symmetric NATs and firewalls, ensuring a 99%+ connection success rate. - **WebRTC Connection Lifecycle:** Provide a step-by-step breakdown of the sequence (Offer, Answer, ICE Candidates) mapping exactly how User A and User B connect using only the 6-digit code. ### 2. P2P Data Transfer & Security Engine Detail how files are handled safely and reliably inside the browser: - **Chunking & Buffer Management:** Explain how to slice large files (e.g., >1GB) into binary ArrayBuffers, transmit them across the WebRTC `RTCDataChannel`, and reassemble them in the recipient's browser using the FileSystem Writable File Stream API. - **Flow Control & Congestion Management:** Describe how to monitor `bufferedAmount` and adjust chunk transmission speeds dynamically to prevent browser tab crashes. - **Security & Privacy:** Highlight the cryptographic measures (DTLS/SRTP encryption) native to WebRTC, and confirm how to guarantee zero-knowledge architecture (no file data ever touches a server). ### 3. UI/UX Design System & User Journeys Provide a highly scannable, modern, and high-converting frontend layout specification. Use a sleek, minimalist, dark-themed SaaS aesthetic (inspired by Linear or Vercel). Outline the visual layout, components, and animations for: - **Landing / Initial State:** Split view or toggle. Left/Top: "Send" button that generates a prominent, highly readable 6-digit code with a "Copy Link" shortcut. Right/Bottom: A clean, auto-focused numeric input field for "Receive" where typing the 6th digit automatically initiates the connection handshake. - **The Transfer Dashboard (Connected State):** - A beautiful, minimalist drag-and-drop file dropzone featuring subtle micro-animations (e.g., border pulse on file hover). - A real-time file queue panel showing file name, format icon, size, and individual progress bars. - A metrics display panel showing Peer Connection Status, Current Transfer Speed (MB/s), and Estimated Time Remaining (ETA). - **Global UI States:** Clear component wireframes/descriptions for Success/Completion states, Connection Loss/Interrupted errors, and Peer Disconnected alerts. ### 4. SaaS Monetization & Tier Infrastructure Design a scalable pricing framework that keeps operational costs low while maximizing profit: - **Free Tier Constraints:** Enforce client-side limitations (e.g., maximum 50MB per file transfer, maximum 2 concurrent transfers, basic transfer speeds). - **Premium/Pro Tier Features:** Propose features that add immense value without breaking the P2P model (e.g., unlimited file sizes, priority TURN server relays for blazing-fast bypass speeds, custom alphanumeric room codes, persistent transfer history logs stored strictly in browser IndexedDB). - **Authentication & Subscription Stack:** Recommend a lightweight SaaS integration strategy (e.g., Clerk or Auth0 for authentication; Stripe for metered or tiered billing checks via lightweight JWT tokens passed during the WebSocket handshake). ### 5. Production Technology Stack Recommendation Provide a definitive, modern tech stack list spanning: - **Frontend Framework:** (e.g., Next.js, React, or Vue.js with Tailwind CSS or Shadcn/ui components). - **WebRTC & State Management Libraries:** (e.g., Zustand, simple-peer, or native WebRTC APIs). - **Backend/Hosting:** (e.g., Vercel for the frontend, AWS/DigitalOcean/Render for the persistent WebSocket signaling and Coturn deployment).
 
 ## Quickstart
 
@@ -97,9 +27,9 @@ pytest test_api.py -v
 
 ## REST API Specification
 - `GET /health` — Service health probe
-- `GET /api/v1/menu_items` — Search, filter, and paginate records
-- `GET /api/v1/menu_items/stats` — Real-time telemetry and aggregation metrics
-- `GET /api/v1/menu_items/{id}` — Fetch single record by UUID
-- `POST /api/v1/menu_items` — Create a new validated record
-- `PUT /api/v1/menu_items/{id}` — Update record
-- `DELETE /api/v1/menu_items/{id}` — Delete record
+- `GET /api/v1/transfer_sessions` — Search, filter, and paginate records
+- `GET /api/v1/transfer_sessions/stats` — Real-time telemetry and aggregation metrics
+- `GET /api/v1/transfer_sessions/{id}` — Fetch single record by UUID
+- `POST /api/v1/transfer_sessions` — Create a new validated record
+- `PUT /api/v1/transfer_sessions/{id}` — Update record
+- `DELETE /api/v1/transfer_sessions/{id}` — Delete record

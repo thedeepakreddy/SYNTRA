@@ -1,1100 +1,739 @@
 <!DOCTYPE html>
-<html lang="en" class="dark scroll-smooth">
+<html lang="en" class="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tandoor &amp; Spice — Modern Indian Culinary Craft</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,600;1,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            serif: ['"Playfair Display"', 'Georgia', 'serif'],
-            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
-            mono: ['"JetBrains Mono"', 'monospace'],
-          },
-          colors: {
-            saffron: {
-              50: '#fffbeb',
-              100: '#fef3c7',
-              200: '#fde68a',
-              300: '#fcd34d',
-              400: '#fbbf24',
-              500: '#f59e0b',
-              600: '#d97706',
-              700: '#b45309',
-              800: '#92400e',
-              900: '#78350f',
-            },
-            terracotta: {
-              500: '#e05638',
-              600: '#c2410c',
-            },
-            charcoal: {
-              900: '#0f1117',
-              950: '#090a0f',
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYNTRA // Secure P2P Data Transfer & WebRTC Engine</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        syntra: {
+                            50: '#f0fdf4',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            950: '#052e16',
+                            bg: '#090a0f',
+                            card: '#12141c',
+                            border: '#1e2230'
+                        }
+                    }
+                }
             }
-          }
         }
-      }
-    }
-  </script>
-  <style>
-    body {
-      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-      background: #090a0f;
-      color: #f1f5f9;
-      overflow-x: hidden;
-    }
-    .font-serif {
-      font-family: 'Playfair Display', Georgia, serif;
-    }
-    .font-mono {
-      font-family: 'JetBrains Mono', monospace;
-    }
-    /* Custom scrollbar */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #090a0f;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #27272a;
-      border-radius: 9999px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #d97706;
-    }
-    .glass-panel {
-      background: rgba(18, 21, 31, 0.75);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(245, 158, 11, 0.18);
-    }
-    .glass-card {
-      background: rgba(22, 26, 38, 0.65);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border: 1px solid rgba(255, 255, 255, 0.07);
-      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .glass-card:hover {
-      border-color: rgba(245, 158, 11, 0.45);
-      transform: translateY(-3px);
-      box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.6), 0 0 24px -4px rgba(245, 158, 11, 0.15);
-    }
-  </style>
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #090a0f;
+            color: #f3f4f6;
+        }
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090a0f;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e2230;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #272c3d;
+        }
+        @keyframes pulse-subtle {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.85; transform: scale(1.01); }
+        }
+        .animate-pulse-subtle {
+            animation: pulse-subtle 3s infinite ease-in-out;
+        }
+    </style>
 </head>
-<body class="min-h-screen selection:bg-amber-500/30 selection:text-amber-200">
+<body class="min-h-screen flex flex-col justify-between selection:bg-emerald-500 selection:text-black">
 
-  <!-- TOP BANNER & OPERATIONAL STATUS -->
-  <div class="bg-gradient-to-r from-amber-950/80 via-slate-900 to-amber-950/80 border-b border-amber-500/20 text-xs py-2 px-4">
-    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
-      <div class="flex items-center space-x-2">
-        <span class="relative flex h-2 w-2">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-        </span>
-        <span class="font-medium text-emerald-400">Kitchen Live &amp; Accepting Orders</span>
-        <span class="text-slate-500">·</span>
-        <span class="text-slate-300">Open 12:00 PM – 11:00 PM</span>
-        <span class="text-slate-500">·</span>
-        <span class="text-amber-400 font-serif italic">Artisanal Clay-Oven &amp; Heritage Spices</span>
-      </div>
-      <div class="flex items-center space-x-4 text-slate-400">
-        <span>📍 442 Saffron Boulevard, Heritage District</span>
-        <span class="text-slate-600">|</span>
-        <span class="text-amber-300">Dine-In &amp; Express Takeaway</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- MAIN NAVIGATION HEADER -->
-  <header class="glass-panel sticky top-0 z-40 border-b border-amber-500/20 px-4 lg:px-8 py-3.5">
-    <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
-      
-      <!-- Brand & Subtitle -->
-      <div class="flex items-center space-x-3.5 cursor-pointer" onclick="window.scrollTo({ top: 0, behavior: 'smooth' })">
-        <div class="h-11 w-11 rounded-xl bg-gradient-to-br from-amber-400 via-amber-600 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20 border border-amber-300/40">
-          <svg class="w-6 h-6 text-slate-950" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C10.5 4.5 9 6.5 9 9c0 2 1 3.5 3 4.5 1.5-1 2-2 2-3.5 0-1-.5-2-1-3 2 1.5 4 4 4 7 0 3.3-2.7 6-6 6s-6-2.7-6-6c0-3.5 2.5-6.5 5-8zm0 18c2.2 0 4-1.8 4-4 0-1.8-1-3-2.5-4-.5 1-1.5 1.5-2.5 1.5s-1.5-.5-1.5-1.5c-1 1-1.5 2.2-1.5 4 0 2.2 1.8 4 4 4z"/>
-          </svg>
-        </div>
-        <div>
-          <div class="flex items-center space-x-2">
-            <h1 class="font-serif font-black text-2xl tracking-tight text-white">TANDOOR &amp; SPICE</h1>
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">Artisanal</span>
-          </div>
-          <p class="text-xs text-amber-200/70 font-serif italic">तन्दूर और मसाले · Modern Indian Culinary Craft</p>
-        </div>
-      </div>
-
-      <!-- Center Search (Desktop) -->
-      <div class="hidden md:flex flex-1 max-w-md mx-4">
-        <div class="relative w-full">
-          <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
-          </div>
-          <input
-            id="desktopSearchInput"
-            type="text"
-            placeholder="Search 30 dishes, ingredients (e.g., paneer, biryani, saffron)..."
-            class="w-full pl-10 pr-9 py-2 bg-slate-900/90 border border-slate-700/80 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/40 transition-all"
-            oninput="handleSearch(this.value)"
-          />
-          <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- Right Actions: Table Selector & Tray Cart -->
-      <div class="flex items-center space-x-3">
-        <!-- Dining Mode & Table -->
-        <div class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-700/60 text-xs">
-          <span class="text-amber-400">🍽️</span>
-          <span class="text-slate-300 font-medium" id="headerDiningModeText">Dine-In</span>
-          <span class="text-slate-500">·</span>
-          <span class="text-amber-300 font-mono font-bold" id="headerTableText">Table 04</span>
-        </div>
-
-        <!-- Your Tray Cart Button -->
-        <button
-          onclick="toggleTrayDrawer()"
-          class="relative flex items-center space-x-2.5 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-          </svg>
-          <span>Your Tray</span>
-          <span id="headerTrayCount" class="px-1.5 py-0.5 rounded-full bg-slate-950 text-amber-300 text-xs font-mono font-extrabold">0</span>
-          <span id="headerTrayTotal" class="hidden md:inline font-mono text-xs text-slate-900 font-black border-l border-slate-900/30 pl-2">$0.00</span>
-        </button>
-      </div>
-
-    </div>
-
-    <!-- Mobile Search Row -->
-    <div class="md:hidden mt-3 pt-2 border-t border-slate-800">
-      <div class="relative w-full">
-        <input
-          id="mobileSearchInput"
-          type="text"
-          placeholder="Search 30 dishes or ingredients..."
-          class="w-full pl-9 pr-8 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400"
-          oninput="handleSearch(this.value)"
-        />
-        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <!-- STICKY CATEGORY NAVIGATION TABS -->
-  <nav class="sticky top-[73px] z-30 bg-slate-950/95 backdrop-blur-xl border-b border-amber-500/20 py-2.5 px-4">
-    <div class="max-w-7xl mx-auto flex items-center space-x-2 overflow-x-auto no-scrollbar scroll-smooth">
-      <button
-        onclick="selectCategory('All')"
-        id="cat-tab-All"
-        class="category-tab whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20"
-      >
-        <span>All Dishes</span>
-        <span class="cat-pill px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-950/30 text-slate-950 font-black">30</span>
-      </button>
-
-      <!-- 6 Categories injected dynamically or static -->
-      <button onclick="selectCategory('Appetizers & Street Chaat')" id="cat-tab-Appetizers" class="category-tab whitespace-nowrap px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 transition-all flex items-center space-x-1.5">
-        <span>Appetizers &amp; Street Chaat</span>
-        <span class="cat-pill px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-800 text-slate-400">5</span>
-      </button>
-
-      <button onclick="selectCategory('Tandoor & Grills')" id="cat-tab-Tandoor" class="category-tab whitespace-nowrap px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 transition-all flex items-center space-x-1.5">
-        <span>Tandoor &amp; Grills</span>
-        <span class="cat-pill px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-800 text-slate-400">5</span>
-      </button>
-
-      <button onclick="selectCategory('Rich Curries & Masalas')" id="cat-tab-Curries" class="category-tab whitespace-nowrap px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 transition-all flex items-center space-x-1.5">
-        <span>Rich Curries &amp; Masalas</span>
-        <span class="cat-pill px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-800 text-slate-400">5</span>
-      </button>
-
-      <button onclick="selectCategory('Biryanis & Rice Specialties')" id="cat-tab-Biryanis" class="category-tab whitespace-nowrap px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 transition-all flex items-center space-x-1.5">
-        <span>Biryanis &amp; Rice</span>
-        <span class="cat-pill px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-800 text-slate-400">5</span>
-      </button>
-
-      <button onclick="selectCategory('Breads & Accompaniments')" id="cat-tab-Breads" class="category-tab whitespace-nowrap px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 transition-all flex items-center space-x-1.5">
-        <span>Breads &amp; Raita</span>
-        <span class="cat-pill px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-800 text-slate-400">5</span>
-      </button>
-
-      <button onclick="selectCategory('Desserts & Drinks')" id="cat-tab-Desserts" class="category-tab whitespace-nowrap px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 transition-all flex items-center space-x-1.5">
-        <span>Desserts &amp; Drinks</span>
-        <span class="cat-pill px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-800 text-slate-400">5</span>
-      </button>
-    </div>
-  </nav>
-
-  <!-- HERO BANNER -->
-  <section class="relative px-4 py-8 lg:py-12 overflow-hidden bg-gradient-to-b from-amber-950/20 via-slate-950 to-slate-950 border-b border-slate-800/60">
-    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(245,158,11,0.08),transparent_50%)] pointer-events-none"></div>
-    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative">
-      <div class="space-y-2 max-w-2xl">
-        <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold">
-          <span>✨</span>
-          <span>Chef Sanjeev Kapur's Autumn Tasting Collection</span>
-        </div>
-        <h2 class="font-serif text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
-          Where Ancient Spices Meet <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-200 to-orange-400">Modern Gastronomy</span>
-        </h2>
-        <p class="text-sm sm:text-base text-slate-300/80 leading-relaxed font-light">
-          Experience 30 authentic dishes crafted with single-origin Indian spices, 24-hour slow marinades, and charcoal tandoor roasting. Built for table dining and express digital ordering.
-        </p>
-      </div>
-
-      <!-- Quick Metrics Pill Group -->
-      <div class="grid grid-cols-3 gap-3 w-full md:w-auto">
-        <div class="p-3.5 rounded-2xl bg-slate-900/80 border border-amber-500/20 text-center">
-          <div class="font-mono text-xl sm:text-2xl font-black text-amber-400">30</div>
-          <div class="text-[11px] text-slate-400 font-medium">Curated Dishes</div>
-        </div>
-        <div class="p-3.5 rounded-2xl bg-slate-900/80 border border-amber-500/20 text-center">
-          <div class="font-mono text-xl sm:text-2xl font-black text-emerald-400">6</div>
-          <div class="text-[11px] text-slate-400 font-medium">Categories</div>
-        </div>
-        <div class="p-3.5 rounded-2xl bg-slate-900/80 border border-amber-500/20 text-center">
-          <div class="font-mono text-xl sm:text-2xl font-black text-orange-400">4.9 ★</div>
-          <div class="text-[11px] text-slate-400 font-medium">1,240 Reviews</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- MULTI-FILTER TOOLBAR (DIETARY & SPICE LEVEL & SORT) -->
-  <section class="max-w-7xl mx-auto px-4 py-5">
-    <div class="p-4 rounded-2xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-md space-y-4">
-      <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-        
-        <!-- Dietary Filters -->
-        <div class="flex items-center flex-wrap gap-2 text-xs">
-          <span class="text-slate-400 font-semibold uppercase tracking-wider text-[11px] mr-1">Dietary:</span>
-          <button onclick="setDietaryFilter('All')" id="diet-All" class="diet-btn px-3 py-1.5 rounded-xl font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">All</button>
-          <button onclick="setDietaryFilter('Vegetarian')" id="diet-Vegetarian" class="diet-btn px-3 py-1.5 rounded-xl text-slate-300 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60">🥬 Vegetarian</button>
-          <button onclick="setDietaryFilter('Vegan-friendly')" id="diet-Vegan" class="diet-btn px-3 py-1.5 rounded-xl text-slate-300 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60">🌱 Vegan-friendly</button>
-          <button onclick="setDietaryFilter('Gluten-Free')" id="diet-GlutenFree" class="diet-btn px-3 py-1.5 rounded-xl text-slate-300 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60">🌾 Gluten-Free</button>
-          <button onclick="setDietaryFilter('Chef')" id="diet-Chef" class="diet-btn px-3 py-1.5 rounded-xl text-slate-300 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60">⭐ Chef's Special</button>
-        </div>
-
-        <!-- Spice Level Filters -->
-        <div class="flex items-center flex-wrap gap-1.5 text-xs">
-          <span class="text-slate-400 font-semibold uppercase tracking-wider text-[11px] mr-1">Spice:</span>
-          <button onclick="setSpiceFilter('All')" id="spice-All" class="spice-btn px-2.5 py-1 rounded-lg font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">All</button>
-          <button onclick="setSpiceFilter('0')" id="spice-0" class="spice-btn px-2.5 py-1 rounded-lg text-slate-300 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60">Mild (0)</button>
-          <button onclick="setSpiceFilter('1')" id="spice-1" class="spice-btn px-2.5 py-1 rounded-lg text-slate-300 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60">🌶️ Med (1)</button>
-          <button onclick="setSpiceFilter('2')" id="spice-2" class="spice-btn px-2.5 py-1 rounded-lg text-slate-300 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60">🌶️🌶️ Hot (2)</button>
-          <button onclick="setSpiceFilter('3')" id="spice-3" class="spice-btn px-2.5 py-1 rounded-lg text-slate-300 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60">🌶️🌶️🌶️ Indian Hot (3)</button>
-        </div>
-
-      </div>
-
-      <!-- Result Counter & Sort Controls -->
-      <div class="pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between text-xs gap-3">
-        <div class="text-slate-400">
-          Showing <span id="dishCountDisplay" class="font-mono font-bold text-amber-400">30</span> of <span class="font-mono font-bold text-white">30</span> authentic Indian dishes
-          <span id="activeFilterTags" class="ml-2 text-slate-500 font-medium"></span>
-        </div>
-        <div class="flex items-center space-x-2">
-          <span class="text-slate-400">Sort By:</span>
-          <select id="sortSelect" onchange="handleSortChange(this.value)" class="bg-slate-800/80 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1 focus:outline-none focus:border-amber-400 text-xs">
-            <option value="recommended">Chef's Recommendation</option>
-            <option value="price-asc">Price: Low to High</option>
-            <option value="price-desc">Price: High to Low</option>
-            <option value="spice-asc">Spice: Mild First</option>
-            <option value="spice-desc">Spice: Hot First</option>
-          </select>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- MENU DISHES GRID -->
-  <main class="max-w-7xl mx-auto px-4 pb-24">
-    <div id="dishGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <!-- 30 Cards will be injected by JavaScript -->
-    </div>
-
-    <!-- Empty State if filters yield 0 results -->
-    <div id="emptyState" class="hidden text-center py-20 px-4">
-      <div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-slate-800/80 text-amber-400 text-2xl mb-4">
-        🔍
-      </div>
-      <h3 class="font-serif text-2xl font-bold text-white mb-2">No dishes match your filters</h3>
-      <p class="text-sm text-slate-400 max-w-md mx-auto mb-6">Try clearing your search terms or relaxing dietary/spice constraints to view the rest of the 30 dishes.</p>
-      <button onclick="resetAllFilters()" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider">
-        Reset All Filters
-      </button>
-    </div>
-  </main>
-
-  <!-- ITEM DETAIL POPUP MODAL -->
-  <div id="itemDetailModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="glass-panel w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl border border-amber-500/30 animate-in fade-in zoom-in-95 duration-200">
-      
-      <!-- Modal Header Image -->
-      <div class="relative h-64 sm:h-72 w-full bg-slate-900 overflow-hidden">
-        <img id="modalDishImage" src="" alt="Dish Preview" class="w-full h-full object-cover">
-        <button onclick="closeDetailModal()" class="absolute top-4 right-4 h-9 w-9 rounded-full bg-slate-950/80 text-white hover:text-amber-300 flex items-center justify-center border border-white/20 transition-all">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-        <div class="absolute bottom-4 left-4 flex flex-wrap gap-2" id="modalDietaryBadges"></div>
-      </div>
-
-      <!-- Modal Content Body -->
-      <div class="p-6 sm:p-8 space-y-6">
-        <div>
-          <div class="flex items-start justify-between gap-4">
+    <!-- Top Navigation / Header -->
+    <header class="w-full border-b border-syntra-border bg-syntra-bg/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold font-mono text-lg shadow-[0_0_15px_rgba(34,197,94,0.15)]">
+                S
+            </div>
             <div>
-              <div id="modalDishCategory" class="text-xs uppercase tracking-widest font-bold text-amber-400 mb-1"></div>
-              <h3 id="modalDishName" class="font-serif text-2xl sm:text-3xl font-bold text-white"></h3>
-              <p id="modalHindiName" class="text-sm text-amber-200/80 font-serif italic mt-0.5"></p>
+                <h1 class="font-bold text-base tracking-tight text-white flex items-center gap-2">
+                    SYNTRA <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono font-normal">P2P v2.4</span>
+                </h1>
+                <p class="text-xs text-zinc-400 hidden sm:block">Zero-Knowledge Encrypted Data Engine</p>
             </div>
-            <div class="text-right">
-              <div id="modalDishPrice" class="font-mono text-2xl sm:text-3xl font-black text-amber-400"></div>
-              <div id="modalSpiceLevelBadge" class="text-xs font-semibold text-slate-300 mt-1"></div>
-            </div>
-          </div>
         </div>
 
-        <!-- Sensory Description -->
-        <p id="modalDishDesc" class="text-sm text-slate-300 leading-relaxed font-light"></p>
-
-        <!-- Key Ingredients -->
-        <div>
-          <h4 class="text-xs uppercase tracking-wider font-bold text-slate-400 mb-2">Authentic Ingredients</h4>
-          <div id="modalIngredientsList" class="flex flex-wrap gap-1.5 text-xs"></div>
-        </div>
-
-        <!-- Allergen Warnings -->
-        <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start space-x-2.5 text-xs">
-          <span class="text-amber-400 font-bold">⚠️</span>
-          <div>
-            <span class="font-bold text-amber-200">Allergen Notice: </span>
-            <span id="modalAllergensText" class="text-slate-300"></span>
-          </div>
-        </div>
-
-        <!-- Special Cooking Notes Input -->
-        <div class="space-y-1.5">
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Special Cooking Notes / Instructions:</label>
-          <input
-            id="modalSpecialNotesInput"
-            type="text"
-            placeholder="e.g., Extra crispy, mild spice, sauce on side, no dairy..."
-            class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400"
-          />
-        </div>
-
-        <!-- Quantity & Add to Tray Action -->
-        <div class="pt-4 border-t border-slate-800 flex items-center justify-between gap-4">
-          <div class="flex items-center space-x-3 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-700">
-            <button onclick="decrementModalQty()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center">-</button>
-            <span id="modalQtyDisplay" class="font-mono text-base font-bold text-white w-6 text-center">1</span>
-            <button onclick="incrementModalQty()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center">+</button>
-          </div>
-
-          <button
-            onclick="addModalItemToTray()"
-            class="flex-1 py-3 px-6 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-sm shadow-xl shadow-amber-500/20 active:scale-95 transition-all flex items-center justify-center space-x-2"
-          >
-            <span>Add to Order Tray</span>
-            <span class="text-slate-900/60">·</span>
-            <span id="modalAddTotalDisplay" class="font-mono font-black">$0.00</span>
-          </button>
-        </div>
-
-      </div>
-    </div>
-  </div>
-
-  <!-- SLIDE-OUT "YOUR TRAY" CART DRAWER -->
-  <div id="trayBackdrop" onclick="toggleTrayDrawer()" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm transition-opacity"></div>
-  
-  <aside id="trayDrawer" class="fixed top-0 right-0 bottom-0 w-full sm:w-[440px] z-50 bg-slate-950/95 border-l border-amber-500/20 backdrop-blur-2xl shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
-    
-    <!-- Drawer Header -->
-    <div class="p-5 border-b border-slate-800/80 flex items-center justify-between bg-slate-900/40">
-      <div class="flex items-center space-x-3">
-        <div class="h-9 w-9 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center font-bold">
-          🛒
-        </div>
-        <div>
-          <h3 class="font-serif font-bold text-lg text-white">Your Order Tray</h3>
-          <p class="text-xs text-slate-400" id="drawerItemCount">0 items ready</p>
-        </div>
-      </div>
-      <button onclick="toggleTrayDrawer()" class="h-8 w-8 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-    </div>
-
-    <!-- Dining Mode Toggle & Table Selection -->
-    <div class="px-5 py-3 border-b border-slate-800/80 bg-slate-900/20 flex items-center justify-between text-xs">
-      <div class="flex items-center space-x-1.5 p-1 rounded-xl bg-slate-900 border border-slate-800">
-        <button onclick="setDiningMode('Dine-In')" id="modeDineInBtn" class="px-3 py-1 rounded-lg font-bold bg-amber-500 text-slate-950">🍽️ Dine-In</button>
-        <button onclick="setDiningMode('Takeaway')" id="modeTakeawayBtn" class="px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-white">🛍️ Takeaway</button>
-      </div>
-      <div class="flex items-center space-x-1 text-slate-400">
-        <span>Table:</span>
-        <input id="drawerTableInput" type="text" value="04" class="w-12 px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-center font-mono font-bold text-amber-400 focus:outline-none focus:border-amber-400" onchange="updateTableNumber(this.value)" />
-      </div>
-    </div>
-
-    <!-- Tray Items List -->
-    <div id="trayItemsContainer" class="flex-1 overflow-y-auto p-5 space-y-3.5">
-      <!-- Injected items or empty state -->
-    </div>
-
-    <!-- Drawer Footer Calculation & Checkout -->
-    <div class="p-5 border-t border-slate-800/80 bg-slate-900/60 space-y-3">
-      <div class="space-y-1.5 text-xs text-slate-300">
-        <div class="flex justify-between">
-          <span class="text-slate-400">Subtotal:</span>
-          <span id="traySubtotal" class="font-mono font-bold">$0.00</span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-slate-400">Estimated Tax (8.5%):</span>
-          <span id="trayTax" class="font-mono font-bold">$0.00</span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-slate-400">Eco Packaging &amp; Service Fee:</span>
-          <span id="trayFee" class="font-mono font-bold">$2.00</span>
-        </div>
-        <div class="pt-2 border-t border-slate-800 flex justify-between text-sm font-bold text-white">
-          <span class="font-serif">Total Due:</span>
-          <span id="trayTotal" class="font-mono text-base font-black text-amber-400">$0.00</span>
-        </div>
-      </div>
-
-      <button
-        id="submitOrderBtn"
-        onclick="submitOrder()"
-        class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-sm uppercase tracking-wider shadow-xl shadow-amber-500/20 active:scale-95 transition-all flex items-center justify-center space-x-2"
-      >
-        <span>Submit Order &amp; Generate QR</span>
-        <span>→</span>
-      </button>
-    </div>
-
-  </aside>
-
-  <!-- ORDER RECEIPT & QR CODE MODAL -->
-  <div id="orderSuccessModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="glass-panel w-full max-w-lg rounded-3xl p-6 sm:p-8 space-y-6 text-center border border-emerald-500/40 shadow-2xl">
-      
-      <!-- Checkmark -->
-      <div class="mx-auto h-16 w-16 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center text-3xl">
-        ✓
-      </div>
-
-      <div>
-        <span class="px-3 py-1 rounded-full text-[11px] font-mono font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">Order Sent to Kitchen</span>
-        <h3 class="font-serif text-2xl sm:text-3xl font-black text-white mt-2">Order Confirmed!</h3>
-        <p class="text-xs text-slate-400 mt-1">Thank you for dining at Tandoor &amp; Spice. Your dishes are being prepared.</p>
-      </div>
-
-      <!-- QR Code Display Box (Pure Inline SVG) -->
-      <div class="p-4 rounded-2xl bg-white mx-auto inline-block shadow-lg">
-        <div id="qrCodeContainer" class="w-44 h-44 flex items-center justify-center"></div>
-      </div>
-      <p class="text-xs text-slate-400 max-w-xs mx-auto">
-        Scan this QR code at your table terminal or present it to your server to track preparation status.
-      </p>
-
-      <!-- Order Details Summary -->
-      <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 text-left space-y-2 text-xs">
-        <div class="flex justify-between pb-2 border-b border-slate-800">
-          <span class="text-slate-400">Order Reference:</span>
-          <span id="receiptOrderId" class="font-mono font-bold text-amber-400">#TS-99214</span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-slate-400">Dining Option:</span>
-          <span id="receiptDiningMode" class="font-medium text-white">Dine-In (Table 04)</span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-slate-400">Timestamp:</span>
-          <span id="receiptTimestamp" class="font-mono text-slate-300">Oct 23, 2026 · 12:45 PM</span>
-        </div>
-        <div class="flex justify-between pt-2 border-t border-slate-800 font-bold text-white">
-          <span>Amount Paid:</span>
-          <span id="receiptTotal" class="font-mono text-sm text-emerald-400">$0.00</span>
-        </div>
-      </div>
-
-      <!-- Action Buttons -->
-      <div class="flex items-center space-x-3">
-        <button onclick="closeSuccessModal()" class="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-wider">
-          Close
-        </button>
-        <button onclick="window.print()" class="py-3 px-5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider">
-          Print Receipt
-        </button>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- TOAST NOTIFICATION -->
-  <div id="toastNotification" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none transition-all duration-300 opacity-0 translate-y-4">
-    <div class="px-4 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs shadow-2xl flex items-center space-x-2">
-      <span id="toastIcon">✓</span>
-      <span id="toastText">Item added to your tray!</span>
-    </div>
-  </div>
-
-  <!-- JAVASCRIPT STATE & LOGIC -->
-  <script>
-    // Authentic catalog of 30 items
-    const DISHES = [{"id": "samosa_chaat", "name": "Samosa Chaat (\u0938\u092e\u094b\u0938\u093e \u091a\u093e\u091f)", "category": "Appetizers & Street Chaat", "description": "Crispy golden spiced potato samosas crushed over slow-cooked chickpeas, bathed in sweet-tangy tamarind, mint-coriander chutney, chilled yoghurt, and crisp nylon sev.", "price": 11.5, "spice_level": 2, "dietary_tags": ["Vegetarian", "Street Food", "Popular"], "allergens": ["Gluten", "Dairy"], "ingredients": ["Handmade Samosa", "Chole Chickpeas", "Mint Chutney", "Saunth Tamarind", "Nylon Sev", "Pomegranate"], "image": "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=80"}, {"id": "pani_puri", "name": "Pani Puri Shots (\u092a\u093e\u0928\u0940 \u092a\u0942\u0930\u0940)", "category": "Appetizers & Street Chaat", "description": "Eight delicate semolina crisps filled with spiced potato-sprout filling, served with chilled spicy mint-coriander and sweet tamarind waters.", "price": 9.95, "spice_level": 1, "dietary_tags": ["Vegetarian", "Vegan-friendly", "Interactive Experience"], "allergens": ["Gluten"], "ingredients": ["Semolina Puris", "Spiced Potatoes", "Sprouted Moong", "Teekha Jaljeera", "Meetha Imli Pani"], "image": "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=800&q=80"}, {"id": "palak_chaat", "name": "Palak Chaat (\u092a\u093e\u0932\u0915 \u091a\u093e\u091f)", "category": "Appetizers & Street Chaat", "description": "Flash-fried baby spinach tempura tossed in whipped spiced yoghurt, date-tamarind reduction, and fresh ruby pomegranate arils.", "price": 12.5, "spice_level": 1, "dietary_tags": ["Vegetarian", "Chef's Special", "Crispy"], "allergens": ["Dairy"], "ingredients": ["Baby Spinach Leaves", "Chickpea Flour Batter", "Whisked Sweet Dahi", "Date-Tamarind Sauce", "Chaat Masala"], "image": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80"}, {"id": "veg_pakora", "name": "Vegetable Pakora (\u0938\u092c\u094d\u091c\u0940 \u092a\u0915\u094b\u0921\u093c\u093e)", "category": "Appetizers & Street Chaat", "description": "Garden medley of spinach, cauliflower, and onions enrobed in carom-scented chickpea batter, fried crisp with green mango mint chutney.", "price": 8.95, "spice_level": 1, "dietary_tags": ["Vegetarian", "Vegan-friendly", "Gluten-Free"], "allergens": ["None"], "ingredients": ["Spinach", "Cauliflower", "Red Onion", "Ajwain Carom Seeds", "Gram Flour", "Green Mango Dip"], "image": "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=800&q=80"}, {"id": "dahi_bhalla", "name": "Dahi Bhalla (\u0926\u0939\u0940 \u092d\u0932\u094d\u0932\u093e)", "category": "Appetizers & Street Chaat", "description": "Melt-in-mouth lentil dumplings immersed in velvety chilled sweetened yoghurt, topped with roasted cumin and sweet-tart chutneys.", "price": 10.5, "spice_level": 0, "dietary_tags": ["Vegetarian", "Gluten-Free", "Cooling"], "allergens": ["Dairy"], "ingredients": ["Urad Dal Dumplings", "Chilled Cultured Curd", "Roasted Jeera", "Red Chili Flakes", "Saunth Chutney"], "image": "https://images.unsplash.com/photo-1626777553632-47e24b4249a1?auto=format&fit=crop&w=800&q=80"}, {"id": "tandoori_chicken", "name": "Tandoori Chicken (\u0924\u0902\u0926\u0942\u0930\u0940 \u091a\u093f\u0915\u0928)", "category": "Tandoor & Grills", "description": "Free-range chicken steeped for 24 hours in smoked Kashmiri chilies, mustard oil, and hung curd, roasted in clay oven with charred lime.", "price": 19.95, "spice_level": 2, "dietary_tags": ["Gluten-Free", "High-Protein", "Clay Oven"], "allergens": ["Dairy"], "ingredients": ["Bone-in Chicken", "Deghi Mirch", "Kachri", "Hung Curd", "Cold-Pressed Mustard Oil", "Charred Lime"], "image": "https://images.unsplash.com/photo-1610057099443-fde8c4d50f91?auto=format&fit=crop&w=800&q=80"}, {"id": "paneer_tikka", "name": "Paneer Tikka (\u092a\u0928\u0940\u0930 \u091f\u093f\u0915\u094d\u0915\u093e)", "category": "Tandoor & Grills", "description": "Handcrafted cottage cheese cubes, bell peppers, and shallots marinated in carom seeds, ginger-garlic paste, and tandoori spices.", "price": 16.5, "spice_level": 2, "dietary_tags": ["Vegetarian", "Gluten-Free", "House Favorite"], "allergens": ["Dairy"], "ingredients": ["Artisanal Paneer", "Three-Color Peppers", "Pickled Shallots", "Ajwain", "Turmeric Yogurt Marinade"], "image": "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?auto=format&fit=crop&w=800&q=80"}, {"id": "murgh_malai", "name": "Murgh Malai Kebab (\u092e\u0941\u0930\u094d\u0917 \u092e\u0932\u093e\u0908 \u0915\u092c\u093e\u092c)", "category": "Tandoor & Grills", "description": "Tender boneless chicken morsels infused with green cardamom, royal mace, melted white cheddar, and clotted cream.", "price": 18.5, "spice_level": 0, "dietary_tags": ["Gluten-Free", "Mild & Creamy", "Royal Recipe"], "allergens": ["Dairy", "Nuts"], "ingredients": ["Chicken Supreme", "Green Cardamom", "Javitri Mace", "Malai Cream", "Cashew Paste", "White Pepper"], "image": "https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?auto=format&fit=crop&w=800&q=80"}, {"id": "lamb_chops", "name": "Tandoori Lamb Chops (\u0924\u0902\u0926\u0942\u0930\u0940 \u0932\u0948\u092e\u094d\u092c \u091a\u0949\u092a\u094d\u0938)", "category": "Tandoor & Grills", "description": "Prime Australian lamb cutlets massaged with raw papaya, toasted royal cumin, and crushed peppercorns, char-grilled over acacia charcoal.", "price": 26.95, "spice_level": 3, "dietary_tags": ["Gluten-Free", "Chef's Special", "Prime Cut"], "allergens": ["Dairy"], "ingredients": ["Lamb Chops", "Raw Papaya", "Black Peppercorn", "Royal Cumin", "Garlic Emulsion", "Smoked Ghee"], "image": "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80"}, {"id": "tandoori_prawns", "name": "Tandoori Prawns (\u0924\u0902\u0926\u0942\u0930\u0940 \u091d\u0940\u0902\u0917\u093e)", "category": "Tandoor & Grills", "description": "Jumbo wild-caught tiger prawns skewered with lime zest, crushed coriander seeds, and yellow chili powder, seared to smoky perfection.", "price": 24.5, "spice_level": 2, "dietary_tags": ["Gluten-Free", "Seafood", "Wild Caught"], "allergens": ["Crustacean", "Dairy"], "ingredients": ["Jumbo Tiger Prawns", "Yellow Chili", "Coriander Seeds", "Lemon Grass Infusion", "Garam Masala"], "image": "https://images.unsplash.com/photo-1559742811-822873691df8?auto=format&fit=crop&w=800&q=80"}, {"id": "butter_chicken", "name": "Butter Chicken (Murgh Makhani) (\u092e\u0941\u0930\u094d\u0917 \u092e\u0916\u0928\u0940)", "category": "Rich Curries & Masalas", "description": "Char-roasted chicken tikka simmered in a velvet silk tomato gravy, finished with churned makhana butter, honey, and dried fenugreek.", "price": 19.5, "spice_level": 1, "dietary_tags": ["Gluten-Free", "Signature Classic", "Popular"], "allergens": ["Dairy", "Nuts"], "ingredients": ["Tandoori Chicken Tikka", "San Marzano Tomatoes", "Kasuri Methi", "White Butter", "Cashew Silk Gravy"], "image": "https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?auto=format&fit=crop&w=800&q=80"}, {"id": "palak_paneer", "name": "Palak Paneer (\u092a\u093e\u0932\u0915 \u092a\u0928\u0940\u0930)", "category": "Rich Curries & Masalas", "description": "Tender fresh cheese cubes enveloped in slow-simmered organic spinach puree, seasoned with roasted garlic, cumin, and light cream.", "price": 17.5, "spice_level": 1, "dietary_tags": ["Vegetarian", "Gluten-Free", "Comfort Classic"], "allergens": ["Dairy"], "ingredients": ["Blanched Baby Spinach", "Farm Cottage Cheese", "Crisp Burnt Garlic", "Cumin", "Single Cream"], "image": "https://images.unsplash.com/photo-1601050690117-94f5f6fa8bd7?auto=format&fit=crop&w=800&q=80"}, {"id": "lamb_rogan_josh", "name": "Lamb Rogan Josh (\u0930\u094b\u0917\u0928 \u091c\u094b\u0936)", "category": "Rich Curries & Masalas", "description": "Heritage Kashmiri lamb braised low and slow with Ratan Jot alkanet root, fennel powder, ginger essence, and whole aromatic spices.", "price": 22.5, "spice_level": 2, "dietary_tags": ["Gluten-Free", "Kashmiri Heritage", "Slow-Braised"], "allergens": ["None"], "ingredients": ["Grass-Fed Lamb Shoulder", "Kashmiri Mirch", "Saunf Fennel", "Dry Ginger Powder", "Mustard Oil Broth"], "image": "https://images.unsplash.com/photo-1545247181-516773cae754?auto=format&fit=crop&w=800&q=80"}, {"id": "chana_masala", "name": "Chana Masala (\u091a\u0928\u093e \u092e\u0938\u093e\u0932\u093e)", "category": "Rich Curries & Masalas", "description": "Heritage chickpeas stewed with roasted pomegranate seeds, dry mango, caramelized onions, and stone-ground Punjabi garam masala.", "price": 15.5, "spice_level": 2, "dietary_tags": ["Vegetarian", "Vegan-friendly", "Gluten-Free"], "allergens": ["None"], "ingredients": ["Kabuli Chana", "Anardana Seeds", "Amchoor", "Caramelized Onion Gravy", "Fresh Ginger Matchsticks"], "image": "https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=800&q=80"}, {"id": "chicken_tikka_masala", "name": "Chicken Tikka Masala (\u091a\u093f\u0915\u0928 \u091f\u093f\u0915\u094d\u0915\u093e \u092e\u0938\u093e\u0932\u093e)", "category": "Rich Curries & Masalas", "description": "Tandoori grilled chicken morsels tossed in a robust, spiced onion-tomato masala enriched with bell peppers and fresh cilantro.", "price": 19.95, "spice_level": 2, "dietary_tags": ["Gluten-Free", "House Special", "Popular"], "allergens": ["Dairy"], "ingredients": ["Smoked Chicken Thighs", "Fire-Roasted Peppers", "Onion-Tomato Masala", "Coriander Roots", "Fenugreek"], "image": "https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=800&q=80"}, {"id": "chicken_biryani", "name": "Hyderabadi Chicken Dum Biryani (\u0939\u0948\u0926\u0930\u093e\u092c\u093e\u0926\u0940 \u092c\u093f\u0930\u092f\u093e\u0928\u0940)", "category": "Biryanis & Rice Specialties", "description": "Aged long-grain basmati rice and marinated chicken sealed with dough in a heavy handi, steam-dum cooked with saffron and fried onions.", "price": 20.5, "spice_level": 2, "dietary_tags": ["Gluten-Free", "Chef's Masterpiece", "Slow-Cooked"], "allergens": ["Dairy"], "ingredients": ["Dehradun Basmati Rice", "Bone-in Chicken", "Pure Saffron Milk", "Birista Crisp Onions", "Mint & Coriander"], "image": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=800&q=80"}, {"id": "lamb_biryani", "name": "Lucknowi Lamb Biryani (\u0932\u0916\u0928\u0935\u0940 \u092c\u093f\u0930\u092f\u093e\u0928\u0940)", "category": "Biryanis & Rice Specialties", "description": "Awadhi royal recipe of fragrant yakhni mutton broth infused into basmati pearls, layered with tender lamb, kewra water, and rose petals.", "price": 23.5, "spice_level": 1, "dietary_tags": ["Gluten-Free", "Awadhi Royal", "Aromatic"], "allergens": ["Dairy", "Nuts"], "ingredients": ["Lamb Shanks Yakhni", "Kewra Essence", "Rose Petals", "Green Cardamom Pods", "Shahi Zeera"], "image": "https://images.unsplash.com/photo-1633945274405-b6c8069047b0?auto=format&fit=crop&w=800&q=80"}, {"id": "subz_biryani", "name": "Subz Biryani (Vegetable) (\u0938\u092c\u094d\u091c \u092c\u093f\u0930\u092f\u093e\u0928\u0940)", "category": "Biryanis & Rice Specialties", "description": "Seasonal florets, French beans, baby potatoes, and paneer gems cooked with saffron-infused basmati and warm spices.", "price": 16.5, "spice_level": 1, "dietary_tags": ["Vegetarian", "Vegan-friendly", "Gluten-Free"], "allergens": ["Dairy (Optional)"], "ingredients": ["Seasonal Vegetables", "Aged Basmati", "Green Peas", "Brown Onions", "Star Anise & Mace"], "image": "https://images.unsplash.com/photo-1645177628172-a94c1f96e6db?auto=format&fit=crop&w=800&q=80"}, {"id": "jeera_rice", "name": "Jeera Rice (\u091c\u0940\u0930\u093e \u0930\u093e\u0907\u0938)", "category": "Biryanis & Rice Specialties", "description": "Fluffy steamed long-grain basmati rice tempered with golden roasted cumin seeds, bay leaves, and clarified desi ghee.", "price": 6.5, "spice_level": 0, "dietary_tags": ["Vegetarian", "Gluten-Free", "Comfort Side"], "allergens": ["None"], "ingredients": ["Steamed Basmati", "Toasted Cumin Seeds", "Desi Ghee", "Bay Leaves", "Fresh Cilantro"], "image": "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=800&q=80"}, {"id": "saffron_pulao", "name": "Saffron Pulao (\u0915\u0947\u0938\u0930 \u092a\u0941\u0932\u093e\u0935)", "category": "Biryanis & Rice Specialties", "description": "Delicate royal basmati pilaf steeped in Kashmiri saffron, tossed with roasted cashews, golden raisins, and green cardamom.", "price": 8.5, "spice_level": 0, "dietary_tags": ["Vegetarian", "Gluten-Free", "Fragrant"], "allergens": ["Dairy", "Nuts"], "ingredients": ["Basmati Rice", "Kashmiri Mongra Saffron", "Cashew Nuts", "Kishmish Raisins", "Cloves"], "image": "https://images.unsplash.com/photo-1626777553258-293674686b24?auto=format&fit=crop&w=800&q=80"}, {"id": "garlic_naan", "name": "Garlic Butter Naan (\u0917\u093e\u0930\u094d\u0932\u093f\u0915 \u0928\u093e\u0928)", "category": "Breads & Accompaniments", "description": "Hand-stretched leavened flatbread slapped onto tandoor clay walls, brushed with clarified butter, garlic confit, and fresh coriander.", "price": 4.95, "spice_level": 0, "dietary_tags": ["Vegetarian", "Tandoor Baked", "Popular"], "allergens": ["Gluten", "Dairy"], "ingredients": ["Enriched Flour", "Cultured Buttermilk", "Minced Garlic", "Amul Butter", "Nigella Seeds"], "image": "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=80"}, {"id": "tandoori_roti", "name": "Tandoori Roti (\u0924\u0902\u0926\u0942\u0930\u0940 \u0930\u094b\u091f\u0940)", "category": "Breads & Accompaniments", "description": "Traditional stone-ground whole wheat flatbread blistered crisp and golden in the charcoal tandoor.", "price": 3.95, "spice_level": 0, "dietary_tags": ["Vegetarian", "Vegan-friendly", "Whole Wheat"], "allergens": ["Gluten"], "ingredients": ["Whole Wheat Chakki Atta", "Water", "Pinch of Sea Salt", "Light Ghee (Optional)"], "image": "https://images.unsplash.com/photo-1505253758473-96b3015f27eb?auto=format&fit=crop&w=800&q=80"}, {"id": "laccha_paratha", "name": "Laccha Paratha (\u0932\u091a\u094d\u091b\u093e \u092a\u0930\u093e\u0902\u0920\u093e)", "category": "Breads & Accompaniments", "description": "Multi-layered flaky whole wheat bread pleated by hand, brushed with desi ghee, and baked crisp with tender interior layers.", "price": 5.5, "spice_level": 0, "dietary_tags": ["Vegetarian", "Layered Craft"], "allergens": ["Gluten", "Dairy"], "ingredients": ["Whole Wheat Flour", "Clarified Butter Ghee", "Ajwain Carom Seeds", "Sea Salt"], "image": "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=800&q=80"}, {"id": "onion_kulcha", "name": "Onion Kulcha (\u092a\u094d\u092f\u093e\u091c \u0915\u0941\u0932\u091a\u093e)", "category": "Breads & Accompaniments", "description": "Tandoor-baked flatbread stuffed with finely diced red onions, pomegranate powder, green chilies, and crushed coriander seeds.", "price": 5.95, "spice_level": 1, "dietary_tags": ["Vegetarian", "Stuffed Specialty"], "allergens": ["Gluten", "Dairy"], "ingredients": ["Refined Wheat Dough", "Spiced Red Onions", "Anardana", "Green Chilies", "Butter Glaze"], "image": "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=80"}, {"id": "cucumber_raita", "name": "Cucumber Raita (\u0916\u0940\u0930\u093e \u0930\u093e\u092f\u0924\u093e)", "category": "Breads & Accompaniments", "description": "Whisked artisanal yoghurt folded with grated English cucumbers, roasted cumin powder, black Himalayan salt, and fresh mint.", "price": 4.5, "spice_level": 0, "dietary_tags": ["Vegetarian", "Gluten-Free", "Cooling"], "allergens": ["Dairy"], "ingredients": ["Cultured Yoghurt", "Fresh Cucumbers", "Bhuna Jeera", "Kala Namak", "Garden Mint"], "image": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80"}, {"id": "gulab_jamun", "name": "Gulab Jamun (\u0917\u0941\u0932\u093e\u092c \u091c\u093e\u092e\u0941\u0928)", "category": "Desserts & Drinks", "description": "Deep-fried artisanal khoya milk dumplings soaked warm in green cardamom and saffron rose-scented syrup.", "price": 7.5, "spice_level": 0, "dietary_tags": ["Vegetarian", "Warm Dessert", "Classic"], "allergens": ["Dairy", "Gluten"], "ingredients": ["Khoya Mawa", "Chhena", "Saffron Sugar Syrup", "Rose Water", "Silver Leaf Chandi Vark"], "image": "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=800&q=80"}, {"id": "rasmalai", "name": "Rasmalai (\u0930\u0938\u092e\u0932\u093e\u0908)", "category": "Desserts & Drinks", "description": "Spongy, delicate cottage cheese disks immersed in chilled, thickened saffron-pistachio clotted milk infusion.", "price": 8.5, "spice_level": 0, "dietary_tags": ["Vegetarian", "Gluten-Free", "Royal Heritage"], "allergens": ["Dairy", "Nuts"], "ingredients": ["Soft Chhena Discs", "Rabdi Clotted Milk", "Kashmiri Saffron", "Iranian Pistachios", "Cardamom"], "image": "https://images.unsplash.com/photo-1579954115545-a95591f28bfc?auto=format&fit=crop&w=800&q=80"}, {"id": "mango_lassi", "name": "Mango Lassi (\u092e\u0948\u0902\u0917\u094b \u0932\u0938\u094d\u0938\u0940)", "category": "Desserts & Drinks", "description": "Velvety chilled shake of Alphonso mango pulp, cultured sweet yoghurt, cardamom spice, and crushed pistachios.", "price": 6.0, "spice_level": 0, "dietary_tags": ["Vegetarian", "Gluten-Free", "Beverage Favorite"], "allergens": ["Dairy", "Nuts"], "ingredients": ["Alphonso Mango Puree", "Creamy Dahi", "Cardamom", "Pistachio Slivers", "Honey Drop"], "image": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80"}, {"id": "masala_chai", "name": "Masala Chai (\u092e\u0938\u093e\u0932\u093e \u091a\u093e\u092f)", "category": "Desserts & Drinks", "description": "Slow-brewed Assam black tea infused with whole crushed ginger, green cardamom, cinnamon quill, cloves, and whole buffalo milk.", "price": 4.5, "spice_level": 1, "dietary_tags": ["Vegetarian", "Gluten-Free", "Comfort Beverage"], "allergens": ["Dairy"], "ingredients": ["Assam CTC Tea", "Adrak Ginger", "Elaichi Cardamom", "Dalchini Cinnamon", "Steamed Whole Milk"], "image": "https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=800&q=80"}, {"id": "kulfi_pistachio", "name": "Kulfi (Pistachio) (\u092a\u093f\u0938\u094d\u0924\u093e \u0915\u0941\u0932\u094d\u092b\u0940)", "category": "Desserts & Drinks", "description": "Traditional slow-reduced dense Indian ice cream scented with kewra, loaded with slivered pistachios and almonds on a wooden stick.", "price": 7.0, "spice_level": 0, "dietary_tags": ["Vegetarian", "Gluten-Free", "Frozen Delicacy"], "allergens": ["Dairy", "Nuts"], "ingredients": ["Slow-Reduced Full Cream", "Pistachio Nuts", "Almonds", "Kewra Water", "Green Cardamom"], "image": "https://images.unsplash.com/photo-1501443762994-82bd5dace89a?auto=format&fit=crop&w=800&q=80"}];
-    const CATEGORIES = ["Appetizers & Street Chaat", "Tandoor & Grills", "Rich Curries & Masalas", "Biryanis & Rice Specialties", "Breads & Accompaniments", "Desserts & Drinks"];
-
-    // Application Reactive State
-    let currentCategory = 'All';
-    let searchQuery = '';
-    let dietaryFilter = 'All';
-    let spiceFilter = 'All';
-    let sortMode = 'recommended';
-    let tray = [];
-    let modalDish = null;
-    let modalQty = 1;
-    let diningMode = 'Dine-In';
-    let tableNumber = '04';
-
-    // Initialize application
-    document.addEventListener('DOMContentLoaded', () => {
-      renderDishes();
-      updateTrayUI();
-    });
-
-    // Filter and Sort Pipeline
-    function getFilteredDishes() {
-      return DISHES.filter(d => {
-        // Category check
-        if (currentCategory !== 'All' && d.category !== currentCategory) return false;
-
-        // Dietary check
-        if (dietaryFilter !== 'All') {
-          if (dietaryFilter === 'Chef') {
-            if (!d.dietary_tags.some(t => t.toLowerCase().includes('chef'))) return false;
-          } else {
-            if (!d.dietary_tags.some(t => t.toLowerCase().includes(dietaryFilter.toLowerCase()))) return false;
-          }
-        }
-
-        // Spice check
-        if (spiceFilter !== 'All') {
-          if (parseInt(d.spice_level) !== parseInt(spiceFilter)) return false;
-        }
-
-        // Search Query check (name, hindi subtitle, description, ingredients, tags)
-        if (searchQuery.trim() !== '') {
-          const q = searchQuery.toLowerCase();
-          const matchName = d.name.toLowerCase().includes(q);
-          const matchDesc = d.description.toLowerCase().includes(q);
-          const matchCat = d.category.toLowerCase().includes(q);
-          const matchIng = d.ingredients.some(i => i.toLowerCase().includes(q));
-          const matchTags = d.dietary_tags.some(t => t.toLowerCase().includes(q));
-          if (!matchName && !matchDesc && !matchCat && !matchIng && !matchTags) return false;
-        }
-
-        return true;
-      }).sort((a, b) => {
-        if (sortMode === 'price-asc') return a.price - b.price;
-        if (sortMode === 'price-desc') return b.price - a.price;
-        if (sortMode === 'spice-asc') return a.spice_level - b.spice_level;
-        if (sortMode === 'spice-desc') return b.spice_level - a.spice_level;
-        return 0; // recommended preserves original authentic sequence
-      });
-    }
-
-    function renderDishes() {
-      const grid = document.getElementById('dishGrid');
-      const empty = document.getElementById('emptyState');
-      const counter = document.getElementById('dishCountDisplay');
-      const filtered = getFilteredDishes();
-
-      counter.textContent = filtered.length;
-
-      if (filtered.length === 0) {
-        grid.innerHTML = '';
-        empty.classList.remove('hidden');
-        return;
-      }
-
-      empty.classList.add('hidden');
-
-      grid.innerHTML = filtered.map(dish => {
-        const spiceChilis = '🌶️'.repeat(dish.spice_level) || '🟢 Mild';
-        const spiceLabel = dish.spice_level === 0 ? 'Mild (0)' : dish.spice_level === 1 ? 'Medium (1)' : dish.spice_level === 2 ? 'Hot (2)' : 'Indian Hot (3)';
-        
-        // Dietary badge chips
-        const dietChips = dish.dietary_tags.slice(0, 2).map(tag => {
-          const isVeg = tag.toLowerCase().includes('veg');
-          const isChef = tag.toLowerCase().includes('chef');
-          const colorClass = isChef ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : isVeg ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-slate-800 text-slate-300 border-slate-700';
-          return `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${colorClass}">${tag}</span>`;
-        }).join('');
-
-        // Key ingredients
-        const ingPreview = dish.ingredients.slice(0, 3).join(', ');
-
-        return `
-          <div class="glass-card rounded-2xl overflow-hidden flex flex-col justify-between group">
-            <!-- Image Thumbnail with fallback and overlays -->
-            <div class="relative h-48 w-full bg-slate-900 overflow-hidden cursor-pointer" onclick="openDetailModal('${dish.id}')">
-              <img
-                src="${dish.image}"
-                alt="${dish.name}"
-                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=800&q=80';"
-              />
-              <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent"></div>
-              
-              <!-- Badges over image -->
-              <div class="absolute top-3 left-3 flex flex-wrap gap-1.5">
-                ${dietChips}
-              </div>
-
-              <div class="absolute top-3 right-3 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-950/80 border border-slate-700 text-amber-400">
-                ${spiceChilis}
-              </div>
-
-              <!-- Category Badge Bottom Left -->
-              <div class="absolute bottom-2 left-3 text-[10px] uppercase font-bold tracking-wider text-amber-400 font-mono">
-                ${dish.category}
-              </div>
+        <!-- Global Status & Navigation Actions -->
+        <div class="flex items-center gap-3">
+            <!-- Simulated Signaling Server Status -->
+            <div id="signalingStatusBadge" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-mono text-emerald-400">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                Signaling: Connected
             </div>
 
-            <!-- Card Body -->
-            <div class="p-5 flex-1 flex flex-col justify-between space-y-3">
-              <div>
-                <h4 class="font-serif font-bold text-lg text-white group-hover:text-amber-300 transition-colors cursor-pointer" onclick="openDetailModal('${dish.id}')">
-                  ${dish.name}
-                </h4>
-                <p class="text-xs text-slate-300/80 line-clamp-2 mt-1 leading-relaxed">
-                  ${dish.description}
-                </p>
-                <div class="text-[11px] text-slate-400 mt-2">
-                  <span class="text-slate-500">Key:</span> ${ingPreview}...
-                </div>
-              </div>
+            <!-- Tier / Pro Upgrade Modal Toggle -->
+            <button onclick="toggleModal('pricingModal')" class="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition flex items-center gap-1.5">
+                <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                <span id="tierBadgeText">Free Tier (50MB Limit)</span>
+            </button>
 
-              <!-- Price & Action Buttons -->
-              <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between">
-                <div class="font-mono font-black text-xl text-amber-400">
-                  $${dish.price.toFixed(2)}
-                </div>
-                <div class="flex items-center space-x-2">
-                  <button
-                    onclick="openDetailModal('${dish.id}')"
-                    class="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700 transition-all"
-                  >
-                    Quick View
-                  </button>
-                  <button
-                    onclick="quickAddToCart('${dish.id}')"
-                    class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/10 active:scale-95 transition-all flex items-center space-x-1"
-                  >
-                    <span>+ Add</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
+            <!-- Architecture Spec Drawer Toggle -->
+            <button onclick="toggleModal('architectureModal')" class="p-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-white transition" title="System Architecture & Protocol Spec">
+                <i data-lucide="cpu" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </header>
 
-    // Navigation & Filtering handlers
-    function selectCategory(categoryName) {
-      currentCategory = categoryName;
-      document.querySelectorAll('.category-tab').forEach(tab => {
-        tab.className = "category-tab whitespace-nowrap px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 transition-all flex items-center space-x-1.5";
-      });
-      
-      const tabId = categoryName === 'All' ? 'cat-tab-All' :
-                    categoryName.includes('Appetizers') ? 'cat-tab-Appetizers' :
-                    categoryName.includes('Tandoor') ? 'cat-tab-Tandoor' :
-                    categoryName.includes('Curries') ? 'cat-tab-Curries' :
-                    categoryName.includes('Biryanis') ? 'cat-tab-Biryanis' :
-                    categoryName.includes('Breads') ? 'cat-tab-Breads' : 'cat-tab-Desserts';
-      
-      const activeEl = document.getElementById(tabId);
-      if (activeEl) {
-        activeEl.className = "category-tab whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20";
-      }
-      renderDishes();
-    }
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-6xl w-full mx-auto px-4 py-8 flex flex-col justify-center">
 
-    function handleSearch(val) {
-      searchQuery = val;
-      const clearBtn = document.getElementById('clearSearchBtn');
-      if (val.trim() !== '') {
-        clearBtn.classList.remove('hidden');
-      } else {
-        clearBtn.classList.add('hidden');
-      }
-      // Sync mobile and desktop inputs
-      const desk = document.getElementById('desktopSearchInput');
-      const mob = document.getElementById('mobileSearchInput');
-      if (desk && desk.value !== val) desk.value = val;
-      if (mob && mob.value !== val) mob.value = val;
-
-      renderDishes();
-    }
-
-    function clearSearch() {
-      handleSearch('');
-      const desk = document.getElementById('desktopSearchInput');
-      const mob = document.getElementById('mobileSearchInput');
-      if (desk) desk.value = '';
-      if (mob) mob.value = '';
-    }
-
-    function setDietaryFilter(tag) {
-      dietaryFilter = tag;
-      document.querySelectorAll('.diet-btn').forEach(btn => {
-        btn.className = "diet-btn px-3 py-1.5 rounded-xl text-slate-300 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60";
-      });
-      const el = document.getElementById('diet-' + (tag === 'All' ? 'All' : tag === 'Vegan-friendly' ? 'Vegan' : tag === 'Gluten-Free' ? 'GlutenFree' : tag));
-      if (el) el.className = "diet-btn px-3 py-1.5 rounded-xl font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40";
-      renderDishes();
-    }
-
-    function setSpiceFilter(level) {
-      spiceFilter = level;
-      document.querySelectorAll('.spice-btn').forEach(btn => {
-        btn.className = "spice-btn px-2.5 py-1 rounded-lg text-slate-300 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60";
-      });
-      const el = document.getElementById('spice-' + level);
-      if (el) el.className = "spice-btn px-2.5 py-1 rounded-lg font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40";
-      renderDishes();
-    }
-
-    function handleSortChange(val) {
-      sortMode = val;
-      renderDishes();
-    }
-
-    function resetAllFilters() {
-      currentCategory = 'All';
-      searchQuery = '';
-      dietaryFilter = 'All';
-      spiceFilter = 'All';
-      sortMode = 'recommended';
-      clearSearch();
-      selectCategory('All');
-      setDietaryFilter('All');
-      setSpiceFilter('All');
-      document.getElementById('sortSelect').value = 'recommended';
-      renderDishes();
-    }
-
-    // Detail Modal Actions
-    function openDetailModal(dishId) {
-      const dish = DISHES.find(d => d.id === dishId);
-      if (!dish) return;
-      modalDish = dish;
-      modalQty = 1;
-
-      document.getElementById('modalDishImage').src = dish.image;
-      document.getElementById('modalDishCategory').textContent = dish.category;
-      document.getElementById('modalDishName').textContent = dish.name;
-      document.getElementById('modalHindiName').textContent = dish.name.includes('(') ? dish.name.split('(')[1].replace(')', '') : '';
-      document.getElementById('modalDishPrice').textContent = '$' + dish.price.toFixed(2);
-      document.getElementById('modalDishDesc').textContent = dish.description;
-      document.getElementById('modalAllergensText').textContent = dish.allergens.join(', ');
-      document.getElementById('modalSpecialNotesInput').value = '';
-      document.getElementById('modalQtyDisplay').textContent = '1';
-      document.getElementById('modalAddTotalDisplay').textContent = '$' + dish.price.toFixed(2);
-
-      // Spice badge
-      const spiceGauge = '🌶️'.repeat(dish.spice_level) || '🟢 Mild (0)';
-      document.getElementById('modalSpiceLevelBadge').textContent = 'Spice: ' + spiceGauge;
-
-      // Dietary Badges
-      const badgesContainer = document.getElementById('modalDietaryBadges');
-      badgesContainer.innerHTML = dish.dietary_tags.map(t => 
-        `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-950/80 text-amber-300 border border-amber-500/30">${t}</span>`
-      ).join('');
-
-      // Ingredients pills
-      const ingContainer = document.getElementById('modalIngredientsList');
-      ingContainer.innerHTML = dish.ingredients.map(ing =>
-        `<span class="px-2 py-0.5 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300">${ing}</span>`
-      ).join('');
-
-      document.getElementById('itemDetailModal').classList.remove('hidden');
-    }
-
-    function closeDetailModal() {
-      document.getElementById('itemDetailModal').classList.add('hidden');
-      modalDish = null;
-    }
-
-    function incrementModalQty() {
-      modalQty += 1;
-      document.getElementById('modalQtyDisplay').textContent = modalQty;
-      if (modalDish) {
-        document.getElementById('modalAddTotalDisplay').textContent = '$' + (modalDish.price * modalQty).toFixed(2);
-      }
-    }
-
-    function decrementModalQty() {
-      if (modalQty > 1) {
-        modalQty -= 1;
-        document.getElementById('modalQtyDisplay').textContent = modalQty;
-        if (modalDish) {
-          document.getElementById('modalAddTotalDisplay').textContent = '$' + (modalDish.price * modalQty).toFixed(2);
-        }
-      }
-    }
-
-    function addModalItemToTray() {
-      if (!modalDish) return;
-      const notes = document.getElementById('modalSpecialNotesInput').value.trim();
-      addToTray(modalDish, modalQty, notes);
-      closeDetailModal();
-      showToast(`Added ${modalQty}x ${modalDish.name.split('(')[0].trim()} to your tray!`);
-    }
-
-    function quickAddToCart(dishId) {
-      const dish = DISHES.find(d => d.id === dishId);
-      if (!dish) return;
-      addToTray(dish, 1, '');
-      showToast(`Added ${dish.name.split('(')[0].trim()} to your tray!`);
-    }
-
-    // Cart / Tray Management
-    function addToTray(dish, qty, notes) {
-      const existing = tray.find(i => i.dishId === dish.id && i.notes === notes);
-      if (existing) {
-        existing.qty += qty;
-      } else {
-        tray.push({
-          dishId: dish.id,
-          name: dish.name,
-          price: dish.price,
-          qty: qty,
-          notes: notes,
-          image: dish.image,
-          category: dish.category,
-        });
-      }
-      updateTrayUI();
-    }
-
-    function updateTrayItemQty(idx, delta) {
-      if (tray[idx]) {
-        tray[idx].qty += delta;
-        if (tray[idx].qty <= 0) {
-          tray.splice(idx, 1);
-        }
-        updateTrayUI();
-      }
-    }
-
-    function removeTrayItem(idx) {
-      if (tray[idx]) {
-        tray.splice(idx, 1);
-        updateTrayUI();
-      }
-    }
-
-    function updateTrayUI() {
-      const countEl = document.getElementById('headerTrayCount');
-      const totalEl = document.getElementById('headerTrayTotal');
-      const drawerCountEl = document.getElementById('drawerItemCount');
-      const container = document.getElementById('trayItemsContainer');
-      const subtotalEl = document.getElementById('traySubtotal');
-      const taxEl = document.getElementById('trayTax');
-      const grandTotalEl = document.getElementById('trayTotal');
-
-      const totalItems = tray.reduce((sum, item) => sum + item.qty, 0);
-      const subtotal = tray.reduce((sum, item) => sum + (item.price * item.qty), 0);
-      const tax = subtotal * 0.085;
-      const fee = subtotal > 0 ? 2.00 : 0.00;
-      const grandTotal = subtotal + tax + fee;
-
-      countEl.textContent = totalItems;
-      totalEl.textContent = '$' + subtotal.toFixed(2);
-      drawerCountEl.textContent = `${totalItems} items ready in tray`;
-
-      subtotalEl.textContent = '$' + subtotal.toFixed(2);
-      taxEl.textContent = '$' + tax.toFixed(2);
-      grandTotalEl.textContent = '$' + grandTotal.toFixed(2);
-
-      if (tray.length === 0) {
-        container.innerHTML = `
-          <div class="text-center py-16 px-4">
-            <div class="text-4xl mb-3 text-slate-600">🍲</div>
-            <p class="font-serif text-base font-bold text-slate-300">Your Tray is Empty</p>
-            <p class="text-xs text-slate-400 mt-1 max-w-xs mx-auto">Explore our 30 authentic Indian specialties and add your favorites.</p>
-          </div>
-        `;
-        return;
-      }
-
-      container.innerHTML = tray.map((item, idx) => `
-        <div class="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 flex items-start space-x-3 group">
-          <img src="${item.image}" alt="${item.name}" class="w-16 h-16 rounded-xl object-cover bg-slate-800 flex-shrink-0" />
-          <div class="flex-1 min-w-0">
-            <div class="flex items-start justify-between">
-              <h5 class="font-bold text-xs text-white truncate">${item.name}</h5>
-              <button onclick="removeTrayItem(${idx})" class="text-slate-500 hover:text-red-400 text-xs ml-2">✕</button>
-            </div>
-            <div class="font-mono text-xs font-bold text-amber-400 mt-0.5">$${item.price.toFixed(2)} each</div>
-            ${item.notes ? `<div class="text-[11px] text-amber-300/80 bg-amber-500/10 px-2 py-0.5 rounded mt-1.5 italic">"${item.notes}"</div>` : ''}
+        <!-- STATE 1: Landing / Initial Connection View -->
+        <div id="viewLanding" class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl mx-auto">
             
-            <div class="flex items-center justify-between mt-2.5 pt-2 border-t border-slate-800">
-              <div class="flex items-center space-x-2 bg-slate-950 px-2 py-0.5 rounded-lg border border-slate-700/60 text-xs">
-                <button onclick="updateTrayItemQty(${idx}, -1)" class="w-5 text-slate-400 hover:text-white font-bold">-</button>
-                <span class="font-mono font-bold text-white px-1">${item.qty}</span>
-                <button onclick="updateTrayItemQty(${idx}, 1)" class="w-5 text-slate-400 hover:text-white font-bold">+</button>
-              </div>
-              <div class="font-mono font-black text-xs text-white">
-                $${(item.price * item.qty).toFixed(2)}
-              </div>
+            <!-- Send Card -->
+            <div class="bg-syntra-card border border-syntra-border rounded-2xl p-6 flex flex-col justify-between shadow-xl relative overflow-hidden group hover:border-emerald-500/50 transition duration-300">
+                <div class="absolute -right-12 -top-12 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition"></div>
+                <div>
+                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4">
+                        <i data-lucide="upload-cloud" class="w-6 h-6"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-white mb-2">Send Files & Media</h2>
+                    <p class="text-sm text-zinc-400 mb-6">Generate a secure 6-digit room code and stream files directly peer-to-peer with zero server storage.</p>
+                </div>
+
+                <div id="senderCodeContainer" class="space-y-4">
+                    <button onclick="generateRoomCode()" id="generateBtn" class="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-black font-semibold text-sm transition flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(34,197,94,0.25)]">
+                        <i data-lucide="key" class="w-4 h-4"></i>
+                        Generate Room Code
+                    </button>
+                </div>
             </div>
-          </div>
+
+            <!-- Receive Card -->
+            <div class="bg-syntra-card border border-syntra-border rounded-2xl p-6 flex flex-col justify-between shadow-xl relative overflow-hidden group hover:border-emerald-500/50 transition duration-300">
+                <div class="absolute -right-12 -top-12 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition"></div>
+                <div>
+                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4">
+                        <i data-lucide="download-cloud" class="w-6 h-6"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-white mb-2">Receive Files</h2>
+                    <p class="text-sm text-zinc-400 mb-6">Enter the 6-digit room code provided by the sender. Handshake initiates automatically upon typing the 6th digit.</p>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-mono text-zinc-400 uppercase tracking-wider mb-2">Enter 6-Digit Room Code</label>
+                        <div class="flex gap-2 justify-between" id="codeInputGroup">
+                            <input type="text" maxlength="1" class="code-digit w-12 h-14 text-center font-mono text-xl font-bold bg-zinc-900 border border-zinc-800 rounded-xl text-white focus:border-emerald-500 focus:outline-none transition" oninput="handleCodeInput(this, 0)" onkeydown="handleCodeKeyDown(event, 0)" />
+                            <input type="text" maxlength="1" class="code-digit w-12 h-14 text-center font-mono text-xl font-bold bg-zinc-900 border border-zinc-800 rounded-xl text-white focus:border-emerald-500 focus:outline-none transition" oninput="handleCodeInput(this, 1)" onkeydown="handleCodeKeyDown(event, 1)" />
+                            <input type="text" maxlength="1" class="code-digit w-12 h-14 text-center font-mono text-xl font-bold bg-zinc-900 border border-zinc-800 rounded-xl text-white focus:border-emerald-500 focus:outline-none transition" oninput="handleCodeInput(this, 2)" onkeydown="handleCodeKeyDown(event, 2)" />
+                            <input type="text" maxlength="1" class="code-digit w-12 h-14 text-center font-mono text-xl font-bold bg-zinc-900 border border-zinc-800 rounded-xl text-white focus:border-emerald-500 focus:outline-none transition" oninput="handleCodeInput(this, 3)" onkeydown="handleCodeKeyDown(event, 3)" />
+                            <input type="text" maxlength="1" class="code-digit w-12 h-14 text-center font-mono text-xl font-bold bg-zinc-900 border border-zinc-800 rounded-xl text-white focus:border-emerald-500 focus:outline-none transition" oninput="handleCodeInput(this, 4)" onkeydown="handleCodeKeyDown(event, 4)" />
+                            <input type="text" maxlength="1" class="code-digit w-12 h-14 text-center font-mono text-xl font-bold bg-zinc-900 border border-zinc-800 rounded-xl text-white focus:border-emerald-500 focus:outline-none transition" oninput="handleCodeInput(this, 5)" onkeydown="handleCodeKeyDown(event, 5)" />
+                        </div>
+                    </div>
+                    <button onclick="connectWithCode()" id="connectBtn" class="w-full py-3.5 px-4 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold text-sm transition flex items-center justify-center gap-2">
+                        <i data-lucide="zap" class="w-4 h-4"></i>
+                        Connect Manually
+                    </button>
+                </div>
+            </div>
+
         </div>
-      `).join('');
-    }
 
-    function toggleTrayDrawer() {
-      const drawer = document.getElementById('trayDrawer');
-      const backdrop = document.getElementById('trayBackdrop');
-      const isClosed = drawer.classList.contains('translate-x-full');
+        <!-- STATE 2: Connecting / Handshake View -->
+        <div id="viewConnecting" class="hidden flex-col items-center justify-center max-w-md mx-auto text-center py-12">
+            <div class="relative w-24 h-24 mb-6">
+                <div class="absolute inset-0 rounded-full border-4 border-emerald-500/20 animate-ping"></div>
+                <div class="absolute inset-0 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin"></div>
+                <div class="absolute inset-0 flex items-center justify-center text-emerald-400">
+                    <i data-lucide="shield-check" class="w-8 h-8"></i>
+                </div>
+            </div>
+            <h3 id="connectingTitle" class="text-xl font-bold text-white mb-2">Establishing P2P Tunnel...</h3>
+            <p id="connectingSubtitle" class="text-sm text-zinc-400 mb-6">Negotiating ICE candidates and establishing DTLS encrypted WebRTC channel.</p>
+            <button onclick="resetApp()" class="px-4 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 hover:text-white transition">
+                Cancel Connection
+            </button>
+        </div>
 
-      if (isClosed) {
-        drawer.classList.remove('translate-x-full');
-        backdrop.classList.remove('hidden');
-      } else {
-        drawer.classList.add('translate-x-full');
-        backdrop.classList.add('hidden');
-      }
-    }
+        <!-- STATE 3: Connected Transfer Dashboard -->
+        <div id="viewDashboard" class="hidden grid-cols-1 lg:grid-cols-3 gap-6 w-full">
+            
+            <!-- Left 2 Cols: Dropzone & File Queue -->
+            <div class="lg:col-span-2 space-y-6">
+                
+                <!-- Dropzone Component -->
+                <div id="dropzone" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleFileDrop(event)" class="border-2 border-dashed border-zinc-800 hover:border-emerald-500 bg-syntra-card/50 hover:bg-syntra-card rounded-2xl p-8 text-center transition duration-300 cursor-pointer relative group">
+                    <input type="file" id="fileInput" multiple onchange="handleFileSelect(event)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                    <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mx-auto mb-4 group-hover:scale-110 transition">
+                        <i data-lucide="file-up" class="w-7 h-7"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-1">Drop files to stream instantly</h3>
+                    <p class="text-xs text-zinc-400 mb-4">Supports any file format. Sliced into binary chunks and streamed securely.</p>
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 font-medium">
+                        <i data-lucide="mouse-pointer-click" class="w-3.5 h-3.5 text-emerald-400"></i>
+                        Browse Files
+                    </div>
+                </div>
 
-    function setDiningMode(mode) {
-      diningMode = mode;
-      document.getElementById('headerDiningModeText').textContent = mode;
-      const dineInBtn = document.getElementById('modeDineInBtn');
-      const takeawayBtn = document.getElementById('modeTakeawayBtn');
-      if (mode === 'Dine-In') {
-        dineInBtn.className = "px-3 py-1 rounded-lg font-bold bg-amber-500 text-slate-950";
-        takeawayBtn.className = "px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-white";
-      } else {
-        dineInBtn.className = "px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-white";
-        takeawayBtn.className = "px-3 py-1 rounded-lg font-bold bg-amber-500 text-slate-950";
-      }
-    }
+                <!-- File Queue Panel -->
+                <div class="bg-syntra-card border border-syntra-border rounded-2xl p-6 shadow-xl">
+                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-zinc-800">
+                        <h4 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                            <i data-lucide="list" class="w-4 h-4 text-emerald-400"></i>
+                            Transfer Queue (<span id="queueCount">0</span>)
+                        </h4>
+                        <button onclick="clearQueue()" class="text-xs text-zinc-500 hover:text-zinc-300 transition">Clear Finished</button>
+                    </div>
 
-    function updateTableNumber(val) {
-      tableNumber = val || '04';
-      document.getElementById('headerTableText').textContent = 'Table ' + tableNumber;
-    }
+                    <div id="fileQueueList" class="space-y-3 max-h-80 overflow-y-auto pr-2">
+                        <!-- Dynamic file queue items populate here -->
+                        <div id="emptyQueueState" class="text-center py-8 text-zinc-500 text-xs">
+                            No active or pending transfers in queue.
+                        </div>
+                    </div>
+                </div>
 
-    // SVG QR Code Generator (21x21 matrix render)
-    function generatePureSvgQr(orderText) {
-      // Deterministic decorative QR code matrix
-      const matrix = [
-        [1,1,1,1,1,1,1,0,1,0,1,0,1,0,1,1,1,1,1,1,1],
-        [1,0,0,0,0,0,1,0,0,1,0,1,0,0,1,0,0,0,0,0,1],
-        [1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,0,1,1,1,0,1],
-        [1,0,1,1,1,0,1,0,0,1,0,1,1,0,1,0,1,1,1,0,1],
-        [1,0,1,1,1,0,1,0,1,0,1,0,0,0,1,0,1,1,1,0,1],
-        [1,0,0,0,0,0,1,0,1,1,0,1,1,0,1,0,0,0,0,0,1],
-        [1,1,1,1,1,1,1,0,1,0,1,0,1,0,1,1,1,1,1,1,1],
-        [0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0],
-        [1,1,0,1,0,1,1,1,0,0,1,0,1,1,1,0,1,0,1,1,0],
-        [0,1,1,0,1,0,0,1,1,1,0,1,0,0,1,1,0,1,0,1,1],
-        [1,0,1,1,0,1,0,0,1,0,1,0,1,1,0,1,1,0,1,0,1],
-        [0,1,0,1,1,0,1,1,0,1,1,1,0,1,0,0,1,1,0,1,0],
-        [1,1,1,0,0,1,0,1,1,0,0,1,1,0,1,1,0,0,1,1,1],
-        [0,0,0,0,0,0,0,0,1,0,1,0,0,1,0,0,1,1,0,1,0],
-        [1,1,1,1,1,1,1,0,1,1,0,1,1,0,1,0,1,0,1,0,1],
-        [1,0,0,0,0,0,1,0,0,1,1,0,0,1,0,1,0,1,1,1,0],
-        [1,0,1,1,1,0,1,0,1,0,1,1,1,0,1,1,0,0,1,0,1],
-        [1,0,1,1,1,0,1,0,0,1,0,0,1,1,0,1,1,0,1,1,0],
-        [1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,0,1,1,0,0,1],
-        [1,0,0,0,0,0,1,0,0,0,1,1,0,1,0,0,1,0,1,1,0],
-        [1,1,1,1,1,1,1,0,1,0,1,0,1,1,1,0,1,0,1,0,1],
-      ];
+            </div>
 
-      const size = 160;
-      const cellSize = size / 21;
-      let rects = '';
-      for (let r = 0; r < 21; r++) {
-        for (let c = 0; c < 21; c++) {
-          if (matrix[r][c] === 1) {
-            rects += `<rect x="${c * cellSize}" y="${r * cellSize}" width="${cellSize + 0.5}" height="${cellSize + 0.5}" fill="#090a0f" />`;
-          }
+            <!-- Right Col: Connection Metrics & Peer Status -->
+            <div class="space-y-6">
+                
+                <!-- Peer Status Card -->
+                <div class="bg-syntra-card border border-syntra-border rounded-2xl p-6 shadow-xl">
+                    <h4 class="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <i data-lucide="shield" class="w-4 h-4 text-emerald-400"></i>
+                        Peer Connection
+                    </h4>
+
+                    <div class="space-y-3 font-mono text-xs">
+                        <div class="flex justify-between items-center py-2 border-b border-zinc-800/60">
+                            <span class="text-zinc-400">Status</span>
+                            <span id="metricStatus" class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">CONNECTED</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2 border-b border-zinc-800/60">
+                            <span class="text-zinc-400">Protocol</span>
+                            <span class="text-zinc-200">WebRTC (DTLS/SRTP)</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2 border-b border-zinc-800/60">
+                            <span class="text-zinc-400">NAT Traversal</span>
+                            <span id="metricNat" class="text-emerald-400">STUN (Direct P2P)</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2 border-b border-zinc-800/60">
+                            <span class="text-zinc-400">Current Speed</span>
+                            <span id="metricSpeed" class="text-white font-bold">0.0 MB/s</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2">
+                            <span class="text-zinc-400">Buffer Usage</span>
+                            <span id="metricBuffer" class="text-zinc-200">0 KB / 16MB</span>
+                        </div>
+                    </div>
+
+                    <button onclick="disconnectPeer()" class="w-full mt-6 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-semibold text-xs transition flex items-center justify-center gap-2">
+                        <i data-lucide="power" class="w-3.5 h-3.5"></i>
+                        Disconnect Peer
+                    </button>
+                </div>
+
+                <!-- Live Chat / Notes Utility -->
+                <div class="bg-syntra-card border border-syntra-border rounded-2xl p-6 shadow-xl flex flex-col h-72">
+                    <h4 class="text-sm font-bold text-white uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <i data-lucide="message-square" class="w-4 h-4 text-emerald-400"></i>
+                        P2P Secure Chat
+                    </h4>
+                    <div id="chatMessages" class="flex-1 bg-zinc-950/50 border border-zinc-800 rounded-xl p-3 overflow-y-auto space-y-2 text-xs mb-3 font-mono">
+                        <div class="text-zinc-500 text-center italic">Encrypted data channel ready. Send notes or links.</div>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="chatInput" onkeydown="handleChatKeyDown(event)" placeholder="Type encrypted message..." class="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:border-emerald-500 focus:outline-none" />
+                        <button onclick="sendChatMessage()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-black rounded-xl font-semibold text-xs transition">
+                            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full border-t border-syntra-border bg-syntra-bg py-4 px-6 text-center text-xs text-zinc-500 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <p>&copy; 2025 SYNTRA Systems Inc. Zero-Knowledge WebRTC P2P Architecture.</p>
+        <div class="flex items-center gap-4">
+            <span class="hover:text-zinc-300 cursor-pointer" onclick="toggleModal('architectureModal')">Protocol Spec</span>
+            <span class="hover:text-zinc-300 cursor-pointer" onclick="toggleModal('pricingModal')">Pricing & Tiers</span>
+            <span class="hover:text-zinc-300 cursor-pointer" onclick="alert('SYNTRA Enterprise Security Audit Passed.')">Security Audit</span>
+        </div>
+    </footer>
+
+    <!-- MODAL 1: Architecture & Protocol Specification -->
+    <div id="architectureModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-syntra-card border border-syntra-border rounded-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto shadow-2xl relative">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-zinc-800">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i data-lucide="cpu" class="w-5 h-5 text-emerald-400"></i>
+                    System Architecture & Signaling Protocol
+                </h3>
+                <button onclick="toggleModal('architectureModal')" class="text-zinc-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4 text-xs text-zinc-300 leading-relaxed font-mono">
+                <div class="bg-zinc-900 p-4 rounded-xl border border-zinc-800">
+                    <h4 class="text-emerald-400 font-bold mb-1">1. Signaling Server Architecture</h4>
+                    <p class="text-zinc-400">Powered by Node.js + WebSockets (Socket.io). The signaling server is strictly used for exchanging SDP offers/answers and ICE candidates. <strong>Zero file payloads ever touch the server.</strong></p>
+                </div>
+
+                <div class="bg-zinc-900 p-4 rounded-xl border border-zinc-800">
+                    <h4 class="text-emerald-400 font-bold mb-1">2. 6-Digit Code Lifecycle (Redis Cache)</h4>
+                    <p class="text-zinc-400">When User A clicks 'Generate Room Code', a collision-resistant 6-digit numeric token is mapped in Redis with a strict <strong>5-minute TTL (Time-To-Live)</strong>, binding the code directly to User A's WebSocket session ID.</p>
+                </div>
+
+                <div class="bg-zinc-900 p-4 rounded-xl border border-zinc-800">
+                    <h4 class="text-emerald-400 font-bold mb-1">3. NAT Traversal & Coturn STUN/TURN</h4>
+                    <p class="text-zinc-400">Utilizes enterprise Coturn servers to resolve symmetric NATs and restrictive corporate firewalls, guaranteeing a <strong>99.4% P2P connection success rate</strong> across global networks.</p>
+                </div>
+
+                <div class="bg-zinc-900 p-4 rounded-xl border border-zinc-800">
+                    <h4 class="text-emerald-400 font-bold mb-1">4. Chunking & File System API</h4>
+                    <p class="text-zinc-400">Files are sliced into 64KB binary ArrayBuffers, transmitted over `RTCDataChannel`, monitored via `bufferedAmount` flow control, and reassembled directly in the browser via the File System Writable File Stream API.</p>
+                </div>
+            </div>
+
+            <div class="mt-6 text-right">
+                <button onclick="toggleModal('architectureModal')" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-black font-semibold text-xs">Close Specification</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: SaaS Pricing & Tiers -->
+    <div id="pricingModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-syntra-card border border-syntra-border rounded-2xl max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto shadow-2xl relative">
+            <div class="flex items-center justify-between mb-6 pb-3 border-b border-zinc-800">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i data-lucide="zap" class="w-5 h-5 text-emerald-400"></i>
+                    SYNTRA SaaS Tier Infrastructure
+                </h3>
+                <button onclick="toggleModal('pricingModal')" class="text-zinc-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Free Tier -->
+                <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex flex-col justify-between">
+                    <div>
+                        <div class="text-xs font-mono text-zinc-400 uppercase tracking-wider mb-1">Standard</div>
+                        <h4 class="text-2xl font-bold text-white mb-2">Free Tier</h4>
+                        <p class="text-xs text-zinc-400 mb-6">Essential secure P2P transfers for personal everyday use.</p>
+                        
+                        <ul class="space-y-3 text-xs text-zinc-300">
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Max 50MB per file transfer</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Max 2 concurrent transfers</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Standard STUN relay routing</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Zero knowledge encryption</li>
+                        </ul>
+                    </div>
+
+                    <button onclick="setTier('free'); toggleModal('pricingModal');" class="mt-6 w-full py-2.5 rounded-xl bg-zinc-800 text-zinc-300 font-semibold text-xs hover:bg-zinc-700 transition">Active Tier</button>
+                </div>
+
+                <!-- Pro Tier -->
+                <div class="bg-gradient-to-b from-emerald-950/40 to-zinc-900 border border-emerald-500/40 rounded-2xl p-6 flex flex-col justify-between relative shadow-lg">
+                    <div class="absolute -top-3 right-6 px-3 py-0.5 rounded-full bg-emerald-500 text-black font-mono font-bold text-[10px]">RECOMMENDED</div>
+                    <div>
+                        <div class="text-xs font-mono text-emerald-400 uppercase tracking-wider mb-1">Professional</div>
+                        <h4 class="text-2xl font-bold text-white mb-2">SYNTRA Pro <span class="text-emerald-400 text-lg">$12/mo</span></h4>
+                        <p class="text-xs text-zinc-400 mb-6">Unlimited throughput and priority dedicated TURN server bypass.</p>
+                        
+                        <ul class="space-y-3 text-xs text-zinc-300">
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> <strong>Unlimited</strong> file size transfers</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Unlimited concurrent transfers</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Priority TURN Relay (Blazing fast speeds)</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Custom alphanumeric room codes</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> IndexedDB persistent transfer logs</li>
+                        </ul>
+                    </div>
+
+                    <button onclick="setTier('pro'); toggleModal('pricingModal');" class="mt-6 w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-black font-semibold text-xs transition shadow-[0_0_15px_rgba(34,197,94,0.3)]">Upgrade to Pro</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application JavaScript Logic -->
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Application State
+        let appState = {
+            tier: 'free', // 'free' or 'pro'
+            role: null, // 'sender' or 'receiver'
+            roomCode: null,
+            peerConnected: false,
+            fileQueue: [],
+            maxFileSize: 50 * 1024 * 1024, // 50MB for free
+            stats: {
+                speed: 0,
+                buffer: 0
+            }
+        };
+
+        // Simulated WebRTC & Signaling Mock Engine for instant working prototype demonstration
+        let mockPeerConnection = null;
+        let mockDataChannel = null;
+
+        // UI View Switcher
+        function switchView(viewName) {
+            document.getElementById('viewLanding').classList.add('hidden');
+            document.getElementById('viewConnecting').classList.add('hidden');
+            document.getElementById('viewDashboard').classList.add('hidden');
+
+            if (viewName === 'landing') {
+                document.getElementById('viewLanding').classList.remove('hidden');
+            } else if (viewName === 'connecting') {
+                document.getElementById('viewConnecting').classList.remove('hidden');
+            } else if (viewName === 'dashboard') {
+                document.getElementById('viewDashboard').classList.remove('hidden');
+                // Re-initialize icons for dynamic elements
+                lucide.createIcons();
+            }
         }
-      }
-      return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${rects}</svg>`;
-    }
 
-    function submitOrder() {
-      if (tray.length === 0) {
-        showToast('Your tray is empty! Please add dishes before submitting.');
-        return;
-      }
+        // Modal Toggle Utility
+        function toggleModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            } else {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
+        }
 
-      const orderNum = 'TS-' + Math.floor(10000 + Math.random() * 90000);
-      const subtotal = tray.reduce((sum, item) => sum + (item.price * item.qty), 0);
-      const grandTotal = subtotal + (subtotal * 0.085) + 2.00;
+        // Tier Management
+        function setTier(tier) {
+            appState.tier = tier;
+            if (tier === 'pro') {
+                appState.maxFileSize = Number.MAX_SAFE_INTEGER;
+                document.getElementById('tierBadgeText').innerText = 'SYNTRA Pro (Unlimited)';
+                alert('SYNTRA Pro activated! Unlimited file sizes and priority TURN relay unlocked.');
+            } else {
+                appState.maxFileSize = 50 * 1024 * 1024;
+                document.getElementById('tierBadgeText').innerText = 'Free Tier (50MB Limit)';
+                alert('Switched back to Free Tier (50MB file size limit enforced).');
+            }
+        }
 
-      document.getElementById('receiptOrderId').textContent = '#' + orderNum;
-      document.getElementById('receiptDiningMode').textContent = `${diningMode} (${diningMode === 'Dine-In' ? 'Table ' + tableNumber : 'Takeaway Counter'})`
-      document.getElementById('receiptTotal').textContent = '$' + grandTotal.toFixed(2);
-      document.getElementById('receiptTimestamp').textContent = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-      
-      const qrSvg = generatePureSvgQr(`order:${orderNum}|mode:${diningMode}|total:${grandTotal.toFixed(2)}`);
-      document.getElementById('qrCodeContainer').innerHTML = qrSvg;
+        // Generate Room Code (User A)
+        function generateRoomCode() {
+            appState.role = 'sender';
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            appState.roomCode = code;
 
-      // Close tray drawer and open order success modal
-      toggleTrayDrawer();
-      document.getElementById('orderSuccessModal').classList.remove('hidden');
+            const container = document.getElementById('senderCodeContainer');
+            container.innerHTML = `
+                <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-center">
+                    <div class="text-xs font-mono text-zinc-400 uppercase tracking-wider mb-1">Your Secure Room Code</div>
+                    <div class="text-3xl font-mono font-bold text-emerald-400 tracking-widest my-2">${code}</div>
+                    <p class="text-xs text-zinc-500 mb-4">Expires in <span class="text-emerald-400 font-mono">05:00</span> minutes</p>
+                    <div class="flex gap-2">
+                        <button onclick="copyRoomCode('${code}')" class="flex-1 py-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium transition flex items-center justify-center gap-1.5">
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Code
+                        </button>
+                        <button onclick="simulatePeerJoin()" class="flex-1 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-black text-xs font-semibold transition flex items-center justify-center gap-1.5">
+                            <i data-lucide="users" class="w-3.5 h-3.5"></i> Simulate Peer Join
+                        </button>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
 
-      // Clear tray
-      tray = [];
-      updateTrayUI();
-    }
+        function copyRoomCode(code) {
+            navigator.clipboard.writeText(code);
+            alert(`Room code ${code} copied to clipboard!`);
+        }
 
-    function closeSuccessModal() {
-      document.getElementById('orderSuccessModal').classList.add('hidden');
-    }
+        // Code Input Handling for Receiver (User B)
+        function handleCodeInput(element, index) {
+            const value = element.value;
+            // Allow only numbers
+            if (!/^\d*$/.test(value)) {
+                element.value = '';
+                return;
+            }
 
-    function showToast(msg) {
-      const toast = document.getElementById('toastNotification');
-      const text = document.getElementById('toastText');
-      text.textContent = msg;
-      toast.classList.remove('opacity-0', 'translate-y-4');
-      toast.classList.add('opacity-100', 'translate-y-0');
-      setTimeout(() => {
-        toast.classList.remove('opacity-100', 'translate-y-0');
-        toast.classList.add('opacity-0', 'translate-y-4');
-      }, 3000);
-    }
-  </script>
+            if (value && index < 5) {
+                const inputs = document.querySelectorAll('.code-digit');
+                inputs[index + 1].focus();
+            }
+
+            // Check if all 6 digits are entered
+            checkAndAutoConnect();
+        }
+
+        function handleCodeKeyDown(event, index) {
+            if (event.key === 'Backspace') {
+                const inputs = document.querySelectorAll('.code-digit');
+                if (!inputs[index].value && index > 0) {
+                    inputs[index - 1].focus();
+                }
+            }
+        }
+
+        function checkAndAutoConnect() {
+            const inputs = document.querySelectorAll('.code-digit');
+            let code = '';
+            inputs.forEach(input => code += input.value);
+
+            if (code.length === 6) {
+                appState.role = 'receiver';
+                appState.roomCode = code;
+                
+                // Acceptance Criteria: Auto-initiate connection on 6th digit
+                document.getElementById('connectingTitle').innerText = `Connecting to Room #${code}...`;
+                switchView('connecting');
+
+                setTimeout(() => {
+                    appState.peerConnected = true;
+                    switchView('dashboard');
+                    addChatMessage('System', `Secure WebRTC P2P tunnel established with Room #${code}.`);
+                }, 2000);
+            }
+        }
+
+        function connectWithCode() {
+            const inputs = document.querySelectorAll('.code-digit');
+            let code = '';
+            inputs.forEach(input => code += input.value);
+            if (code.length < 6) {
+                alert('Please enter all 6 digits of the room code.');
+                return;
+            }
+            checkAndAutoConnect();
+        }
+
+        function simulatePeerJoin() {
+            document.getElementById('connectingTitle').innerText = `Waiting for Peer in Room #${appState.roomCode}...`;
+            switchView('connecting');
+
+            setTimeout(() => {
+                appState.peerConnected = true;
+                switchView('dashboard');
+                addChatMessage('System', `Peer connected to Room #${appState.roomCode}. WebRTC DataChannel open.`);
+            }, 2000);
+        }
+
+        // File Selection & Drag-and-Drop Handling
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('dropzone').classList.add('border-emerald-500', 'bg-syntra-card');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('dropzone').classList.remove('border-emerald-500', 'bg-syntra-card');
+        }
+
+        function handleFileDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('dropzone').classList.remove('border-emerald-500', 'bg-syntra-card');
+            
+            const files = e.dataTransfer.files;
+            processFiles(files);
+        }
+
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            processFiles(files);
+        }
+
+        function processFiles(files) {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+
+                // Acceptance Criteria: Free Tier Limit Enforcement (50MB)
+                if (file.size > appState.maxFileSize) {
+                    alert(`File "${file.name}" exceeds the Free Tier limit of 50MB. Upgrade to SYNTRA Pro for unlimited file transfers.`);
+                    continue;
+                }
+
+                const fileItem = {
+                    id: Math.random().toString(36.substring(2, 9)),
+                    name: file.name,
+                    size: formatBytes(file.size),
+                    rawSize: file.size,
+                    progress: 0,
+                    status: 'Transferring'
+                };
+
+                appState.fileQueue.push(fileItem);
+                renderFileQueue();
+                simulateFileTransfer(fileItem.id);
+            }
+        }
+
+        function simulateFileTransfer(fileId) {
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.floor(Math.random() * 15) + 5;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    updateFileStatus(fileId, 'Completed', 100);
+                } else {
+                    updateFileStatus(fileId, 'Transferring', progress);
+                }
+
+                // Update metrics display
+                document.getElementById('metricSpeed').innerText = (Math.random() * 12 + 18).toFixed(1) + ' MB/s';
+                document.getElementById('metricBuffer').innerText = Math.floor(Math.random() * 500 + 100) + ' KB / 16MB';
+            }, 300);
+        }
+
+        function updateFileStatus(fileId, status, progress) {
+            const file = appState.fileQueue.find(f => f.id === fileId);
+            if (file) {
+                file.status = status;
+                file.progress = progress;
+                renderFileQueue();
+            }
+        }
+
+        function renderFileQueue() {
+            const list = document.getElementById('fileQueueList');
+            document.getElementById('queueCount').innerText = appState.fileQueue.length;
+
+            if (appState.fileQueue.length === 0) {
+                list.innerHTML = `
+                    <div id="emptyQueueState" class="text-center py-8 text-zinc-500 text-xs">
+                        No active or pending transfers in queue.
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = '';
+            appState.fileQueue.forEach(file => {
+                const isComplete = file.status === 'Completed';
+                list.innerHTML += `
+                    <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-3 flex flex-col gap-2">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2 overflow-hidden">
+                                <i data-lucide="file" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+                                <span class="text-xs font-medium text-white truncate">${file.name}</span>
+                                <span class="text-[10px] text-zinc-500">(${file.size})</span>
+                            </div>
+                            <span class="text-[10px] font-mono px-2 py-0.5 rounded ${isComplete ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-zinc-800 text-zinc-300'}">${file.status}</span>
+                        </div>
+                        <div class="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden">
+                            <div class="bg-emerald-500 h-full transition-all duration-300" style="width: ${file.progress}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+            lucide.createIcons();
+        }
+
+        function clearQueue() {
+            appState.fileQueue = appState.fileQueue.filter(f => f.status !== 'Completed');
+            renderFileQueue();
+        }
+
+        // P2P Chat Messaging
+        function addChatMessage(sender, text) {
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.innerHTML += `
+                <div>
+                    <span class="text-emerald-400 font-bold">[${sender}]:</span> <span class="text-zinc-200">${text}</span>
+                </div>
+            `;
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            addChatMessage('You', text);
+            input.value = '';
+
+            // Simulate incoming echo response
+            setTimeout(() => {
+                addChatMessage('Peer', `Received: "${text}"`);
+            }, 600);
+        }
+
+        function handleChatKeyDown(e) {
+            if (e.key === 'Enter') {
+                sendChatMessage();
+            }
+        }
+
+        // Disconnect & Reset
+        function disconnectPeer() {
+            if (confirm('Are you sure you want to disconnect from the peer?')) {
+                resetApp();
+            }
+        }
+
+        function resetApp() {
+            appState.role = null;
+            appState.roomCode = null;
+            appState.peerConnected = false;
+            appState.fileQueue = [];
+            
+            // Clear code input fields
+            document.querySelectorAll('.code-digit').forEach(input => input.value = '');
+            
+            // Reset sender view container
+            document.getElementById('senderCodeContainer').innerHTML = `
+                <button onclick="generateRoomCode()" id="generateBtn" class="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-black font-semibold text-sm transition flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(34,197,94,0.25)]">
+                    <i data-lucide="key" class="w-4 h-4"></i>
+                    Generate Room Code
+                </button>
+            `;
+
+            switchView('landing');
+            lucide.createIcons();
+        }
+
+        // Utility: Format Bytes
+        function formatBytes(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+    </script>
 </body>
 </html>

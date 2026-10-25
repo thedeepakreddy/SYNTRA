@@ -1,4 +1,4 @@
-"""Comprehensive Automated Test Suite for MenuItem API.
+"""Comprehensive Automated Test Suite for TransferSession API.
 
 Authored by SYNTRA QA & Backend Engineer Agents.
 Follows TDD principles, testing CRUD operations, validation rules, 404 boundaries, and search filters.
@@ -62,26 +62,26 @@ async def test_create_and_get_item(async_client):
     payload = {
         "title": "Automated Test Item",
         "category": "Testing",
-        "status": "AVAILABLE",
+        "status": "CONNECTED",
         "priority": "HIGH",
         "description": "Integration test created payload",
         "tags": ["Test", "QA"],
     }
-    create_resp = await async_client.post("/api/v1/menu_items", json=payload)
+    create_resp = await async_client.post("/api/v1/transfer_sessions", json=payload)
     assert create_resp.status_code == 201
     created = create_resp.json()
     assert created["title"] == payload["title"]
     assert "id" in created
 
     # Fetch by ID
-    get_resp = await async_client.get(f"/api/v1/menu_items/{created['id']}")
+    get_resp = await async_client.get(f"/api/v1/transfer_sessions/{created['id']}")
     assert get_resp.status_code == 200
     assert get_resp.json()["id"] == created["id"]
 
 
 @pytest.mark.asyncio
 async def test_get_not_found(async_client):
-    resp = await async_client.get("/api/v1/menu_items/non-existent-uuid")
+    resp = await async_client.get("/api/v1/transfer_sessions/non-existent-uuid")
     assert resp.status_code == 404
 
 
@@ -90,15 +90,15 @@ async def test_update_item(async_client):
     payload = {
         "title": "Initial Item",
         "category": "Testing",
-        "status": "AVAILABLE",
+        "status": "CONNECTED",
         "priority": "LOW",
         "tags": ["Init"],
     }
-    create_resp = await async_client.post("/api/v1/menu_items", json=payload)
+    create_resp = await async_client.post("/api/v1/transfer_sessions", json=payload)
     item_id = create_resp.json()["id"]
 
     update_payload = {"title": "Updated Title", "priority": "CRITICAL"}
-    put_resp = await async_client.put(f"/api/v1/menu_items/{item_id}", json=update_payload)
+    put_resp = await async_client.put(f"/api/v1/transfer_sessions/{item_id}", json=update_payload)
     assert put_resp.status_code == 200
     assert put_resp.json()["title"] == "Updated Title"
     assert put_resp.json()["priority"] == "CRITICAL"
@@ -107,39 +107,39 @@ async def test_update_item(async_client):
 @pytest.mark.asyncio
 async def test_delete_item(async_client):
     payload = {"title": "Item To Delete", "category": "Testing"}
-    create_resp = await async_client.post("/api/v1/menu_items", json=payload)
+    create_resp = await async_client.post("/api/v1/transfer_sessions", json=payload)
     item_id = create_resp.json()["id"]
 
-    del_resp = await async_client.delete(f"/api/v1/menu_items/{item_id}")
+    del_resp = await async_client.delete(f"/api/v1/transfer_sessions/{item_id}")
     assert del_resp.status_code == 204
 
     # Verify deleted
-    get_resp = await async_client.get(f"/api/v1/menu_items/{item_id}")
+    get_resp = await async_client.get(f"/api/v1/transfer_sessions/{item_id}")
     assert get_resp.status_code == 404
 
 
 @pytest.mark.asyncio
 async def test_list_and_search_filters(async_client):
-    await async_client.post("/api/v1/menu_items", json={"title": "Search Alpha Target", "category": "Alpha"})
-    await async_client.post("/api/v1/menu_items", json={"title": "Search Beta Noise", "category": "Beta"})
+    await async_client.post("/api/v1/transfer_sessions", json={"title": "Search Alpha Target", "category": "Alpha"})
+    await async_client.post("/api/v1/transfer_sessions", json={"title": "Search Beta Noise", "category": "Beta"})
 
     # Search query
-    resp = await async_client.get("/api/v1/menu_items?q=Alpha")
+    resp = await async_client.get("/api/v1/transfer_sessions?q=Alpha")
     assert resp.status_code == 200
     items = resp.json()
     assert len(items) >= 1
     assert any("Alpha Target" in it["title"] for it in items)
 
     # Category filter
-    resp_cat = await async_client.get("/api/v1/menu_items?category=Beta")
+    resp_cat = await async_client.get("/api/v1/transfer_sessions?category=Beta")
     assert resp_cat.status_code == 200
     assert all(it["category"] == "Beta" for it in resp_cat.json())
 
 
 @pytest.mark.asyncio
 async def test_stats_endpoint(async_client):
-    await async_client.post("/api/v1/menu_items", json={"title": "Stats Record 1", "category": "CatA", "status": "DONE"})
-    resp = await async_client.get("/api/v1/menu_items/stats")
+    await async_client.post("/api/v1/transfer_sessions", json={"title": "Stats Record 1", "category": "CatA", "status": "DONE"})
+    resp = await async_client.get("/api/v1/transfer_sessions/stats")
     assert resp.status_code == 200
     data = resp.json()
     assert "total_records" in data

@@ -34,8 +34,12 @@ def _resolve_api_model(target_model: str) -> str:
         "gemini-2.5-pro": "gemini-3.5-flash-lite",
         "gemini-2.5-flash": "gemini-3.5-flash-lite",
         "gemini-2.5-flash-lite": "gemini-3.5-flash-lite",
+        "gemini-2.0-flash": "gemini-3.5-flash-lite",
         "gemini-2.0-flash-lite": "gemini-3.5-flash-lite",
+        "gemini-1.5-pro": "gemini-3.5-flash-lite",
+        "gemini-1.5-flash": "gemini-3.5-flash-lite",
         "gemini-3.8-flash": "gemini-3.5-flash-lite",
+        "gemini-3.1-pro-preview": "gemini-3.5-flash-lite",
     }
     return aliases.get(target_model, target_model)
 
@@ -247,8 +251,8 @@ class GeminiModelProvider(ModelProvider):
             api_model,
             "gemini-3.5-flash-lite",
             "gemini-3.5-flash",
+            "gemini-flash-latest",
             "gemini-flash-lite-latest",
-            "gemma-4-26b-a4b-it",
         ]
         unique_candidates: list[str] = []
         for m in candidate_models:
@@ -405,8 +409,8 @@ class GeminiModelProvider(ModelProvider):
             api_model,
             "gemini-3.5-flash-lite",
             "gemini-3.5-flash",
+            "gemini-flash-latest",
             "gemini-flash-lite-latest",
-            "gemma-4-26b-a4b-it",
         ]
         unique_candidates: list[str] = []
         for m in candidate_models:

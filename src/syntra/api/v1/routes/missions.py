@@ -192,9 +192,13 @@ def _is_complete_html(code: str | None) -> bool:
         return False
     if "</body>" not in lower:
         return False
-    if lower.count("<script") != lower.count("</script>"):
+    script_open = len(re.findall(r"<script[\s>]", lower))
+    script_close = len(re.findall(r"</script>", lower))
+    if script_open != script_close:
         return False
-    if lower.count("<style") != lower.count("</style>"):
+    style_open = len(re.findall(r"<style[\s>]", lower))
+    style_close = len(re.findall(r"</style>", lower))
+    if style_open != style_close:
         return False
     return True
 
@@ -399,7 +403,7 @@ async def _execute_mission_stages(mission_id: UUID, org_id: UUID) -> None:
                     artifact_type = ArtifactType.ARCHITECTURE_SPEC
 
                 elif role in ["backend_engineer", "frontend_engineer"]:
-                    model_name = "gemini-3.5-flash-lite"
+                    model_name = "gemini-2.5-flash"
                     from pathlib import Path
 
                     from syntra.agents.fullstack_generator import (
@@ -423,26 +427,45 @@ async def _execute_mission_stages(mission_id: UUID, org_id: UUID) -> None:
                     # 2. Interactive Frontend Single-Page Application Generation
                     app_html = None
                     if has_gemini:
+                        context_blocks = []
+                        if prd_summary:
+                            context_blocks.append(f"PRD Summary:\n{prd_summary}")
+                        if prd_criteria:
+                            context_blocks.append("PRD Acceptance Criteria:\n" + "\n".join(f"- {c}" for c in prd_criteria))
+                        if arch_summary:
+                            context_blocks.append(f"Architecture Specification:\n{arch_summary}")
+                        context_str = "\n\n".join(context_blocks)
+
                         prompt = (
                             f"You are the Lead Full-Stack & Frontend Engineer in SYNTRA.\n"
                             f"Build the COMPLETE, working, interactive web application tailored EXACTLY to this mission:\n"
-                            f"Objective: {mission.objective}\n"
-                            f"PRD Acceptance Criteria:\n" + "\n".join(f"- {c}" for c in prd_criteria) + "\n\n"
+                            f"Objective: {mission.objective}\n\n"
+                            f"{context_str}\n\n"
                             "Full-Output Enforcement & High-End Visual Design Requirements:\n"
                             "1. Produce complete, working, production-grade, self-contained HTML5/CSS/JavaScript single-page application code.\n"
                             "2. Ensure all UI components, buttons, inputs, business logic, calculations, animations, and interactivity are 100% implemented.\n"
-                            "3. Absolutely zero placeholder comments (no '// TODO', no '// implement later', no truncated blocks).\n"
-                            "4. Return ONLY the complete HTML5 document starting with <!DOCTYPE html>."
+                            "3. Keep styling modern, responsive, and elegant using Tailwind CSS via CDN (<script src='https://cdn.tailwindcss.com'></script>).\n"
+                            "4. Absolutely zero placeholder comments (no '// TODO', no '// implement later', no truncated blocks).\n"
+                            "5. Every module mentioned in the objective and acceptance criteria must be visibly represented and interactively functional in the UI.\n"
+                            "6. You MUST emit the complete closing tags: </script></body></html>.\n"
+                            "7. Return ONLY the complete HTML5 document starting with <!DOCTYPE html>."
                         )
                         try:
                             req = ModelRequest(
                                 model=model_name,
                                 messages=[LLMMessage(role=MessageRole.USER, content=prompt)],
-                                max_tokens=8192,
+                                max_tokens=32768,
                             )
                             resp = await gemini.generate_with_tools(req)
                             raw_code = resp.text.strip()
-                            if "```html" in raw_code:
+                            html_match = re.search(r"<!DOCTYPE html.*</html>", raw_code, re.DOTALL | re.IGNORECASE)
+                            if html_match:
+                                raw_code = html_match.group(0).strip()
+                            elif "<html" in raw_code and "</html>" in raw_code:
+                                html_match = re.search(r"<html.*</html>", raw_code, re.DOTALL | re.IGNORECASE)
+                                if html_match:
+                                    raw_code = "<!DOCTYPE html>\n" + html_match.group(0).strip()
+                            elif "```html" in raw_code:
                                 raw_code = raw_code.split("```html", 1)[1].split("```", 1)[0].strip()
                             elif "```" in raw_code:
                                 raw_code = raw_code.split("```", 1)[1].split("```", 1)[0].strip()

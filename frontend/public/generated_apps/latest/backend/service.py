@@ -1,4 +1,4 @@
-"""Domain Business Service Layer for MenuItem.
+"""Domain Business Service Layer for TransferSession.
 
 Encapsulates all database operations, filters, validations, and statistical aggregations.
 """
@@ -16,47 +16,47 @@ if pkg_dir not in sys.path:
     sys.path.insert(0, pkg_dir)
 
 try:
-    from models import MenuItemModel
-    from schemas import MenuItemCreate, MenuItemUpdate, FilterParams
+    from models import TransferSessionModel
+    from schemas import TransferSessionCreate, TransferSessionUpdate, FilterParams
 except ImportError:
-    from .models import MenuItemModel
-    from .schemas import MenuItemCreate, MenuItemUpdate, FilterParams
+    from .models import TransferSessionModel
+    from .schemas import TransferSessionCreate, TransferSessionUpdate, FilterParams
 
 
-class MenuItemService:
+class TransferSessionService:
     """Core domain business logic service."""
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def list_items(self, filters: FilterParams) -> Sequence[MenuItemModel]:
-        stmt = select(MenuItemModel)
+    async def list_items(self, filters: FilterParams) -> Sequence[TransferSessionModel]:
+        stmt = select(TransferSessionModel)
         if filters.category:
-            stmt = stmt.where(MenuItemModel.category == filters.category)
+            stmt = stmt.where(TransferSessionModel.category == filters.category)
         if filters.status:
-            stmt = stmt.where(MenuItemModel.status == filters.status)
+            stmt = stmt.where(TransferSessionModel.status == filters.status)
         if filters.priority:
-            stmt = stmt.where(MenuItemModel.priority == filters.priority)
+            stmt = stmt.where(TransferSessionModel.priority == filters.priority)
         if filters.q:
             kw = f"%{filters.q}%"
             stmt = stmt.where(
                 or_(
-                    MenuItemModel.title.ilike(kw),
-                    MenuItemModel.description.ilike(kw),
-                    MenuItemModel.tags_csv.ilike(kw),
+                    TransferSessionModel.title.ilike(kw),
+                    TransferSessionModel.description.ilike(kw),
+                    TransferSessionModel.tags_csv.ilike(kw),
                 )
             )
-        stmt = stmt.order_by(desc(MenuItemModel.created_at)).offset(filters.offset).limit(filters.limit)
+        stmt = stmt.order_by(desc(TransferSessionModel.created_at)).offset(filters.offset).limit(filters.limit)
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
-    async def get_by_id(self, item_id: str) -> MenuItemModel | None:
-        stmt = select(MenuItemModel).where(MenuItemModel.id == item_id)
+    async def get_by_id(self, item_id: str) -> TransferSessionModel | None:
+        stmt = select(TransferSessionModel).where(TransferSessionModel.id == item_id)
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def create_item(self, payload: MenuItemCreate) -> MenuItemModel:
-        record = MenuItemModel(
+    async def create_item(self, payload: TransferSessionCreate) -> TransferSessionModel:
+        record = TransferSessionModel(
             title=payload.title,
             category=payload.category,
             status=payload.status,
@@ -68,7 +68,7 @@ class MenuItemService:
         await self.session.flush()
         return record
 
-    async def update_item(self, item_id: str, payload: MenuItemUpdate) -> MenuItemModel | None:
+    async def update_item(self, item_id: str, payload: TransferSessionUpdate) -> TransferSessionModel | None:
         item = await self.get_by_id(item_id)
         if not item:
             return None
@@ -96,7 +96,7 @@ class MenuItemService:
         return True
 
     async def get_stats(self) -> dict:
-        stmt = select(MenuItemModel)
+        stmt = select(TransferSessionModel)
         result = await self.session.execute(stmt)
         items = result.scalars().all()
 
