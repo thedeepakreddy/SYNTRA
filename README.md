@@ -344,6 +344,8 @@ syntra/
 |   |-- skills/                 # Skill package loader and profile definitions
 |   |-- api/                    # FastAPI REST routes and WebSocket handlers
 |
+|-- apps/                       # Service entrypoints (api, orchestrator, scheduler, worker_controller, mcp_server)
+|-- frontend/                   # Control Center (React 18 + TypeScript + Tailwind, Vite)
 |-- skills/                     # 16 Versioned domain skill packages
 |   |-- backend-api-development/
 |   |-- system-architecture/
@@ -365,7 +367,37 @@ syntra/
 
 ---
 
-## 9. Getting Started
+## 9. Project Status & Phase Roadmap
+
+**Current milestone: Phases 0–20 complete.** The latest regression run passed **612/612** pytest tests. Phases 0–14 have formal verification reports in [`docs/phases/progress.md`](docs/phases/progress.md). Phases 15–20 cover the Control Center pipeline work that followed Phase 14.
+
+| Phase | Title | Status | Key Deliverables |
+|---|---|---|---|
+| 0 | System Architecture & Technical Planning | ✅ Complete | Architecture docs, ADR-001..007, contracts index, roadmap |
+| 1 | Project Initialization | ✅ Complete | Monorepo layout, Compose stack (Postgres/Redis/MinIO), health probes |
+| 2 | Database & Domain Foundation | ✅ Complete | 30 SQLAlchemy models, Alembic migrations, Unit of Work, outbox |
+| 3 | API, Auth & Governance | ✅ Complete | `/v1/` REST control plane, approvals, budgets |
+| 4 | MCP Infrastructure | ✅ Complete | MCP 2.x gateway, capability policy engine, SYNTRA MCP server |
+| 5 | Skills & Capability Registry | ✅ Complete | 16 versioned skills, 10 capability profiles, progressive disclosure |
+| 6 | Model Runtime & Gemini Integration | ✅ Complete | `google-genai` adapter, model router, cost ledger |
+| 7 | LangGraph Workflow Engine | ✅ Complete | 13-phase mission graph, checkpointing, human interrupt gates |
+| 8 | Task Scheduler & Leases | ✅ Complete | DAG scheduler, `SKIP LOCKED` leases, fencing tokens |
+| 9 | Sandbox Execution | ✅ Complete | Isolated Docker sandboxes, ephemeral Git worktrees |
+| 10 | Autonomous Engineering Organization | ✅ Complete | 10 specialist personas with separation of powers |
+| 11 | Memory & Self-Correction | ✅ Complete | Tiered memory, failure reflection, bounded replanning |
+| 12 | Verification, Security & Observability | ✅ Complete | Independent verifier, secret scrubbing, OpenTelemetry, audit log |
+| 13 | End-to-End Integration & Benchmark | ✅ Complete | Benchmark runner (Modes A/B/D), worker SIGKILL recovery |
+| 14 | Control Center & Product Integration | ✅ Complete | React 18 / TypeScript Control Center (`frontend/`), model routing simulator |
+| 15 | Live Mission Execution | ✅ Complete | `POST /v1/missions/{id}/run`, auto-generated 7-stage persona DAG, real Gemini multi-agent execution with live polling and artifact streaming |
+| 16 | Artifact Inspection & Approval Actions | ✅ Complete | Interactive artifact document inspector, delivery-gate approval resolution, direct approval actions |
+| 17 | Autonomous Application Generation | ✅ Complete | End-to-end application synthesis with live in-dashboard preview, Gemini model-pool failover, mission-tailored synthesis |
+| 18 | Liquid Glass Control Center & Live App Simulator | ✅ Complete | Redesign of all 13 Control Center pages, Safari-style Live App deck with desktop and iPhone chassis, source inspector |
+| **19** | **Full-Stack Solution Generation & Level-4 Delivery Gate** | ✅ **Complete** | Autonomous full-stack generation (backend + UI), level-4 delivery-gate approval workflow, mission re-run support, hermetic backend imports |
+| **20** | **Universal Domain Extraction, Project Rebuild & Orchestration Hardening** | ✅ **Complete** | Universal domain schema extractor (11 domains + noun fallback), `POST /v1/missions/{id}/rebuild` and `POST /v1/projects/{id}/rebuild` with UI buttons, domain-classifier fixes, P2P/WebRTC domain, 32k-token SPA generation to stop truncation, PRD/architecture context routed into agent prompts, retired-model remapping |
+
+---
+
+## 10. Getting Started
 
 ### Prerequisites
 * **Python**: `3.12+`
@@ -419,6 +451,6 @@ uv run uvicorn syntra.api.main:app --host 0.0.0.0 --port 8000 --reload
 
 ---
 
-## 10. License
+## 11. License
 
 This project is licensed under the Apache 2.0 License.
