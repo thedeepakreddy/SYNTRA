@@ -399,7 +399,7 @@ syntra/
 
 | Phase | Title | Status | Scope |
 |---|---|---|---|
-| 21 | SYNTRA City UI/UX | 🛠️ Next | Replace the Control Center with an open-world, cinematic 3D city interface. SYNTRA's engineering organization becomes one office building in the city. |
+| 21 | SYNTRA City UI/UX | 🛠️ Next | Replace the Control Center with an open-world, cinematic 3D city interface built in Unreal Engine 5, with Blender assets. SYNTRA's engineering organization becomes one office building in the city. |
 | 22 | City Cinema | 📋 Planned | Movie theater where users watch films |
 | 23 | Shopping Mall | 📋 Planned | Buy real products and get them delivered to your home |
 | 24 | Grocery Store | 📋 Planned | Grocery shopping through the user's local delivery apps |
@@ -445,7 +445,25 @@ flowchart TD
 - Companies advertise new products of any kind (cars, clothing, gadgets and more) as part of the visual experience, for example by placing a new car model on the streets or showing a clothing line in the mall.
 - A self-serve advertiser portal for campaigns, placement, scheduling and analytics.
 
-### 10.6 Guiding Principles for the City
+### 10.6 Technology Stack
+
+| Tool | Role in SYNTRA City |
+|---|---|
+| **Unreal Engine 5** | The game engine for the city. Nanite handles high-detail geometry, Lumen handles real-time lighting, and World Partition streams the open world. Gameplay is written in C++ and Blueprints. |
+| **Blender** | 3D modeling, texturing, rigging and animation for buildings, vehicles, characters, props and storefronts. Assets are exported to Unreal as FBX or glTF. |
+| **Claude Code** | Development partner for the whole project: writes Unreal C++ and Blueprint logic, Unreal editor Python scripts, Blender Python automation, and the integration code between the city and the SYNTRA backend. |
+| **SYNTRA backend (FastAPI)** | The existing platform API. The city calls the REST/WebSocket endpoints to drive the HQ office (missions, agents, approvals, delivery gate) and, later, the cinema, commerce and advertising services. |
+
+```mermaid
+flowchart LR
+    Blender["Blender<br/>3D assets"] -->|FBX / glTF| UE5["Unreal Engine 5<br/>SYNTRA City"]
+    Claude["Claude Code"] -->|C++, Blueprints, Python scripts| UE5
+    Claude -->|Blender Python automation| Blender
+    UE5 <-->|REST / WebSocket| API["SYNTRA FastAPI Backend"]
+    API --> Agents["10 Engineering Agents"]
+```
+
+### 10.7 Guiding Principles for the City
 - **SYNTRA's engineering invariants still apply**: separation of powers, independent verification, and human approval gates for anything that spends money or ships to production.
 - **Real money and real deliveries need extra safeguards**: secure payments, explicit user confirmation on every purchase, privacy-safe handling of addresses, and clear labeling of paid advertising.
 
