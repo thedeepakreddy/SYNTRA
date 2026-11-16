@@ -19,7 +19,7 @@ SYNTRA coordinates a synchronized team of specialized engineering personas power
 3. **Immutable Artifact Handoffs**: All cross-agent communication occurs through cryptographically hashed (SHA-256), schema-validated artifacts (PRDs, ADRs, Task Plans, Unified Diffs, Verification Runs).
 4. **Separation of Powers & Anti-Collusion**: No agent may review, approve, or verify its own output. Implementing roles are cryptographically barred from acting as QA, Security Reviewer, or Code Reviewer for their own patches.
 5. **Human-in-the-Loop Governance**: Autonomous execution is bounded by explicit cryptographic delivery gates. No agent possesses the authority to perform external Git pushes or production releases without human authorization.
-6. **Headless-First & Backend-Only**: SYNTRA is strictly a headless platform operable via FastAPI REST/WebSocket endpoints and the `syntra` CLI. SYNTRA never generates UI for itself; target UI development is strictly confined to target repositories.
+6. **API-First Core with a Human Control Center**: Every capability is exposed through FastAPI REST/WebSocket endpoints and the `syntra` CLI. Humans operate the platform through the Control Center (`frontend/`), which is built and maintained by the platform team. Agents never modify SYNTRA's own UI: the Frontend Engineer agent works only inside target repositories.
 
 ---
 
@@ -78,9 +78,9 @@ flowchart TD
 
 ---
 
-## 3. The 10 Planned & Implemented Engineering Personas
+## 3. The 10 Operational Engineering Personas
 
-SYNTRA defines 10 specialized engineering roles. Each persona operates under an explicit system prompt, a strict set of permitted tools, bounded token and financial budgets, and typed Pydantic v2 input/output schemas.
+SYNTRA runs 10 specialized engineering roles, and all 10 are operational: missions run end-to-end through PM → Architect → EM → implementation → QA → Security → Code Review, with the Debugging Specialist handling failures. Each persona operates under an explicit system prompt, a strict set of permitted tools, bounded token and financial budgets, and typed Pydantic v2 input/output schemas.
 
 ```mermaid
 flowchart LR
@@ -148,7 +148,7 @@ flowchart LR
 
 ### 5. Frontend Engineer (Target Repositories Only)
 * **Role Mandate**: Implement client-side code and user interfaces *exclusively inside target repositories*.
-* **Critical Platform Policy**: SYNTRA itself is strictly backend-only. The Frontend Engineer agent never modifies or creates UI components for the SYNTRA platform.
+* **Critical Platform Policy**: The Frontend Engineer agent never modifies or creates UI components for the SYNTRA platform itself. SYNTRA's Control Center is built by the platform team; the agent works only inside target repositories.
 * **Core Responsibilities**:
   * Build UI components, state management, and API clients within target project repositories (e.g., Next.js, React, Tailwind).
   * Implement client-side validation and automated component tests.
@@ -369,7 +369,7 @@ syntra/
 
 ## 9. Project Status & Phase Roadmap
 
-**Current milestone: Phases 0–20 complete.** The latest regression run passed **612/612** pytest tests. Phases 0–14 have formal verification reports in [`docs/phases/progress.md`](docs/phases/progress.md). Phases 15–20 cover the Control Center pipeline work that followed Phase 14.
+**Current milestone: Phases 0–20 complete. All 10 agents are operational.** The latest regression run passed **612/612** pytest tests. Phases 0–14 have formal verification reports in [`docs/phases/progress.md`](docs/phases/progress.md). Phases 15–20 cover the Control Center pipeline work that followed Phase 14.
 
 | Phase | Title | Status | Key Deliverables |
 |---|---|---|---|
@@ -395,9 +395,63 @@ syntra/
 | **19** | **Full-Stack Solution Generation & Level-4 Delivery Gate** | ✅ **Complete** | Autonomous full-stack generation (backend + UI), level-4 delivery-gate approval workflow, mission re-run support, hermetic backend imports |
 | **20** | **Universal Domain Extraction, Project Rebuild & Orchestration Hardening** | ✅ **Complete** | Universal domain schema extractor (11 domains + noun fallback), `POST /v1/missions/{id}/rebuild` and `POST /v1/projects/{id}/rebuild` with UI buttons, domain-classifier fixes, P2P/WebRTC domain, 32k-token SPA generation to stop truncation, PRD/architecture context routed into agent prompts, retired-model remapping |
 
+### Planned Phases
+
+| Phase | Title | Status | Scope |
+|---|---|---|---|
+| 21 | SYNTRA City UI/UX | 🛠️ Next | Replace the Control Center with an open-world, cinematic 3D city interface. SYNTRA's engineering organization becomes one office building in the city. |
+| 22 | City Cinema | 📋 Planned | Movie theater where users watch films |
+| 23 | Shopping Mall | 📋 Planned | Buy real products and get them delivered to your home |
+| 24 | Grocery Store | 📋 Planned | Grocery shopping through the user's local delivery apps |
+| 25 | City Billboards & Advertising | 📋 Planned | Billboards that show real ads, with a self-serve platform for advertisers |
+
 ---
 
-## 10. Getting Started
+## 10. Future Vision: SYNTRA City
+
+SYNTRA's long-term plan is to grow from one autonomous engineering office into a **living, open-world city**: a cinematic, AAA-quality 3D place where users explore, work, shop and are entertained. The SYNTRA engineering organization is **one office building in that city**.
+
+```mermaid
+flowchart TD
+    City["SYNTRA City (Open-World 3D Experience)"]
+    City --> Office["SYNTRA HQ Office<br/>Autonomous engineering org (10 agents)"]
+    City --> Cinema["Cinema Theater<br/>Watch movies"]
+    City --> Mall["Shopping Mall<br/>Real products, home delivery"]
+    City --> Grocery["Grocery Store<br/>Local delivery app integration"]
+    City --> Billboards["Billboards<br/>Real ads from real companies"]
+    Advertisers["Companies & Brands"] -->|Campaigns| Billboards
+    Mall -->|Orders| Fulfillment["Commerce & Delivery Partners"]
+    Grocery -->|Orders| LocalApps["Users' Local Delivery Apps"]
+```
+
+### 10.1 Open-World City UI/UX
+- **Look and feel**: a cinematic, photoreal open-world city in the style of modern AAA open-world games: day/night cycle, weather, dense streets, neon signs, and smooth third-person or drone-camera movement.
+- **SYNTRA HQ office**: the current Control Center becomes the inside of the SYNTRA office. Each of the 10 agents works at its own station. Missions, task DAGs, approvals and the human delivery gate appear as in-world screens and interactions.
+- **City navigation**: a minimap, fast travel between locations, and HUD-style overlays for missions, notifications and orders.
+
+### 10.2 Cinema Theater
+- Users walk into the theater and watch movies on in-world screens.
+- Content would come from licensed streaming and content partners.
+
+### 10.3 Shopping Mall
+- Storefronts sell **real products**. Orders placed in the city are paid for and **delivered to the user's real home address**.
+- Built on real commerce, payment and fulfillment partners.
+
+### 10.4 Grocery Store
+- A city grocery store **connected to the user's local delivery apps**, so groceries picked in the city arrive at home through services already available in the user's area.
+
+### 10.5 Billboards & Advertising Platform
+- Billboards across the city display **real ads**.
+- Companies advertise new products of any kind (cars, clothing, gadgets and more) as part of the visual experience, for example by placing a new car model on the streets or showing a clothing line in the mall.
+- A self-serve advertiser portal for campaigns, placement, scheduling and analytics.
+
+### 10.6 Guiding Principles for the City
+- **SYNTRA's engineering invariants still apply**: separation of powers, independent verification, and human approval gates for anything that spends money or ships to production.
+- **Real money and real deliveries need extra safeguards**: secure payments, explicit user confirmation on every purchase, privacy-safe handling of addresses, and clear labeling of paid advertising.
+
+---
+
+## 11. Getting Started
 
 ### Prerequisites
 * **Python**: `3.12+`
@@ -451,6 +505,6 @@ uv run uvicorn syntra.api.main:app --host 0.0.0.0 --port 8000 --reload
 
 ---
 
-## 11. License
+## 12. License
 
 This project is licensed under the Apache 2.0 License.
