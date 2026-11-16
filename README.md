@@ -78,33 +78,69 @@ flowchart TD
 
 ---
 
-## 3. The 10 Operational Engineering Personas
+## 3. The 25 Engineering Agents Across 5 Departments
 
-SYNTRA runs 10 specialized engineering roles, and all 10 are operational: missions run end-to-end through PM → Architect → EM → implementation → QA → Security → Code Review, with the Debugging Specialist handling failures. Each persona operates under an explicit system prompt, a strict set of permitted tools, bounded token and financial budgets, and typed Pydantic v2 input/output schemas.
+SYNTRA runs **25 specialized engineering agents organized into 5 departments** of 5 roles each. Missions flow from Product & Design through Engineering, are checked independently by Quality & Assurance, and are shipped by Platform & Delivery. Specialist Engineering supports every stage. Each agent operates under an explicit system prompt, a strict set of permitted tools, bounded token and financial budgets, and typed Pydantic v2 input/output schemas.
+
+| # | Department | Roles |
+|---|---|---|
+| 1 | **Product & Design** | Product Manager, Business Analyst, Software Architect, Engineering Manager, UI/UX Designer |
+| 2 | **Engineering** | Backend Engineer, Frontend Engineer, Full-Stack Engineer, Database Engineer, Integration Engineer |
+| 3 | **Quality & Assurance** | QA Engineer, Test Automation Engineer, Code Reviewer, Security Reviewer, Debugging Specialist |
+| 4 | **Platform & Delivery** | DevOps Engineer, Cloud Engineer, Site Reliability Engineer (SRE), Release Engineer, Git Engineer |
+| 5 | **Specialist Engineering** | AI/ML Engineer, Research Engineer, Performance Engineer, Documentation Engineer, Maintenance Engineer |
 
 ```mermaid
 flowchart LR
-    subgraph Upstream["Upstream Planning (Non-Coding)"]
-        PM["1. Product Manager"] --> Arch["2. Software Architect"]
-        Arch --> EM["3. Engineering Manager"]
+    subgraph D1["1. Product & Design (Non-Coding)"]
+        PM["Product Manager"] --> BA["Business Analyst"]
+        BA --> Arch["Software Architect"]
+        PM --> UX["UI/UX Designer"]
+        Arch --> EM["Engineering Manager"]
+        UX --> EM
     end
 
-    subgraph Implementation["Downstream Implementation (Sandboxed)"]
-        EM -->|Task Leases| BE["4. Backend Engineer"]
-        EM -->|Task Leases| FE["5. Frontend Engineer (Target Repo)"]
-        EM -->|Task Leases| DO["7. DevOps Engineer"]
+    subgraph D2["2. Engineering (Sandboxed)"]
+        BE["Backend Engineer"]
+        FE["Frontend Engineer"]
+        FS["Full-Stack Engineer"]
+        DBE["Database Engineer"]
+        IE["Integration Engineer"]
     end
 
-    subgraph IndependentVerification["Verification & Quality Gates (Separation of Powers)"]
-        BE & FE & DO -->|Unified Diff| QA["6. QA Engineer"]
-        QA -->|Test Suite Evidence| Sec["8. Security Reviewer"]
-        Sec -->|Audit Report| CR["9. Code Reviewer"]
-        CR -.->|Rejection & Traces| DB["10. Debugging Specialist"]
-        DB -.->|Surgical Fix| BE & FE & DO
+    subgraph D3["3. Quality & Assurance (Separation of Powers)"]
+        QA["QA Engineer"] --> TA["Test Automation Engineer"]
+        TA --> Sec["Security Reviewer"]
+        Sec --> CR["Code Reviewer"]
+        CR -.->|Rejection & Traces| Dbg["Debugging Specialist"]
     end
+
+    subgraph D4["4. Platform & Delivery"]
+        DO["DevOps Engineer"] --> Cloud["Cloud Engineer"]
+        Cloud --> SRE["Site Reliability Engineer"]
+        Git["Git Engineer"] --> Rel["Release Engineer"]
+    end
+
+    subgraph D5["5. Specialist Engineering (Supports All Stages)"]
+        ML["AI/ML Engineer"]
+        RE["Research Engineer"]
+        Perf["Performance Engineer"]
+        Doc["Documentation Engineer"]
+        Mnt["Maintenance Engineer"]
+    end
+
+    EM -->|Task Leases| D2
+    D2 -->|Unified Diff| QA
+    Dbg -.->|Surgical Fix| D2
+    CR -->|Approved Patch| Git
+    Rel -->|Release Candidate| Gate{"Human Delivery Gate"}
 ```
 
-### 1. Product Manager (PM)
+---
+
+### Department 1: Product & Design
+
+#### 1. Product Manager (PM)
 * **Role Mandate**: Transform ambiguous user objectives into structured, exhaustive Product Requirements Documents (PRDs).
 * **Core Responsibilities**:
   * Ingest user problem statements and existing repository context.
@@ -115,7 +151,17 @@ flowchart LR
 * **Output Schema**: `RequirementsAnalysis` (`PRDDocument` artifact with YAML frontmatter).
 * **Forbidden Actions**: Must never modify source code, execute bash commands, or approve pull requests.
 
-### 2. Software Architect
+#### 2. Business Analyst
+* **Role Mandate**: Turn the PRD into detailed business rules, user flows and data definitions that engineers can build from.
+* **Core Responsibilities**:
+  * Map user journeys, business processes and edge cases.
+  * Define domain entities, field-level validation rules and business constraints.
+  * Trace every requirement to an acceptance criterion so nothing is lost between PRD and task plan.
+* **Allowed Capabilities**: `workspace_search`, `read_file`, `list_directory`.
+* **Output Schema**: `BusinessAnalysis` (process flows, domain glossary, requirement traceability matrix).
+* **Forbidden Actions**: Must never modify source code, execute bash commands, or change approved requirements without PM sign-off.
+
+#### 3. Software Architect
 * **Role Mandate**: Define modular system boundaries, component contracts, and technical tradeoffs.
 * **Core Responsibilities**:
   * Produce Architecture Decision Records (ADRs).
@@ -125,18 +171,32 @@ flowchart LR
 * **Output Schema**: `ArchitectureProposal` (`ArchitectureSpecification` and `ADR` artifacts).
 * **Forbidden Actions**: Must never write implementation code or execute unverified shell scripts.
 
-### 3. Engineering Manager (EM)
+#### 4. Engineering Manager (EM)
 * **Role Mandate**: Decompose architectural blueprints into a validated, cycle-free Directed Acyclic Graph (DAG) of actionable engineering tasks.
 * **Core Responsibilities**:
   * Enforce atomic task boundaries (one verifiable outcome per task).
   * Validate topological order and reject circular dependencies using `TaskDAGEngine`.
   * Calculate critical paths, token/cost budget reservations, and worker concurrency limits.
-  * Assign tasks to specialized implementation roles with explicit acceptance criteria.
+  * Assign tasks to the right department and role with explicit acceptance criteria.
 * **Allowed Capabilities**: `workspace_search`, `read_file`, `validate_dag`.
 * **Output Schema**: `TaskPlanProposal` (DAG of `Task` records with dependencies and estimated budgets).
 * **Forbidden Actions**: Must never execute tasks, write code, or bypass capability grants.
 
-### 4. Backend Engineer
+#### 5. UI/UX Designer
+* **Role Mandate**: Design the user experience and visual interface for target applications before any frontend code is written.
+* **Core Responsibilities**:
+  * Produce user flows, wireframes, component inventories and design tokens (color, type, spacing).
+  * Define responsive layouts, interaction states and accessibility requirements (WCAG).
+  * Hand off a design specification the Frontend and Full-Stack Engineers implement against.
+* **Allowed Capabilities**: `workspace_search`, `read_file`, `list_directory`.
+* **Output Schema**: `DesignSpecification` (screens, component specs, design tokens, accessibility checklist).
+* **Forbidden Actions**: Must never write production code or modify SYNTRA's own platform UI.
+
+---
+
+### Department 2: Engineering
+
+#### 6. Backend Engineer
 * **Role Mandate**: Implement backend APIs, database models, and pure domain business services.
 * **Core Responsibilities**:
   * Execute assigned tasks inside isolated sandbox environments.
@@ -146,17 +206,51 @@ flowchart LR
 * **Output Schema**: `AgentFinalResult` containing unified diff patch, command execution logs, and local test evidence.
 * **Forbidden Actions**: Must never access the host filesystem, host environment variables, or production databases.
 
-### 5. Frontend Engineer (Target Repositories Only)
+#### 7. Frontend Engineer (Target Repositories Only)
 * **Role Mandate**: Implement client-side code and user interfaces *exclusively inside target repositories*.
 * **Critical Platform Policy**: The Frontend Engineer agent never modifies or creates UI components for the SYNTRA platform itself. SYNTRA's Control Center is built by the platform team; the agent works only inside target repositories.
 * **Core Responsibilities**:
-  * Build UI components, state management, and API clients within target project repositories (e.g., Next.js, React, Tailwind).
+  * Build UI components, state management, and API clients from the UI/UX Designer's specification (e.g., Next.js, React, Tailwind).
   * Implement client-side validation and automated component tests.
 * **Allowed Capabilities**: `read_file`, `write_file`, `run_command` (scoped strictly to target repo sandbox).
 * **Output Schema**: Target repository unified diff patch, client test logs.
 * **Forbidden Actions**: Must never alter SYNTRA core platform code or bypass sandbox security rules.
 
-### 6. QA Engineer
+#### 8. Full-Stack Engineer
+* **Role Mandate**: Deliver complete vertical features that span backend API, data layer and frontend in a target repository.
+* **Core Responsibilities**:
+  * Implement end-to-end features where one task touches both server and client code.
+  * Keep API contracts and frontend clients in sync within a single patch.
+  * Write unit and end-to-end tests covering the full request path.
+* **Allowed Capabilities**: `read_file`, `write_file`, `run_command` (scoped strictly to worker sandbox).
+* **Output Schema**: `AgentFinalResult` with a unified diff spanning backend and frontend, plus test evidence.
+* **Forbidden Actions**: Must never alter SYNTRA core platform code, access production systems, or review its own patch.
+
+#### 9. Database Engineer
+* **Role Mandate**: Own data models, schema migrations, queries and data integrity.
+* **Core Responsibilities**:
+  * Design normalized schemas, indexes and constraints.
+  * Write reversible Alembic migrations with upgrade and downgrade paths.
+  * Optimize slow queries and verify transactional boundaries and locking behavior.
+* **Allowed Capabilities**: `read_file`, `write_file`, `run_command` (sandbox database only).
+* **Output Schema**: Migration scripts, schema diff, query plans, and migration test results.
+* **Forbidden Actions**: Must never connect to production databases or run destructive migrations without human approval.
+
+#### 10. Integration Engineer
+* **Role Mandate**: Connect target applications to third-party APIs, webhooks, payment providers and MCP tools.
+* **Core Responsibilities**:
+  * Implement API clients with retries, timeouts, idempotency and error handling.
+  * Build contract tests and mocks for every external dependency.
+  * Keep credentials out of code by using environment configuration and secret managers.
+* **Allowed Capabilities**: `read_file`, `write_file`, `run_command` (sandbox with mocked external endpoints).
+* **Output Schema**: Integration patch, contract test suite, and interface documentation.
+* **Forbidden Actions**: Must never hardcode credentials or call live third-party production endpoints from the sandbox.
+
+---
+
+### Department 3: Quality & Assurance
+
+#### 11. QA Engineer
 * **Role Mandate**: Formulate independent acceptance test suites and verify functional completeness.
 * **Core Responsibilities**:
   * Author acceptance and integration tests based directly on PRD Given-When-Then criteria.
@@ -166,27 +260,17 @@ flowchart LR
 * **Output Schema**: `QAProposal` and `VerificationRun` record with test execution logs and coverage metrics.
 * **Forbidden Actions**: Must never modify production source code to make tests pass artificially.
 
-### 7. DevOps Engineer
-* **Role Mandate**: Build container definitions, CI/CD automation, and deployment configurations.
+#### 12. Test Automation Engineer
+* **Role Mandate**: Build and maintain the automated test infrastructure that QA and CI rely on.
 * **Core Responsibilities**:
-  * Author reproducible `Dockerfile`, `compose.yaml`, and GitHub Actions workflows.
-  * Configure health check probes, container security baselines (non-root execution), and multi-stage builds.
-  * Manage Git worktrees and patch application mechanics.
-* **Allowed Capabilities**: `read_file`, `write_file`, `run_command` (build verification).
-* **Output Schema**: CI/CD pipeline definitions, container manifests, build logs.
-* **Forbidden Actions**: Must never deploy to production without explicit human authorization.
+  * Create reusable test fixtures, factories and end-to-end browser test suites (e.g., Playwright).
+  * Wire test suites into CI with parallelization and coverage reporting.
+  * Detect and report flaky tests with reproducible evidence.
+* **Allowed Capabilities**: `read_file`, `write_file`, `run_command` (test runner).
+* **Output Schema**: Test framework patch, CI test configuration, coverage and flakiness reports.
+* **Forbidden Actions**: Must never skip, disable or weaken tests to make a build pass, or modify production source code.
 
-### 8. Security Reviewer
-* **Role Mandate**: Perform static and dynamic security auditing of all code diffs and dependencies.
-* **Core Responsibilities**:
-  * Inspect diffs for OWASP Top 10 vulnerabilities (SQLi, SSRF, command injection, path traversal).
-  * Scan for hardcoded credentials, secret leakage, or high-entropy tokens.
-  * Audit third-party dependency updates against known CVE advisories.
-* **Allowed Capabilities**: `read_file`, `workspace_search`, `security_scan`.
-* **Output Schema**: `SecurityReport` (PASS / FAIL with line-level findings, severities, and remediations).
-* **Forbidden Actions**: Cannot approve patches containing unresolved critical or high severity findings.
-
-### 9. Code Reviewer
+#### 13. Code Reviewer
 * **Role Mandate**: Conduct independent peer review of proposed unified diffs for quality, style, and architectural alignment.
 * **Core Responsibilities**:
   * Verify that implementation satisfies task acceptance criteria without scope creep.
@@ -196,7 +280,17 @@ flowchart LR
 * **Output Schema**: `CodeReviewProposal` (APPROVED / REJECTED with line-level comments).
 * **Forbidden Actions**: May not review code authored by itself. May not modify source code directly.
 
-### 10. Debugging Specialist
+#### 14. Security Reviewer
+* **Role Mandate**: Perform static and dynamic security auditing of all code diffs and dependencies.
+* **Core Responsibilities**:
+  * Inspect diffs for OWASP Top 10 vulnerabilities (SQLi, SSRF, command injection, path traversal).
+  * Scan for hardcoded credentials, secret leakage, or high-entropy tokens.
+  * Audit third-party dependency updates against known CVE advisories.
+* **Allowed Capabilities**: `read_file`, `workspace_search`, `security_scan`.
+* **Output Schema**: `SecurityReport` (PASS / FAIL with line-level findings, severities, and remediations).
+* **Forbidden Actions**: Cannot approve patches containing unresolved critical or high severity findings.
+
+#### 15. Debugging Specialist
 * **Role Mandate**: Systematically diagnose test failures, execution errors, and runtime crashes.
 * **Core Responsibilities**:
   * Analyze stderr, traceback outputs, and execution logs from failed QA or sandbox runs.
@@ -206,6 +300,114 @@ flowchart LR
 * **Allowed Capabilities**: `read_file`, `write_file`, `run_command` (diagnostic sandbox).
 * **Output Schema**: `FailureAnalysis` (`RootCauseAnalysisReport`, minimal reproducing test, proposed fix patch).
 * **Forbidden Actions**: Must not disable or weaken existing test assertions to bypass failures.
+
+---
+
+### Department 4: Platform & Delivery
+
+#### 16. DevOps Engineer
+* **Role Mandate**: Build container definitions, CI/CD automation, and deployment configurations.
+* **Core Responsibilities**:
+  * Author reproducible `Dockerfile`, `compose.yaml`, and GitHub Actions workflows.
+  * Configure health check probes, container security baselines (non-root execution), and multi-stage builds.
+  * Verify that builds are reproducible from a clean checkout.
+* **Allowed Capabilities**: `read_file`, `write_file`, `run_command` (build verification).
+* **Output Schema**: CI/CD pipeline definitions, container manifests, build logs.
+* **Forbidden Actions**: Must never deploy to production without explicit human authorization.
+
+#### 17. Cloud Engineer
+* **Role Mandate**: Define cloud infrastructure as code for target applications.
+* **Core Responsibilities**:
+  * Write Infrastructure-as-Code (e.g., Terraform, Pulumi) for networks, compute, storage and managed databases.
+  * Apply least-privilege IAM policies and encryption at rest and in transit.
+  * Estimate infrastructure cost for each environment.
+* **Allowed Capabilities**: `read_file`, `write_file`, `run_command` (plan and validate only, no apply).
+* **Output Schema**: IaC patch, `plan` output, cost estimate and IAM policy summary.
+* **Forbidden Actions**: Must never apply infrastructure changes or hold live cloud credentials without human approval.
+
+#### 18. Site Reliability Engineer (SRE)
+* **Role Mandate**: Make target systems observable, reliable and recoverable.
+* **Core Responsibilities**:
+  * Define SLOs, SLIs, alerts and dashboards (OpenTelemetry, metrics, logs, traces).
+  * Write runbooks and incident response procedures.
+  * Design health checks, autoscaling, backups and disaster recovery plans.
+* **Allowed Capabilities**: `read_file`, `write_file`, `run_command` (sandbox), read-only observability queries.
+* **Output Schema**: `ReliabilityReport` (SLO definitions, alert rules, runbooks, recovery plan).
+* **Forbidden Actions**: Must never change production systems or silence alerts without human approval.
+
+#### 19. Release Engineer
+* **Role Mandate**: Package verified changes into versioned, traceable release candidates.
+* **Core Responsibilities**:
+  * Apply semantic versioning and generate changelogs and release notes from approved patches.
+  * Confirm every release candidate carries QA, Security and Code Review evidence.
+  * Prepare rollback plans for every release.
+* **Allowed Capabilities**: `read_file`, `write_file`, `workspace_search`.
+* **Output Schema**: `ReleaseCandidate` (version, changelog, evidence bundle digest, rollback plan).
+* **Forbidden Actions**: Must never publish a release or pass the Human Delivery Gate on its own authority.
+
+#### 20. Git Engineer
+* **Role Mandate**: Manage repository mechanics for every mission.
+* **Core Responsibilities**:
+  * Create and clean up ephemeral Git worktrees and task branches.
+  * Apply approved unified diffs, resolve merge conflicts and keep a clean, conventional commit history.
+  * Prepare pull requests with descriptions linked to task and verification evidence.
+* **Allowed Capabilities**: `read_file`, `run_command` (local Git operations in the sandbox only).
+* **Output Schema**: Branch and commit manifest, prepared pull request draft.
+* **Forbidden Actions**: Must never push to remote repositories, merge pull requests or rewrite shared history without human approval.
+
+---
+
+### Department 5: Specialist Engineering
+
+#### 21. AI/ML Engineer
+* **Role Mandate**: Build AI and machine learning features in target applications.
+* **Core Responsibilities**:
+  * Integrate LLMs, embeddings, retrieval (RAG) and recommendation features.
+  * Design prompts, evaluation datasets and quality metrics for AI behavior.
+  * Track model cost, latency and safety guardrails.
+* **Allowed Capabilities**: `read_file`, `write_file`, `run_command` (sandbox, offline or mocked models by default).
+* **Output Schema**: ML feature patch, evaluation report, model cost and latency estimate.
+* **Forbidden Actions**: Must never train on or send user data to external models without explicit approval.
+
+#### 22. Research Engineer
+* **Role Mandate**: Investigate unfamiliar technologies and de-risk technical decisions before implementation.
+* **Core Responsibilities**:
+  * Compare libraries, frameworks and approaches with evidence.
+  * Build small throwaway prototypes and spikes to test feasibility.
+  * Feed findings to the Software Architect as ADR inputs.
+* **Allowed Capabilities**: `workspace_search`, `read_file`, `write_file`, `run_command` (isolated prototype sandbox).
+* **Output Schema**: `ResearchReport` (options, tradeoffs, prototype results, recommendation).
+* **Forbidden Actions**: Prototype code must never be merged directly into production branches.
+
+#### 23. Performance Engineer
+* **Role Mandate**: Measure and improve speed, scalability and resource usage.
+* **Core Responsibilities**:
+  * Write load tests and benchmarks, and profile CPU, memory and I/O.
+  * Identify bottlenecks such as N+1 queries, slow endpoints and large frontend bundles.
+  * Propose optimizations backed by before-and-after measurements.
+* **Allowed Capabilities**: `read_file`, `write_file`, `run_command` (benchmark sandbox).
+* **Output Schema**: `PerformanceReport` (benchmarks, profiles, regressions, optimization patch).
+* **Forbidden Actions**: Must never load-test production systems or trade correctness for speed.
+
+#### 24. Documentation Engineer
+* **Role Mandate**: Keep every delivered project understandable and usable.
+* **Core Responsibilities**:
+  * Write and update READMEs, API references, architecture docs and user guides.
+  * Generate OpenAPI documentation and code examples from the implemented contracts.
+  * Keep documentation in sync with each approved patch.
+* **Allowed Capabilities**: `read_file`, `write_file` (documentation files only), `workspace_search`.
+* **Output Schema**: Documentation patch and docs coverage checklist.
+* **Forbidden Actions**: Must never modify source code or document features that do not exist.
+
+#### 25. Maintenance Engineer
+* **Role Mandate**: Keep delivered projects healthy after release.
+* **Core Responsibilities**:
+  * Upgrade dependencies and patch known CVEs.
+  * Pay down tech debt, remove dead code and refactor without changing behavior.
+  * Triage incoming bugs and route them to the right role.
+* **Allowed Capabilities**: `read_file`, `write_file`, `run_command` (sandbox).
+* **Output Schema**: Maintenance patch, dependency upgrade report, tech-debt register updates.
+* **Forbidden Actions**: Must never ship behavior changes disguised as maintenance or bypass QA and Security review.
 
 ---
 
@@ -339,7 +541,7 @@ syntra/
 |   |-- orchestration/          # LangGraph mission state graph and checkpointing
 |   |-- scheduling/             # Task DAG scheduler, outbox relay, and lease reconciler
 |   |-- sandbox/                # Docker container manager, Git worktree isolation
-|   |-- agents/                 # 10 Agent personas, handoff validators, and engineering worker
+|   |-- agents/                 # 25 agent roles (5 departments), handoff validators, and engineering worker
 |   |-- mcp/                    # Model Context Protocol server and client gateway
 |   |-- skills/                 # Skill package loader and profile definitions
 |   |-- api/                    # FastAPI REST routes and WebSocket handlers
@@ -369,7 +571,7 @@ syntra/
 
 ## 9. Project Status & Phase Roadmap
 
-**Current milestone: Phases 0–20 complete. All 10 agents are operational.** The latest regression run passed **612/612** pytest tests. Phases 0–14 have formal verification reports in [`docs/phases/progress.md`](docs/phases/progress.md). Phases 15–20 cover the Control Center pipeline work that followed Phase 14.
+**Current milestone: Phases 0–20 complete. All 25 agents across 5 departments are operational.** The latest regression run passed **612/612** pytest tests. Phases 0–14 have formal verification reports in [`docs/phases/progress.md`](docs/phases/progress.md). Phases 15–20 cover the Control Center pipeline work that followed Phase 14.
 
 | Phase | Title | Status | Key Deliverables |
 |---|---|---|---|
@@ -414,7 +616,7 @@ SYNTRA's long-term plan is to grow from one autonomous engineering office into a
 ```mermaid
 flowchart TD
     City["SYNTRA City (Open-World 3D Experience)"]
-    City --> Office["SYNTRA HQ Office<br/>Autonomous engineering org (10 agents)"]
+    City --> Office["SYNTRA HQ Office<br/>Autonomous engineering org (25 agents, 5 departments)"]
     City --> Cinema["Cinema Theater<br/>Watch movies"]
     City --> Mall["Shopping Mall<br/>Real products, home delivery"]
     City --> Grocery["Grocery Store<br/>Local delivery app integration"]
@@ -426,7 +628,7 @@ flowchart TD
 
 ### 10.1 Open-World City UI/UX
 - **Look and feel**: a cinematic, photoreal open-world city in the style of modern AAA open-world games: day/night cycle, weather, dense streets, neon signs, and smooth third-person or drone-camera movement.
-- **SYNTRA HQ office**: the current Control Center becomes the inside of the SYNTRA office. Each of the 10 agents works at its own station. Missions, task DAGs, approvals and the human delivery gate appear as in-world screens and interactions.
+- **SYNTRA HQ office**: the current Control Center becomes the inside of the SYNTRA office. The 5 departments each have their own floor, and each of the 25 agents works at its own station. Missions, task DAGs, approvals and the human delivery gate appear as in-world screens and interactions.
 - **City navigation**: a minimap, fast travel between locations, and HUD-style overlays for missions, notifications and orders.
 
 ### 10.2 Cinema Theater
@@ -460,7 +662,7 @@ flowchart LR
     Claude["Claude Code"] -->|C++, Blueprints, Python scripts| UE5
     Claude -->|Blender Python automation| Blender
     UE5 <-->|REST / WebSocket| API["SYNTRA FastAPI Backend"]
-    API --> Agents["10 Engineering Agents"]
+    API --> Agents["25 Engineering Agents (5 Departments)"]
 ```
 
 ### 10.7 Guiding Principles for the City
